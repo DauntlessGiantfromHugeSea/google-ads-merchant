@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="92" viewBox="0 0 200 92">
+  <!-- North-Flow-Logo (Platzhalter-Nachbildung, für dunklen Hintergrund).
+       Ersetze diese Datei durch dein Original (gleicher Name: logo.svg). -->
+  <text x="100" y="44" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
+        font-size="30" font-weight="700" fill="#ffffff" letter-spacing="0.5">North Flow</text>
+  <path d="M30 70 C 70 60, 95 82, 120 80 C 148 78, 168 62, 180 54"
+        stroke="#fb8c7e" stroke-width="5.5" fill="none" stroke-linecap="round"/>
+</svg>
