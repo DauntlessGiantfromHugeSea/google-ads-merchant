@@ -89,17 +89,30 @@ def _demo_merchant(external_id: str) -> dict:
 
 
 def _live_merchant(external_id: str, creds: dict) -> dict:
-    """Content API for Shopping (best effort). Zählt Produktstatus/Disapprovals."""
-    from google.oauth2.credentials import Credentials  # noqa: PLC0415
+    """Content API for Shopping (best effort). Zählt Produktstatus/Disapprovals.
+    Unterstützt Service-Account (JSON) ODER OAuth-Refresh-Token."""
     from googleapiclient.discovery import build  # noqa: PLC0415
 
-    credentials = Credentials(
-        token=None,
-        refresh_token=creds["refresh_token"],
-        client_id=creds["client_id"],
-        client_secret=creds["client_secret"],
-        token_uri="https://oauth2.googleapis.com/token",
-    )
+    scopes = ["https://www.googleapis.com/auth/content"]
+    if creds.get("service_account_json"):
+        import json  # noqa: PLC0415
+
+        from google.oauth2 import service_account  # noqa: PLC0415
+
+        raw = creds["service_account_json"]
+        info = json.loads(raw) if isinstance(raw, str) else raw
+        credentials = service_account.Credentials.from_service_account_info(info, scopes=scopes)
+    else:
+        from google.oauth2.credentials import Credentials  # noqa: PLC0415
+
+        credentials = Credentials(
+            token=None,
+            refresh_token=creds["refresh_token"],
+            client_id=creds["client_id"],
+            client_secret=creds["client_secret"],
+            token_uri="https://oauth2.googleapis.com/token",
+            scopes=scopes,
+        )
     service = build("content", "v2.1", credentials=credentials, cache_discovery=False)
 
     total = approved = disapproved = warnings = 0
@@ -137,7 +150,7 @@ def _live_merchant(external_id: str, creds: dict) -> dict:
 
 
 def collect_merchant_data(external_id: str, creds: dict | None = None) -> dict:
-    if creds and creds.get("refresh_token"):
+    if creds and (creds.get("refresh_token") or creds.get("service_account_json")):
         try:
             return _live_merchant(external_id, creds)
         except Exception as exc:  # pragma: no cover – Demo-Fallback bei API-Fehler

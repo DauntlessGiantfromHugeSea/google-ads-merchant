@@ -33,8 +33,19 @@ export interface User {
   organization_id: string; client_id: string | null;
 }
 export interface Client {
-  id: string; name: string; contact_email: string; notes: string;
+  id: string; name: string; notes: string;
   onboarding_completed: boolean; created_at: string;
+  contact_email: string; contact_person: string; phone: string; website: string; address: string;
+  contract_package: string; contract_status: string; contract_start: string; contract_end: string;
+  contract_fee: string; contract_billing: string; contract_notes: string;
+}
+export interface Todo {
+  id: string; title: string; description: string; status: string;
+  due_date: string; created_at: string; client_id: string;
+}
+export interface ClientUpdate {
+  id: string; title: string; body: string; category: string;
+  author_name: string; created_at: string; client_id: string;
 }
 export interface Account {
   id: string; type: "google_ads" | "merchant_center" | "website";
@@ -44,7 +55,7 @@ export interface Account {
 export interface CredentialStatus { configured: boolean; fields_present: string[]; }
 export interface CredentialInput {
   developer_token?: string; client_id?: string; client_secret?: string;
-  refresh_token?: string; login_customer_id?: string;
+  refresh_token?: string; login_customer_id?: string; service_account_json?: string;
 }
 export interface Report {
   id: string; type: string; status: string; period_start: string;
@@ -70,8 +81,24 @@ export const api = {
   createClient: (d: { name: string; contact_email?: string; notes?: string }) =>
     request<Client>("/clients", { method: "POST", body: JSON.stringify(d) }),
   client: (id: string) => request<Client>(`/clients/${id}`),
+  updateClient: (id: string, d: Partial<Client>) =>
+    request<Client>(`/clients/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   completeOnboarding: (id: string) =>
     request<Client>(`/clients/${id}/complete-onboarding`, { method: "POST" }),
+
+  todos: (id: string) => request<Todo[]>(`/clients/${id}/todos`),
+  createTodo: (id: string, d: { title: string; description?: string; due_date?: string }) =>
+    request<Todo>(`/clients/${id}/todos`, { method: "POST", body: JSON.stringify(d) }),
+  updateTodo: (id: string, todoId: string, d: Partial<Todo>) =>
+    request<Todo>(`/clients/${id}/todos/${todoId}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteTodo: (id: string, todoId: string) =>
+    request<void>(`/clients/${id}/todos/${todoId}`, { method: "DELETE" }),
+
+  updates: (id: string) => request<ClientUpdate[]>(`/clients/${id}/updates`),
+  createUpdate: (id: string, d: { title?: string; body: string; category?: string }) =>
+    request<ClientUpdate>(`/clients/${id}/updates`, { method: "POST", body: JSON.stringify(d) }),
+  deleteUpdate: (id: string, updId: string) =>
+    request<void>(`/clients/${id}/updates/${updId}`, { method: "DELETE" }),
 
   accounts: (clientId: string) => request<Account[]>(`/clients/${clientId}/accounts`),
   addAccount: (clientId: string, d: { type: string; external_id: string; label?: string }) =>

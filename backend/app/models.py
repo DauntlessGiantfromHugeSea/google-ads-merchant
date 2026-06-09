@@ -93,16 +93,33 @@ class Client(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    contact_email: Mapped[str] = mapped_column(String(255), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    # Kontaktdaten
+    contact_email: Mapped[str] = mapped_column(String(255), default="")
+    contact_person: Mapped[str] = mapped_column(String(255), default="")
+    phone: Mapped[str] = mapped_column(String(64), default="")
+    website: Mapped[str] = mapped_column(String(512), default="")
+    address: Mapped[str] = mapped_column(Text, default="")
+
+    # Vertragsdaten
+    contract_package: Mapped[str] = mapped_column(String(255), default="")
+    contract_status: Mapped[str] = mapped_column(String(64), default="")  # aktiv/pausiert/beendet
+    contract_start: Mapped[str] = mapped_column(String(10), default="")
+    contract_end: Mapped[str] = mapped_column(String(10), default="")
+    contract_fee: Mapped[str] = mapped_column(String(64), default="")     # z.B. "990 € / Monat"
+    contract_billing: Mapped[str] = mapped_column(String(64), default="")  # monatlich/jährlich
+    contract_notes: Mapped[str] = mapped_column(Text, default="")
 
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     organization: Mapped[Organization] = relationship(back_populates="clients")
 
     accounts: Mapped[list[Account]] = relationship(back_populates="client", cascade="all, delete-orphan")
     reports: Mapped[list[ReportRun]] = relationship(back_populates="client", cascade="all, delete-orphan")
+    todos: Mapped[list[Todo]] = relationship(back_populates="client", cascade="all, delete-orphan")
+    updates: Mapped[list[ClientUpdate]] = relationship(back_populates="client", cascade="all, delete-orphan")
 
 
 class Account(Base):
@@ -168,3 +185,35 @@ class ReportRun(Base):
     ads_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     merchant_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     seo_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+
+class Todo(Base):
+    """Aufgabe/To-Do zu einem Kunden."""
+
+    __tablename__ = "todos"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(32), default="open")  # open/in_progress/done
+    due_date: Mapped[str] = mapped_column(String(10), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship(back_populates="todos")
+
+
+class ClientUpdate(Base):
+    """Eintrag im Verlauf/Activity-Feed eines Kunden (Updates, Notizen)."""
+
+    __tablename__ = "client_updates"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(512), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    category: Mapped[str] = mapped_column(String(64), default="update")  # update/note/milestone
+    author_name: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship(back_populates="updates")

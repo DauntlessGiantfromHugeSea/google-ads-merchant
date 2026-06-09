@@ -172,19 +172,19 @@ def _sitemap_text(resp: httpx.Response, url: str) -> str:
     return data.decode(errors="ignore")
 
 
-def _find_sitemaps(client: httpx.Client, base: str) -> list[str]:
-    found: list[str] = []
+def _fetch_robots(client: httpx.Client, base: str) -> tuple[bool, str, list[str]]:
+    """Liefert (gefunden, robots.txt-Text, darin gelistete Sitemap-URLs)."""
+    sitemaps: list[str] = []
     try:
         r = _fetch(client, base + "/robots.txt")
-        if r.status_code == 200:
+        if r.status_code == 200 and r.text.strip():
             for line in r.text.splitlines():
                 if line.lower().startswith("sitemap:"):
-                    found.append(line.split(":", 1)[1].strip())
+                    sitemaps.append(line.split(":", 1)[1].strip())
+            return True, r.text, sitemaps
     except Exception:
         pass
-    if not found:
-        found.append(base + "/sitemap.xml")
-    return found
+    return False, "", sitemaps
 
 
 def _parse_sitemap(client: httpx.Client, sm_url: str, depth: int = 0) -> list[str]:
@@ -226,7 +226,8 @@ def analyze_site(url: str, max_pages: int | None = None) -> dict:
     host = urlparse(base).netloc
     client = httpx.Client(timeout=10, follow_redirects=True)
     try:
-        sitemaps = _find_sitemaps(client, base)
+        robots_found, robots_txt, robots_sitemaps = _fetch_robots(client, base)
+        sitemaps = robots_sitemaps or [base + "/sitemap.xml"]
         sm_urls: list[str] = []
         for sm in sitemaps:
             sm_urls += _parse_sitemap(client, sm)
@@ -302,8 +303,11 @@ def analyze_site(url: str, max_pages: int | None = None) -> dict:
     return {
         "site": base,
         "fetched_live": analyzed > 0,
+        "robots_found": robots_found,
+        "robots_txt": robots_txt[:2000],
         "sitemap_found": sitemap_found,
         "sitemap_url": sitemap_url,
+        "sitemap_urls": seen[:150],
         "pages_total": total,
         "pages_analyzed": analyzed,
         "score": overall,

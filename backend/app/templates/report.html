@@ -110,11 +110,12 @@
   <div class="recs"><strong>Empfehlungen</strong><ul>{% for r in m.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
   {% endif %}
 
-  {% if report.seo_data %}
-  {% set s = report.seo_data %}
+  {% if report.seo_data and report.seo_data.sites %}
   <h2>3. SEO-Analyse</h2>
+  {% for s in report.seo_data.sites %}
+  <h3 style="margin-top:18px;">{{ s.site }}</h3>
   <p class="sub">
-    {{ s.site }} ·
+    robots.txt: {% if s.robots_found %}gefunden{% else %}nicht gefunden{% endif %} ·
     Sitemap: {% if s.sitemap_found %}gefunden{% else %}nicht gefunden (interne Links genutzt){% endif %} ·
     {{ s.pages_analyzed }} von {{ s.pages_total }} Seiten live geprüft
   </p>
@@ -125,10 +126,10 @@
     {% endfor %}
   </div>
 
-  <h3>Wo etwas fehlt</h3>
+  <h4 style="margin:12px 0 4px;">Wo etwas fehlt</h4>
   {% if s.issue_groups %}
     {% for g in s.issue_groups %}
-    <h4 style="margin:12px 0 4px;font-size:12px;">{{ g.label }} — {{ g.count }} Seite(n)</h4>
+    <p style="margin:10px 0 2px;font-size:11px;"><strong>{{ g.label }} — {{ g.count }} Seite(n)</strong></p>
     <table>
       <tr><th>Seite</th><th>Befund</th></tr>
       {% for it in g.examples %}
@@ -141,7 +142,7 @@
     <p class="sub">Keine kritischen Mängel auf den geprüften Seiten gefunden.</p>
   {% endif %}
 
-  <h3>Seitenübersicht</h3>
+  <h4 style="margin:12px 0 4px;">Seitenübersicht</h4>
   <table>
     <tr><th>Seite</th><th class="num">Score</th><th>Note</th><th>Wichtigste Mängel</th></tr>
     {% for p in s.pages %}
@@ -154,7 +155,20 @@
     {% endfor %}
   </table>
 
+  <h4 style="margin:12px 0 4px;">Sitemap ({{ s.sitemap_urls|length }} von {{ s.pages_total }} URLs)</h4>
+  <table>
+    <tr><th>URL</th></tr>
+    {% for u in s.sitemap_urls[:30] %}<tr><td>{{ u }}</td></tr>{% endfor %}
+    {% if s.pages_total > 30 %}<tr><td class="muted">… und weitere</td></tr>{% endif %}
+  </table>
+
+  {% if s.robots_found %}
+  <h4 style="margin:12px 0 4px;">robots.txt</h4>
+  <pre style="font-size:9px;background:#f5f7fa;padding:8px;border-radius:4px;white-space:pre-wrap;">{{ s.robots_txt }}</pre>
+  {% endif %}
+
   <div class="recs"><strong>Priorisierte Empfehlungen</strong><ul>{% for r in s.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
+  {% endfor %}
   {% endif %}
 </body>
 </html>

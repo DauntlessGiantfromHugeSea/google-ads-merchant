@@ -6,15 +6,29 @@ from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.core.crypto import encrypt_json
 from app.core.security import hash_password
 from app.database import get_db
-from app.models import Account, Client, GoogleCredential, User, UserRole
+from app.models import (
+    Account,
+    Client,
+    ClientUpdate,
+    GoogleCredential,
+    Todo,
+    User,
+    UserRole,
+)
 from app.schemas import (
     AccountCreate,
     AccountOut,
     ClientCreate,
     ClientOut,
+    ClientPatch,
     CredentialIn,
     CredentialStatus,
     InviteClientUser,
+    TodoCreate,
+    TodoOut,
+    TodoPatch,
+    UpdateCreate,
+    UpdateOut,
     UserOut,
 )
 
@@ -48,6 +62,106 @@ def create_client(
 @router.get("/{client_id}", response_model=ClientOut)
 def get_client(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return get_scoped_client(client_id, user, db)
+
+
+@router.patch("/{client_id}", response_model=ClientOut)
+def update_client(
+    client_id: str, data: ClientPatch,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    """Kontakt- und Vertragsdaten bearbeiten (nur Agentur)."""
+    client = get_scoped_client(client_id, user, db)
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(client, field, value)
+    db.commit()
+    db.refresh(client)
+    return client
+
+
+# --- To-Dos ---
+@router.get("/{client_id}/todos", response_model=list[TodoOut])
+def list_todos(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    get_scoped_client(client_id, user, db)
+    return (db.query(Todo).filter(Todo.client_id == client_id)
+            .order_by(Todo.created_at.desc()).all())
+
+
+@router.post("/{client_id}/todos", response_model=TodoOut, status_code=201)
+def create_todo(
+    client_id: str, data: TodoCreate,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    get_scoped_client(client_id, user, db)
+    todo = Todo(client_id=client_id, **data.model_dump())
+    db.add(todo)
+    db.commit()
+    db.refresh(todo)
+    return todo
+
+
+@router.patch("/{client_id}/todos/{todo_id}", response_model=TodoOut)
+def update_todo(
+    client_id: str, todo_id: str, data: TodoPatch,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    get_scoped_client(client_id, user, db)
+    todo = db.get(Todo, todo_id)
+    if not todo or todo.client_id != client_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "To-Do nicht gefunden")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(todo, field, value)
+    db.commit()
+    db.refresh(todo)
+    return todo
+
+
+@router.delete("/{client_id}/todos/{todo_id}", status_code=204)
+def delete_todo(
+    client_id: str, todo_id: str,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    get_scoped_client(client_id, user, db)
+    todo = db.get(Todo, todo_id)
+    if todo and todo.client_id == client_id:
+        db.delete(todo)
+        db.commit()
+
+
+# --- Verlauf / Updates ---
+@router.get("/{client_id}/updates", response_model=list[UpdateOut])
+def list_updates(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    get_scoped_client(client_id, user, db)
+    return (db.query(ClientUpdate).filter(ClientUpdate.client_id == client_id)
+            .order_by(ClientUpdate.created_at.desc()).all())
+
+
+@router.post("/{client_id}/updates", response_model=UpdateOut, status_code=201)
+def create_update(
+    client_id: str, data: UpdateCreate,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    """Eintrag in den Verlauf laden (nur Agentur). Kunde sieht ihn lesend."""
+    get_scoped_client(client_id, user, db)
+    upd = ClientUpdate(
+        client_id=client_id, title=data.title, body=data.body, category=data.category,
+        author_name=user.full_name or user.email,
+    )
+    db.add(upd)
+    db.commit()
+    db.refresh(upd)
+    return upd
+
+
+@router.delete("/{client_id}/updates/{update_id}", status_code=204)
+def delete_update(
+    client_id: str, update_id: str,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    get_scoped_client(client_id, user, db)
+    upd = db.get(ClientUpdate, update_id)
+    if upd and upd.client_id == client_id:
+        db.delete(upd)
+        db.commit()
 
 
 @router.get("/{client_id}/accounts", response_model=list[AccountOut])

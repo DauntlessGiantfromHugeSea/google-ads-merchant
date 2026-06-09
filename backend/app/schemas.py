@@ -48,10 +48,87 @@ class ClientCreate(BaseModel):
 class ClientOut(BaseModel):
     id: str
     name: str
-    contact_email: str
     notes: str
     onboarding_completed: bool
     created_at: datetime
+    contact_email: str
+    contact_person: str
+    phone: str
+    website: str
+    address: str
+    contract_package: str
+    contract_status: str
+    contract_start: str
+    contract_end: str
+    contract_fee: str
+    contract_billing: str
+    contract_notes: str
+
+    class Config:
+        from_attributes = True
+
+
+class ClientPatch(BaseModel):
+    """Alle Felder optional – nur gesetzte werden aktualisiert."""
+    name: str | None = None
+    notes: str | None = None
+    contact_email: str | None = None
+    contact_person: str | None = None
+    phone: str | None = None
+    website: str | None = None
+    address: str | None = None
+    contract_package: str | None = None
+    contract_status: str | None = None
+    contract_start: str | None = None
+    contract_end: str | None = None
+    contract_fee: str | None = None
+    contract_billing: str | None = None
+    contract_notes: str | None = None
+
+
+# --- To-Dos ---
+class TodoCreate(BaseModel):
+    title: str
+    description: str = ""
+    due_date: str = ""
+    status: str = "open"
+
+
+class TodoPatch(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    due_date: str | None = None
+    status: str | None = None
+
+
+class TodoOut(BaseModel):
+    id: str
+    title: str
+    description: str
+    status: str
+    due_date: str
+    created_at: datetime
+    client_id: str
+
+    class Config:
+        from_attributes = True
+
+
+# --- Verlauf / Updates ---
+class UpdateCreate(BaseModel):
+    title: str = ""
+    body: str
+    category: str = "update"
+
+
+class UpdateOut(BaseModel):
+    id: str
+    title: str
+    body: str
+    category: str
+    author_name: str
+    created_at: datetime
+    client_id: str
 
     class Config:
         from_attributes = True
@@ -82,6 +159,7 @@ class CredentialIn(BaseModel):
     client_secret: str = ""
     refresh_token: str = ""
     login_customer_id: str = ""    # optional, Ads-MCC
+    service_account_json: str = ""  # Merchant: kompletter JSON-Schlüssel
 
     def as_payload(self) -> dict:
         return {k: v for k, v in self.model_dump().items() if v}

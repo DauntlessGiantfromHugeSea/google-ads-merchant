@@ -40,7 +40,12 @@ export default function Login() {
   return (
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={submit}>
-        <div className="logo" style={{ marginBottom: 18 }}>North<b> </b>Flow</div>
+        <svg className="login-logo" width="172" height="60" viewBox="0 0 172 60" role="img" aria-label="North Flow">
+          <text x="86" y="32" textAnchor="middle" fontFamily="'Space Grotesk', sans-serif"
+                fontSize="26" fontWeight="700" fill="#ffffff">North Flow</text>
+          <path d="M28 46 C 58 58, 114 58, 144 45" stroke="#f8836b" strokeWidth="4"
+                fill="none" strokeLinecap="round" />
+        </svg>
         <h1>{mode === "login" ? "Anmelden" : "Agentur einrichten"}</h1>
         <div className="sub">
           {mode === "login" ? "Reporting-Plattform für deine Kunden." : "Lege deine Agentur und den Admin-Zugang an."}

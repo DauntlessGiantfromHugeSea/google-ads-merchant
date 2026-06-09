@@ -41,7 +41,8 @@ def run_report(db: Session, report: ReportRun) -> ReportRun:
             used_live = used_live or bool(creds)
             report.merchant_data = merchant.collect_merchant_data(merch_accs[0].external_id, creds)
         if report.type.value in ("seo", "combined") and sites:
-            report.seo_data = seo.analyze_url(sites[0].external_id)
+            # Alle Websites des Kunden crawlen (mehrere möglich).
+            report.seo_data = {"sites": [seo.analyze_site(s.external_id) for s in sites]}
 
         report.data_source = "live" if used_live else "demo"
         report.status = ReportStatus.completed

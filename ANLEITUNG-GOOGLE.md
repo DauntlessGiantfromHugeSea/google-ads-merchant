@@ -34,18 +34,25 @@ Doku: https://developers.google.com/google-ads/api/docs/get-started/introduction
 
 ---
 
-## B) Merchant Center verbinden
+## B) Merchant Center verbinden — per Service-Account (einfach)
 
-Du brauchst: **Händler-ID**, **OAuth Client-ID + Secret**, **Refresh-Token**.
+Kein OAuth-Playground, kein Refresh-Token, kein Ablauf. Du brauchst nur die
+**Service-Account-JSON** und die **Händler-ID**.
 
-1. **Händler-ID**: oben rechts im Merchant Center (= external_id des Kontos).
-2. **Content API for Shopping** in der Google Cloud Console aktivieren.
-3. **OAuth-Client** erstellen (wie oben) → Client-ID/Secret.
-4. **Refresh-Token** mit Scope `https://www.googleapis.com/auth/content` erzeugen.
-   Der Google-Account muss Zugriff auf das Merchant Center haben.
+1. **Content API for Shopping** in der Google Cloud Console aktivieren.
+2. Cloud Console → **IAM & Verwaltung → Dienstkonten → Dienstkonto erstellen**
+   (kein Rolle/keine Berechtigung nötig) → Erstellen/Fertig.
+3. Beim Dienstkonto → Reiter **Schlüssel → Schlüssel hinzufügen → JSON** →
+   Datei wird heruntergeladen.
+4. Im **Merchant Center → Einstellungen → Nutzer / Kontozugriff**: die
+   **Dienstkonto-E-Mail** (Feld `client_email` aus der JSON) als Nutzer mit
+   Zugriff (Standard/Admin) hinzufügen.
+5. **Händler-ID**: oben rechts im Merchant Center (= external_id des Kontos).
 
-Felder im Tool: Client-ID, Client-Secret, Refresh-Token.
-Doku: https://developers.google.com/shopping-content/guides/quickstart
+Feld im Tool: kompletten **Service-Account-JSON-Inhalt** einfügen + Händler-ID.
+Doku: https://developers.google.com/shopping-content/guides/how-tos/service-accounts
+
+*(Alternativ geht weiterhin OAuth mit Client-ID/Secret/Refresh-Token wie bei Ads.)*
 
 ---
 
