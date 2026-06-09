@@ -64,6 +64,7 @@ export const api = {
     return r;
   },
   me: () => request<User>("/auth/me"),
+  registrationOpen: () => request<{ open: boolean }>("/auth/registration-open"),
 
   clients: () => request<Client[]>("/clients"),
   createClient: (d: { name: string; contact_email?: string; notes?: string }) =>

@@ -12,9 +12,22 @@ from app.schemas import RegisterRequest, Token, UserOut
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+@router.get("/registration-open")
+def registration_open(db: Session = Depends(get_db)) -> dict:
+    """Selbst-Registrierung ist nur beim Erst-Setup offen (keine Agentur da)."""
+    return {"open": db.query(Organization).first() is None}
+
+
 @router.post("/register", response_model=UserOut, status_code=201)
 def register(data: RegisterRequest, db: Session = Depends(get_db)) -> User:
-    """Legt eine neue Agentur an und macht den ersten Nutzer zum Admin."""
+    """Legt EINMALIG die Agentur an und macht den ersten Nutzer zum Admin.
+    Danach ist Selbst-Registrierung gesperrt – neue Nutzer kommen nur noch
+    über die Einladung durch die Agentur (Kunden-Zugänge) hinein."""
+    if db.query(Organization).first():
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Registrierung ist geschlossen. Zugänge werden nur per Einladung vergeben.",
+        )
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "E-Mail bereits registriert")
     org = Organization(name=data.organization_name)

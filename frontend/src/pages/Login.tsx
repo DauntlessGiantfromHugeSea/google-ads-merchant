@@ -1,16 +1,24 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api";
 import { useAuth } from "../App";
 
 export default function Login() {
   const { setUser } = useAuth();
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [regOpen, setRegOpen] = useState(false);
   const [org, setOrg] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // Selbst-Registrierung nur anzeigen, solange noch keine Agentur existiert.
+  useEffect(() => {
+    api.registrationOpen()
+      .then((r) => { setRegOpen(r.open); if (r.open) setMode("register"); })
+      .catch(() => setRegOpen(false));
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,13 +72,20 @@ export default function Login() {
         </button>
         {error && <div className="error">{error}</div>}
 
-        <div className="sub" style={{ marginTop: 18, marginBottom: 0 }}>
-          {mode === "login" ? (
-            <>Noch keine Agentur? <span className="switch-link" onClick={() => setMode("register")}>Jetzt einrichten</span></>
-          ) : (
-            <>Schon registriert? <span className="switch-link" onClick={() => setMode("login")}>Anmelden</span></>
-          )}
-        </div>
+        {regOpen && (
+          <div className="sub" style={{ marginTop: 18, marginBottom: 0 }}>
+            {mode === "login" ? (
+              <>Noch keine Agentur? <span className="switch-link" onClick={() => setMode("register")}>Jetzt einrichten</span></>
+            ) : (
+              <>Schon registriert? <span className="switch-link" onClick={() => setMode("login")}>Anmelden</span></>
+            )}
+          </div>
+        )}
+        {!regOpen && (
+          <div className="sub" style={{ marginTop: 18, marginBottom: 0 }}>
+            Zugang nur per Einladung. Wende dich an deine Agentur.
+          </div>
+        )}
       </form>
     </div>
   );
