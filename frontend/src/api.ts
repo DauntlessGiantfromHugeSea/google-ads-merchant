@@ -77,6 +77,11 @@ export interface Account {
   external_id: string; label: string; client_id: string;
   credentials_configured: boolean;
 }
+export interface AgencyContact {
+  agency_contact_name: string; agency_contact_email: string;
+  agency_contact_phone: string; agency_contact_note: string;
+}
+export interface SecretInfo { id: string; views_left: number; note: string; created_by: string; expires_at: string | null; }
 export interface CredentialStatus { configured: boolean; fields_present: string[]; }
 export interface CredentialInput {
   developer_token?: string; client_id?: string; client_secret?: string;
@@ -110,6 +115,14 @@ export const api = {
   deleteLogo: () => request<void>("/branding/logo", { method: "DELETE" }),
 
   dashboard: () => request<DashboardData>("/dashboard"),
+
+  getAgencyContact: () => request<AgencyContact>("/org/contact"),
+  setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),
+
+  createSecret: (d: { ciphertext: string; iv: string; views_left: number; note: string; ttl_hours: number }) =>
+    request<{ id: string; views_left: number }>("/secrets", { method: "POST", body: JSON.stringify(d) }),
+  secretInfo: (id: string) => request<SecretInfo>(`/secrets/${id}`),
+  revealSecret: (id: string) => request<{ ciphertext: string; iv: string; views_left: number }>(`/secrets/${id}/reveal`, { method: "POST" }),
 
   team: () => request<User[]>("/team"),
   inviteMember: (d: { email: string; password: string; full_name?: string }) =>

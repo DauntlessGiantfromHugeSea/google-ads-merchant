@@ -70,6 +70,12 @@ class Organization(Base):
     logo_base64: Mapped[str] = mapped_column(Text, default="")
     logo_content_type: Mapped[str] = mapped_column(String(64), default="")
 
+    # Kontakt der Agentur (für Kunden sichtbar)
+    agency_contact_name: Mapped[str] = mapped_column(String(255), default="")
+    agency_contact_email: Mapped[str] = mapped_column(String(255), default="")
+    agency_contact_phone: Mapped[str] = mapped_column(String(64), default="")
+    agency_contact_note: Mapped[str] = mapped_column(Text, default="")
+
     users: Mapped[list[User]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     clients: Mapped[list[Client]] = relationship(back_populates="organization", cascade="all, delete-orphan")
 
@@ -243,3 +249,21 @@ class Document(Base):
 
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
     client: Mapped[Client] = relationship()
+
+
+class Secret(Base):
+    """Ende-zu-Ende verschlüsseltes Einmal-Geheimnis (Passwort-Safe).
+    Der Server speichert nur den Chiffretext – der Schlüssel liegt im Link
+    (URL-Fragment) und erreicht den Server nie. Nach `views_left` Aufrufen
+    oder Ablauf wird der Eintrag gelöscht."""
+
+    __tablename__ = "secrets"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # zufälliges Token = Link-ID
+    ciphertext: Mapped[str] = mapped_column(Text, nullable=False)
+    iv: Mapped[str] = mapped_column(String(64), default="")
+    views_left: Mapped[int] = mapped_column(default=5)
+    note: Mapped[str] = mapped_column(String(255), default="")  # unverschlüsselter Hinweis (optional)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

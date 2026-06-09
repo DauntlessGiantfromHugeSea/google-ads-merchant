@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Account, Client, ClientUpdate, Report, Todo, api } from "../api";
+import { Account, AgencyContact, Client, ClientUpdate, Report, Todo, api } from "../api";
 import { useToast } from "../toast";
 
 const initials = (n: string) => n.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
@@ -11,13 +11,17 @@ export default function Overview({ client, isAgency, onGo, onSaved }:
   const [todos, setTodos] = useState<Todo[]>([]);
   const [updates, setUpdates] = useState<ClientUpdate[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [agency, setAgency] = useState<AgencyContact | null>(null);
 
   useEffect(() => {
     api.reports(client.id).then(setReports).catch(() => {});
     api.todos(client.id).then(setTodos).catch(() => {});
     api.updates(client.id).then(setUpdates).catch(() => {});
     api.accounts(client.id).then(setAccounts).catch(() => {});
+    api.getAgencyContact().then(setAgency).catch(() => {});
   }, [client.id]);
+
+  const hasAgency = agency && (agency.agency_contact_name || agency.agency_contact_email || agency.agency_contact_phone);
 
   const openTodos = todos.filter((t) => t.status !== "done").length;
   const lastReport = reports[0];
@@ -88,6 +92,18 @@ export default function Overview({ client, isAgency, onGo, onSaved }:
           <div className="meta">{lastUpdate ? new Date(lastUpdate.created_at).toLocaleDateString("de-DE") : "noch keins"}</div>
         </div>
       </div>
+
+      {hasAgency && (
+        <div className="section" style={{ marginTop: 18 }}>
+          <h2>Kontakt zur Agentur</h2>
+          <dl className="kv">
+            {agency!.agency_contact_name && <><dt>Ansprechpartner</dt><dd>{agency!.agency_contact_name}</dd></>}
+            {agency!.agency_contact_email && <><dt>E-Mail</dt><dd><a className="switch-link" href={`mailto:${agency!.agency_contact_email}`}>{agency!.agency_contact_email}</a></dd></>}
+            {agency!.agency_contact_phone && <><dt>Telefon</dt><dd>{agency!.agency_contact_phone}</dd></>}
+            {agency!.agency_contact_note && <><dt>Hinweis</dt><dd style={{ whiteSpace: "pre-line" }}>{agency!.agency_contact_note}</dd></>}
+          </dl>
+        </div>
+      )}
     </>
   );
 }

@@ -5,6 +5,8 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ClientDetail from "./pages/ClientDetail";
 import Settings from "./pages/Settings";
+import Vault from "./pages/Vault";
+import Reveal from "./pages/Reveal";
 
 interface AuthCtx {
   user: User | null;
@@ -48,10 +50,13 @@ export default function App() {
   return (
     <Ctx.Provider value={{ user, setUser, logout, impersonating, startImpersonate, stopImpersonate }}>
       <Routes>
+        {/* Öffentlich: sicheres Geheimnis abrufen (auch ohne Login) */}
+        <Route path="/s/:id" element={<Reveal />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Shell><Dashboard /></Shell> : <Navigate to="/login" />} />
         <Route path="/clients/:id" element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />} />
         <Route path="/settings" element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />} />
+        <Route path="/vault" element={user ? <Shell><Vault /></Shell> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Ctx.Provider>
@@ -67,6 +72,7 @@ function Shell({ children }: { children: React.ReactNode }) {
         <span className="logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>North<b> </b>Flow</span>
         <div className="right">
           <span>{user?.email}</span>
+          <button className="btn btn-ghost on-dark btn-sm" onClick={() => navigate("/vault")}>Passwort-Safe</button>
           {user?.role === "agency_admin" && (
             <button className="btn btn-ghost on-dark btn-sm" onClick={() => navigate("/settings")}>Einstellungen</button>
           )}

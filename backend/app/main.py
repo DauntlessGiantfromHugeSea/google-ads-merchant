@@ -5,7 +5,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
-from app.api.routes import auth, branding, clients, dashboard, documents, reports, team
+from app.api.routes import (
+    auth, branding, clients, dashboard, documents, org, reports, secrets, team,
+)
 from app.database import Base, engine
 
 # Spalten, die bei bestehenden Installationen ggf. fehlen (create_all legt nur
@@ -19,7 +21,11 @@ _CLIENT_COLUMNS = {
     "contract_notes": "TEXT DEFAULT ''",
     "status": "VARCHAR(32) DEFAULT 'aktiv'", "tags": "TEXT DEFAULT ''",
 }
-_ORG_COLUMNS = {"logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''"}
+_ORG_COLUMNS = {
+    "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",
+    "agency_contact_name": "VARCHAR(255) DEFAULT ''", "agency_contact_email": "VARCHAR(255) DEFAULT ''",
+    "agency_contact_phone": "VARCHAR(64) DEFAULT ''", "agency_contact_note": "TEXT DEFAULT ''",
+}
 _TODO_COLUMNS = {"priority": "VARCHAR(16) DEFAULT 'normal'"}
 
 
@@ -64,6 +70,8 @@ app.include_router(branding.router)
 app.include_router(dashboard.router)
 app.include_router(documents.router)
 app.include_router(team.router)
+app.include_router(org.router)
+app.include_router(secrets.router)
 
 
 @app.get("/api/health")

@@ -45,6 +45,38 @@ function Team() {
   );
 }
 
+function AgencyContactForm() {
+  const toast = useToast();
+  const [f, setF] = useState({ agency_contact_name: "", agency_contact_email: "", agency_contact_phone: "", agency_contact_note: "" });
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { api.getAgencyContact().then(setF).catch(() => {}); }, []);
+  const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setF((p) => ({ ...p, [k]: e.target.value }));
+  const save = async () => {
+    setSaving(true);
+    try { await api.setAgencyContact(f); toast("Agentur-Kontakt gespeichert."); }
+    catch (err) { toast((err as Error).message, "err"); }
+    finally { setSaving(false); }
+  };
+  return (
+    <div className="section">
+      <h2>Agentur-Kontakt</h2>
+      <p className="muted" style={{ marginTop: 0 }}>Diese Kontaktdaten sehen deine Kunden in ihrem Bereich.</p>
+      <div className="form-light">
+        <div className="row-inline">
+          <div className="field" style={{ flex: 1 }}><label>Ansprechpartner / Agentur</label><input className="input" value={f.agency_contact_name} onChange={upd("agency_contact_name")} /></div>
+          <div className="field" style={{ flex: 1 }}><label>E-Mail</label><input className="input" value={f.agency_contact_email} onChange={upd("agency_contact_email")} /></div>
+        </div>
+        <div className="row-inline">
+          <div className="field" style={{ flex: 1 }}><label>Telefon</label><input className="input" value={f.agency_contact_phone} onChange={upd("agency_contact_phone")} /></div>
+        </div>
+        <div className="field"><label>Hinweis (z.B. Erreichbarkeit)</label><textarea className="input" value={f.agency_contact_note} onChange={upd("agency_contact_note")} /></div>
+        <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Speichere…" : "Speichern"}</button>
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const [bust, setBust] = useState(Date.now());
   const [busy, setBusy] = useState(false);
@@ -100,6 +132,7 @@ export default function Settings() {
         {error && <div className="error">{error}</div>}
       </div>
 
+      <AgencyContactForm />
       <Team />
     </>
   );

@@ -142,6 +142,37 @@ class TeamInvite(BaseModel):
     full_name: str = ""
 
 
+# --- Passwort-Safe (zero-knowledge) ---
+class SecretCreate(BaseModel):
+    ciphertext: str
+    iv: str = ""
+    views_left: int = 5
+    note: str = ""
+    ttl_hours: int = 168  # Standard: 7 Tage
+
+
+class SecretInfoOut(BaseModel):
+    id: str
+    views_left: int
+    note: str
+    created_by: str
+    expires_at: datetime | None = None
+
+
+class SecretRevealOut(BaseModel):
+    ciphertext: str
+    iv: str
+    views_left: int
+
+
+# --- Agentur-Kontakt (für Kunden sichtbar) ---
+class AgencyContact(BaseModel):
+    agency_contact_name: str = ""
+    agency_contact_email: str = ""
+    agency_contact_phone: str = ""
+    agency_contact_note: str = ""
+
+
 # --- Verlauf / Updates ---
 class UpdateCreate(BaseModel):
     title: str = ""
