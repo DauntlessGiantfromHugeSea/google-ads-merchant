@@ -66,6 +66,10 @@ class Organization(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
+    # Branding: im Tool hochgeladenes Logo (base64 + MIME-Typ).
+    logo_base64: Mapped[str] = mapped_column(Text, default="")
+    logo_content_type: Mapped[str] = mapped_column(String(64), default="")
+
     users: Mapped[list[User]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     clients: Mapped[list[Client]] = relationship(back_populates="organization", cascade="all, delete-orphan")
 

@@ -4,6 +4,7 @@ import { api, auth, User } from "./api";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import ClientDetail from "./pages/ClientDetail";
+import Settings from "./pages/Settings";
 
 interface AuthCtx {
   user: User | null;
@@ -41,6 +42,10 @@ export default function App() {
           path="/clients/:id"
           element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />}
         />
+        <Route
+          path="/settings"
+          element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />}
+        />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Ctx.Provider>
@@ -58,6 +63,9 @@ function Shell({ children }: { children: React.ReactNode }) {
         </span>
         <div className="right">
           <span>{user?.email}</span>
+          {user?.role === "agency_admin" && (
+            <button className="btn btn-ghost on-dark btn-sm" onClick={() => navigate("/settings")}>Einstellungen</button>
+          )}
           <button className="btn btn-ghost on-dark btn-sm" onClick={logout}>Abmelden</button>
         </div>
       </div>

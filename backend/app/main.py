@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
-from app.api.routes import auth, clients, reports
+from app.api.routes import auth, branding, clients, reports
 from app.database import Base, engine
 
 # Spalten, die bei bestehenden Installationen ggf. fehlen (create_all legt nur
@@ -20,15 +20,23 @@ _CLIENT_COLUMNS = {
 }
 
 
+_ORG_COLUMNS = {"logo_base64": "TEXT", "logo_content_type": "VARCHAR(64)"}
+
+
+def _ensure_columns(insp, table: str, columns: dict) -> None:
+    if table not in insp.get_table_names():
+        return
+    existing = {c["name"] for c in insp.get_columns(table)}
+    with engine.begin() as conn:
+        for name, sqltype in columns.items():
+            if name not in existing:
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sqltype} DEFAULT ''"))
+
+
 def _ensure_schema() -> None:
     insp = inspect(engine)
-    if "clients" not in insp.get_table_names():
-        return
-    existing = {c["name"] for c in insp.get_columns("clients")}
-    with engine.begin() as conn:
-        for name, sqltype in _CLIENT_COLUMNS.items():
-            if name not in existing:
-                conn.execute(text(f"ALTER TABLE clients ADD COLUMN {name} {sqltype} DEFAULT ''"))
+    _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
+    _ensure_columns(insp, "organizations", _ORG_COLUMNS)
 
 
 @asynccontextmanager
@@ -51,6 +59,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(clients.router)
 app.include_router(reports.router)
+app.include_router(branding.router)
 
 
 @app.get("/api/health")

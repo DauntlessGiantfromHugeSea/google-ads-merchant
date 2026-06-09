@@ -40,7 +40,7 @@ export default function Login() {
   return (
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={submit}>
-        <img className="login-logo" src="/logo.png" alt="North Flow" width="180"
+        <img className="login-logo" src="/api/branding/logo" alt="North Flow" width="180"
           onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/logo.svg"; }} />
         <h1>{mode === "login" ? "Anmelden" : "Agentur einrichten"}</h1>
         <div className="sub">

@@ -77,6 +77,13 @@ export const api = {
   me: () => request<User>("/auth/me"),
   registrationOpen: () => request<{ open: boolean }>("/auth/registration-open"),
 
+  uploadLogo: (file: File) => {
+    const fd = new FormData();
+    fd.set("file", file);
+    return request<void>("/branding/logo", { method: "POST", body: fd });
+  },
+  deleteLogo: () => request<void>("/branding/logo", { method: "DELETE" }),
+
   clients: () => request<Client[]>("/clients"),
   createClient: (d: { name: string; contact_email?: string; notes?: string }) =>
     request<Client>("/clients", { method: "POST", body: JSON.stringify(d) }),
