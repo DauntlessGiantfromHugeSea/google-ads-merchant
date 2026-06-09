@@ -112,23 +112,48 @@
 
   {% if report.seo_data %}
   {% set s = report.seo_data %}
-  <h2>3. SEO-Bewertung</h2>
-  <p class="sub">{{ s.url }} · {% if s.fetched_live %}live geprüft{% else %}Demo{% endif %}</p>
+  <h2>3. SEO-Analyse</h2>
+  <p class="sub">
+    {{ s.site }} ·
+    Sitemap: {% if s.sitemap_found %}gefunden{% else %}nicht gefunden (interne Links genutzt){% endif %} ·
+    {{ s.pages_analyzed }} von {{ s.pages_total }} Seiten live geprüft
+  </p>
   <div class="kpis">
     <div class="kpi"><div class="score-circle grade-{{ s.grade }}">{{ s.score }}</div><div class="l">Gesamt-Score (Note {{ s.grade }})</div></div>
     {% for cat, val in s.category_scores.items() %}
     <div class="kpi"><div class="v">{{ val }}</div><div class="l">{{ cat }}</div></div>
     {% endfor %}
   </div>
-  <h3>Kriterien</h3>
+
+  <h3>Wo etwas fehlt</h3>
+  {% if s.issue_groups %}
+    {% for g in s.issue_groups %}
+    <h4 style="margin:12px 0 4px;font-size:12px;">{{ g.label }} — {{ g.count }} Seite(n)</h4>
+    <table>
+      <tr><th>Seite</th><th>Befund</th></tr>
+      {% for it in g.examples %}
+      <tr><td>{{ it.url }}</td><td>{{ it.detail }}</td></tr>
+      {% endfor %}
+      {% if g.count > g.examples|length %}<tr><td colspan="2" class="muted">… und {{ g.count - g.examples|length }} weitere Seite(n)</td></tr>{% endif %}
+    </table>
+    {% endfor %}
+  {% else %}
+    <p class="sub">Keine kritischen Mängel auf den geprüften Seiten gefunden.</p>
+  {% endif %}
+
+  <h3>Seitenübersicht</h3>
   <table>
-    <tr><th>Kriterium</th><th>Kategorie</th><th>Status</th><th>Detail</th><th class="num">Punkte</th></tr>
-    {% for c in s.checks %}
-    <tr><td>{{ c.label }}</td><td>{{ c.category }}</td>
-      <td>{% if c.passed %}<span class="pill ok">ok</span>{% else %}<span class="pill bad">prüfen</span>{% endif %}</td>
-      <td>{{ c.detail }}</td><td class="num">{{ c.score }}/{{ c.weight }}</td></tr>
+    <tr><th>Seite</th><th class="num">Score</th><th>Note</th><th>Wichtigste Mängel</th></tr>
+    {% for p in s.pages %}
+    <tr>
+      <td>{{ p.url }}</td>
+      <td class="num">{% if p.score is not none %}{{ p.score }}{% else %}–{% endif %}</td>
+      <td>{{ p.grade }}</td>
+      <td>{{ p.issues | join('; ') }}</td>
+    </tr>
     {% endfor %}
   </table>
+
   <div class="recs"><strong>Priorisierte Empfehlungen</strong><ul>{% for r in s.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
   {% endif %}
 </body>

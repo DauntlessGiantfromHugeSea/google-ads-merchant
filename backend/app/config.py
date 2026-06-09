@@ -28,6 +28,9 @@ class Settings(BaseSettings):
 
     pagespeed_api_key: str = ""
 
+    # Max. Anzahl Unterseiten, die der SEO-Crawler pro Lauf prüft.
+    seo_max_pages: int = 40
+
     # Briefpapier: Pfad zur eigenen Vorlage (PDF empfohlen, auch PNG/JPG/SVG).
     # Leer = automatische Suche nach templates/letterhead.{pdf,png,jpg,svg}.
     letterhead_path: str = ""
