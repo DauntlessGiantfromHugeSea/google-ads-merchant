@@ -98,7 +98,7 @@ h1, h2, h3, h4 { font-family: var(--display); font-weight: 500; letter-spacing: 
 .auth-card .sub { color: var(--muted-light); font-size: 14px; margin-bottom: 22px; }
 .logo { font-family: var(--display); font-weight: 700; font-size: 20px; }
 .logo b { color: var(--coral); }
-.login-logo { display: block; margin: 0 auto 18px; max-height: 64px; }
+.login-logo { display: block; margin: 0 auto 18px; width: auto; height: auto; max-width: min(220px, 72%); max-height: 72px; object-fit: contain; }
 
 /* Felder */
 .field { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
