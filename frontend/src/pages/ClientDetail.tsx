@@ -8,21 +8,31 @@ import Contract from "../sections/Contract";
 import Contact from "../sections/Contact";
 import Todos from "../sections/Todos";
 import Updates from "../sections/Updates";
+import Documents from "../sections/Documents";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
   { key: "reportings", label: "Reportings" },
   { key: "contract", label: "Vertragsdaten" },
+  { key: "documents", label: "Dokumente" },
   { key: "todos", label: "To-Dos" },
   { key: "contact", label: "Kontakt" },
   { key: "updates", label: "Verlauf" },
 ];
+const STATUS = ["lead", "aktiv", "pausiert", "beendet"];
 
 export default function ClientDetail() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, impersonating, startImpersonate } = useAuth();
   const isAgency = user?.role !== "client_user";
+
+  const viewAsClient = async () => {
+    const r = await api.impersonate(id);
+    await startImpersonate(r.access_token);
+    setSection("overview");
+  };
+  const changeStatus = async (status: string) => setClient(await api.updateClient(id, { status }));
 
   const [client, setClient] = useState<Client | null>(null);
   const [section, setSection] = useState("overview");
@@ -53,6 +63,18 @@ export default function ClientDetail() {
   return (
     <>
       <span className="back-link" onClick={() => navigate("/")}>← Alle Kunden</span>
+      {isAgency && !impersonating && (
+        <div className="row-inline" style={{ justifyContent: "space-between", marginBottom: 12, alignItems: "center" }}>
+          <div className="row-inline" style={{ alignItems: "center" }}>
+            <span className="muted" style={{ fontSize: 13 }}>Status:</span>
+            <select className="select form-light" style={{ maxWidth: 150, padding: "7px 10px" }}
+              value={client.status || "aktiv"} onChange={(e) => changeStatus(e.target.value)}>
+              {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <button className="btn btn-ghost" onClick={viewAsClient}>👁️ Als Kunde ansehen</button>
+        </div>
+      )}
       <div className="client-layout">
         <nav className="client-nav">
           <div className="client-name">{client.name}</div>
@@ -74,6 +96,9 @@ export default function ClientDetail() {
           )}
           {section === "contract" && (
             <Contract client={client} isAgency={isAgency} onSaved={setClient} />
+          )}
+          {section === "documents" && (
+            <Documents clientId={id} isAgency={isAgency} />
           )}
           {section === "todos" && (
             <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />

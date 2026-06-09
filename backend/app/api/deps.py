@@ -21,6 +21,19 @@ def get_current_user(
     user = db.get(User, payload["sub"])
     if not user or not user.is_active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nutzer nicht gefunden/inaktiv")
+
+    # Impersonation: Agentur sieht die Kundenansicht. Der echte Nutzer muss
+    # Agentur sein und der Kunde zur eigenen Organisation gehören. Das User-
+    # Objekt wird aus der Session gelöst und nur in-memory umgeschaltet
+    # (keine DB-Änderung).
+    imp = payload.get("imp_client")
+    if imp and user.role != UserRole.client_user:
+        from app.models import Client  # noqa: PLC0415
+        client = db.get(Client, imp)
+        if client and client.organization_id == user.organization_id:
+            db.expunge(user)
+            user.role = UserRole.client_user
+            user.client_id = imp
     return user
 
 

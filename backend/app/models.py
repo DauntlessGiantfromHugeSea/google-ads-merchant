@@ -101,6 +101,10 @@ class Client(Base):
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
+    # Status & Tags
+    status: Mapped[str] = mapped_column(String(32), default="aktiv")  # lead/aktiv/pausiert/beendet
+    tags: Mapped[str] = mapped_column(Text, default="")              # kommagetrennt
+
     # Kontaktdaten
     contact_email: Mapped[str] = mapped_column(String(255), default="")
     contact_person: Mapped[str] = mapped_column(String(255), default="")
@@ -200,6 +204,7 @@ class Todo(Base):
     title: Mapped[str] = mapped_column(String(512), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(32), default="open")  # open/in_progress/done
+    priority: Mapped[str] = mapped_column(String(16), default="normal")  # low/normal/high
     due_date: Mapped[str] = mapped_column(String(10), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
@@ -221,3 +226,20 @@ class ClientUpdate(Base):
 
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
     client: Mapped[Client] = relationship(back_populates="updates")
+
+
+class Document(Base):
+    """Datei zu einem Kunden (Vertrag, Briefing …), in der DB gespeichert."""
+
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    filename: Mapped[str] = mapped_column(String(512), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(128), default="application/octet-stream")
+    size: Mapped[int] = mapped_column(default=0)
+    data_base64: Mapped[str] = mapped_column(Text, default="")
+    uploaded_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship()

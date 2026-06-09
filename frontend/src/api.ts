@@ -1,5 +1,6 @@
 // Schmaler API-Client. Token im localStorage; alle Aufrufe gehen an /api.
 const TOKEN_KEY = "reporting_token";
+const REAL_TOKEN_KEY = "reporting_real_token";
 
 export const auth = {
   get token() {
@@ -10,6 +11,19 @@ export const auth = {
   },
   clear() {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REAL_TOKEN_KEY);
+  },
+  get isImpersonating() {
+    return !!localStorage.getItem(REAL_TOKEN_KEY);
+  },
+  startImpersonation(impToken: string) {
+    if (!this.isImpersonating) localStorage.setItem(REAL_TOKEN_KEY, this.token || "");
+    localStorage.setItem(TOKEN_KEY, impToken);
+  },
+  stopImpersonation() {
+    const real = localStorage.getItem(REAL_TOKEN_KEY);
+    if (real) localStorage.setItem(TOKEN_KEY, real);
+    localStorage.removeItem(REAL_TOKEN_KEY);
   },
 };
 
@@ -35,13 +49,24 @@ export interface User {
 export interface Client {
   id: string; name: string; notes: string;
   onboarding_completed: boolean; created_at: string;
+  status: string; tags: string;
   contact_email: string; contact_person: string; phone: string; website: string; address: string;
   contract_package: string; contract_status: string; contract_start: string; contract_end: string;
   contract_fee: string; contract_billing: string; contract_notes: string;
 }
 export interface Todo {
-  id: string; title: string; description: string; status: string;
+  id: string; title: string; description: string; status: string; priority: string;
   due_date: string; created_at: string; client_id: string;
+}
+export interface Doc {
+  id: string; filename: string; content_type: string; size: number;
+  uploaded_by: string; created_at: string; client_id: string;
+}
+export interface DashboardData {
+  clients_total: number; open_todos: number; reports_total: number;
+  status_counts: Record<string, number>;
+  packages: { package: string; count: number; clients: { id: string; name: string; fee: string }[] }[];
+  recent_updates: { client_id: string; client_name: string; title: string; body: string; category: string; author_name: string; created_at: string }[];
 }
 export interface ClientUpdate {
   id: string; title: string; body: string; category: string;
@@ -84,6 +109,32 @@ export const api = {
   },
   deleteLogo: () => request<void>("/branding/logo", { method: "DELETE" }),
 
+  dashboard: () => request<DashboardData>("/dashboard"),
+
+  team: () => request<User[]>("/team"),
+  inviteMember: (d: { email: string; password: string; full_name?: string }) =>
+    request<User>("/team/invite", { method: "POST", body: JSON.stringify(d) }),
+  removeMember: (uid: string) => request<void>(`/team/${uid}`, { method: "DELETE" }),
+
+  documents: (clientId: string) => request<Doc[]>(`/clients/${clientId}/documents`),
+  uploadDocument: (clientId: string, file: File) => {
+    const fd = new FormData();
+    fd.set("file", file);
+    return request<Doc>(`/clients/${clientId}/documents`, { method: "POST", body: fd });
+  },
+  deleteDocument: (clientId: string, docId: string) =>
+    request<void>(`/clients/${clientId}/documents/${docId}`, { method: "DELETE" }),
+  async downloadDocument(clientId: string, docId: string, filename: string) {
+    const res = await fetch(`/api/clients/${clientId}/documents/${docId}/download`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  },
+
   clients: () => request<Client[]>("/clients"),
   createClient: (d: { name: string; contact_email?: string; notes?: string }) =>
     request<Client>("/clients", { method: "POST", body: JSON.stringify(d) }),
@@ -92,9 +143,11 @@ export const api = {
     request<Client>(`/clients/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   completeOnboarding: (id: string) =>
     request<Client>(`/clients/${id}/complete-onboarding`, { method: "POST" }),
+  impersonate: (id: string) =>
+    request<{ access_token: string }>(`/clients/${id}/impersonate`, { method: "POST" }),
 
   todos: (id: string) => request<Todo[]>(`/clients/${id}/todos`),
-  createTodo: (id: string, d: { title: string; description?: string; due_date?: string }) =>
+  createTodo: (id: string, d: { title: string; description?: string; due_date?: string; priority?: string }) =>
     request<Todo>(`/clients/${id}/todos`, { method: "POST", body: JSON.stringify(d) }),
   updateTodo: (id: string, todoId: string, d: Partial<Todo>) =>
     request<Todo>(`/clients/${id}/todos/${todoId}`, { method: "PATCH", body: JSON.stringify(d) }),

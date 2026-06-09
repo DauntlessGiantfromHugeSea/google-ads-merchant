@@ -51,6 +51,8 @@ class ClientOut(BaseModel):
     notes: str
     onboarding_completed: bool
     created_at: datetime
+    status: str
+    tags: str
     contact_email: str
     contact_person: str
     phone: str
@@ -72,6 +74,8 @@ class ClientPatch(BaseModel):
     """Alle Felder optional – nur gesetzte werden aktualisiert."""
     name: str | None = None
     notes: str | None = None
+    status: str | None = None
+    tags: str | None = None
     contact_email: str | None = None
     contact_person: str | None = None
     phone: str | None = None
@@ -92,6 +96,7 @@ class TodoCreate(BaseModel):
     description: str = ""
     due_date: str = ""
     status: str = "open"
+    priority: str = "normal"
 
 
 class TodoPatch(BaseModel):
@@ -99,6 +104,7 @@ class TodoPatch(BaseModel):
     description: str | None = None
     due_date: str | None = None
     status: str | None = None
+    priority: str | None = None
 
 
 class TodoOut(BaseModel):
@@ -106,12 +112,34 @@ class TodoOut(BaseModel):
     title: str
     description: str
     status: str
+    priority: str
     due_date: str
     created_at: datetime
     client_id: str
 
     class Config:
         from_attributes = True
+
+
+# --- Dokumente ---
+class DocumentOut(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    size: int
+    uploaded_by: str
+    created_at: datetime
+    client_id: str
+
+    class Config:
+        from_attributes = True
+
+
+# --- Team ---
+class TeamInvite(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: str = ""
 
 
 # --- Verlauf / Updates ---

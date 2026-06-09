@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.core.crypto import encrypt_json
-from app.core.security import hash_password
+from app.core.security import create_access_token, hash_password
 from app.database import get_db
 from app.models import (
     Account,
@@ -24,6 +24,7 @@ from app.schemas import (
     CredentialIn,
     CredentialStatus,
     InviteClientUser,
+    Token,
     TodoCreate,
     TodoOut,
     TodoPatch,
@@ -62,6 +63,15 @@ def create_client(
 @router.get("/{client_id}", response_model=ClientOut)
 def get_client(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return get_scoped_client(client_id, user, db)
+
+
+@router.post("/{client_id}/impersonate", response_model=Token)
+def impersonate(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Liefert ein Token, mit dem die Agentur die Kundenansicht sieht (nur lesend,
+    nur dieser Kunde). Funktioniert auch ohne separaten Kunden-Login."""
+    get_scoped_client(client_id, user, db)
+    token = create_access_token(user.id, {"imp_client": client_id, "role": "client_user"})
+    return Token(access_token=token)
 
 
 @router.patch("/{client_id}", response_model=ClientOut)

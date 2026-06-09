@@ -10,42 +10,48 @@ interface AuthCtx {
   user: User | null;
   setUser: (u: User | null) => void;
   logout: () => void;
+  impersonating: boolean;
+  startImpersonate: (token: string) => Promise<void>;
+  stopImpersonate: () => Promise<void>;
 }
-const Ctx = createContext<AuthCtx>({ user: null, setUser: () => {}, logout: () => {} });
+const Ctx = createContext<AuthCtx>({
+  user: null, setUser: () => {}, logout: () => {},
+  impersonating: false, startImpersonate: async () => {}, stopImpersonate: async () => {},
+});
 export const useAuth = () => useContext(Ctx);
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [impersonating, setImpersonating] = useState(auth.isImpersonating);
 
   useEffect(() => {
-    if (!auth.token) {
-      setLoading(false);
-      return;
-    }
+    if (!auth.token) { setLoading(false); return; }
     api.me().then(setUser).catch(() => auth.clear()).finally(() => setLoading(false));
   }, []);
 
-  const logout = () => {
-    auth.clear();
-    setUser(null);
+  const logout = () => { auth.clear(); setUser(null); setImpersonating(false); };
+
+  const startImpersonate = async (token: string) => {
+    auth.startImpersonation(token);
+    setImpersonating(true);
+    setUser(await api.me());
+  };
+  const stopImpersonate = async () => {
+    auth.stopImpersonation();
+    setImpersonating(false);
+    setUser(await api.me());
   };
 
   if (loading) return null;
 
   return (
-    <Ctx.Provider value={{ user, setUser, logout }}>
+    <Ctx.Provider value={{ user, setUser, logout, impersonating, startImpersonate, stopImpersonate }}>
       <Routes>
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Shell><Dashboard /></Shell> : <Navigate to="/login" />} />
-        <Route
-          path="/clients/:id"
-          element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />}
-        />
-        <Route
-          path="/settings"
-          element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />}
-        />
+        <Route path="/clients/:id" element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />} />
+        <Route path="/settings" element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Ctx.Provider>
@@ -53,14 +59,12 @@ export default function App() {
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, logout, impersonating, stopImpersonate } = useAuth();
   const navigate = useNavigate();
   return (
     <>
       <div className="topbar">
-        <span className="logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          North<b> </b>Flow
-        </span>
+        <span className="logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>North<b> </b>Flow</span>
         <div className="right">
           <span>{user?.email}</span>
           {user?.role === "agency_admin" && (
@@ -69,6 +73,18 @@ function Shell({ children }: { children: React.ReactNode }) {
           <button className="btn btn-ghost on-dark btn-sm" onClick={logout}>Abmelden</button>
         </div>
       </div>
+      {impersonating && (
+        <div style={{
+          background: "linear-gradient(120deg, rgba(20,184,166,0.9), rgba(124,58,237,0.9))",
+          color: "#fff", padding: "9px 24px", display: "flex", alignItems: "center",
+          justifyContent: "center", gap: 14, fontSize: 14,
+        }}>
+          👁️ Du siehst gerade die <strong>Kundenansicht</strong>.
+          <button className="btn btn-ghost on-dark btn-sm" onClick={() => { stopImpersonate().then(() => navigate("/")); }}>
+            Zurück zur Agentur
+          </button>
+        </div>
+      )}
       <div className="container">{children}</div>
     </>
   );
