@@ -70,9 +70,26 @@ class AccountOut(BaseModel):
     external_id: str
     label: str
     client_id: str
+    credentials_configured: bool = False
 
     class Config:
         from_attributes = True
+
+
+class CredentialIn(BaseModel):
+    developer_token: str = ""      # nur Google Ads
+    client_id: str = ""
+    client_secret: str = ""
+    refresh_token: str = ""
+    login_customer_id: str = ""    # optional, Ads-MCC
+
+    def as_payload(self) -> dict:
+        return {k: v for k, v in self.model_dump().items() if v}
+
+
+class CredentialStatus(BaseModel):
+    configured: bool
+    fields_present: list[str] = []
 
 
 # --- Client user invitation ---

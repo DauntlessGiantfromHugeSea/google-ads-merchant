@@ -46,17 +46,27 @@ Seitenränder des Inhalts: oben 4 cm, rechts 5 cm, unten 3,2 cm, links 2,8 cm
 
 ## Daten: Demo vs. Live
 
-Standardmäßig `DATA_SOURCE_MODE=demo` – das System läuft sofort mit
-realistischen Demo-Daten. Für Live-Daten die Google-Credentials in `.env`
-eintragen und `DATA_SOURCE_MODE=live` setzen (echte API-Adapter: Ausbaustufe).
+Ohne hinterlegte Zugangsdaten laufen Reports mit realistischen **Demo-Daten**.
+Die echten Google-Zugangsdaten werden **pro Kunde im Tool** hinterlegt
+(verschlüsselt) – Schritt-für-Schritt in [ANLEITUNG-GOOGLE.md](ANLEITUNG-GOOGLE.md).
+Schlägt ein Live-Abruf fehl, fällt das System automatisch auf Demo zurück.
+
+## Online stellen (north-flow.de)
+
+Schlüsselfertiges Deployment mit automatischem HTTPS (Caddy):
+siehe [DEPLOY.md](DEPLOY.md).
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build
+```
 
 ## Status
 
 | Bereich | Stand |
 |---|---|
 | Backend, Auth, Mandantentrennung | ✅ |
-| Ads / Merchant / SEO (Demo-Adapter) | ✅ |
+| Ads / Merchant / SEO (Demo + Live-Adapter) | ✅ |
+| Google-API pro Kunde verbinden (verschlüsselt) + Anleitung | ✅ |
 | PDF-Reports auf Briefpapier (flüchtig) | ✅ |
 | Frontend (Login, Kunden, Onboarding, Reports) | ✅ |
-| Echte Google-API-Adapter | ⬜ geplant |
-| Celery-Scheduling (geplante Reports) | ⬜ Grundgerüst vorhanden |
+| Produktions-Deployment (Docker + Caddy/HTTPS) | ✅ |
+| Celery-Scheduling (automatische Reports) | ⬜ Grundgerüst vorhanden |

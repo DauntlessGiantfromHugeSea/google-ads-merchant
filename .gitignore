@@ -12,7 +12,9 @@ venv/
 # Env / secrets
 .env
 *.env
+.env.prod
 !.env.example
+!.env.prod.example
 secrets/
 google-ads.yaml
 

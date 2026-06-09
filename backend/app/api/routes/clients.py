@@ -3,14 +3,17 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
+from app.core.crypto import encrypt_json
 from app.core.security import hash_password
 from app.database import get_db
-from app.models import Account, Client, User, UserRole
+from app.models import Account, Client, GoogleCredential, User, UserRole
 from app.schemas import (
     AccountCreate,
     AccountOut,
     ClientCreate,
     ClientOut,
+    CredentialIn,
+    CredentialStatus,
     InviteClientUser,
     UserOut,
 )
@@ -68,6 +71,57 @@ def add_account(
     db.commit()
     db.refresh(account)
     return account
+
+
+def _scoped_account(client_id: str, account_id: str, user: User, db: Session) -> Account:
+    get_scoped_client(client_id, user, db)
+    account = db.get(Account, account_id)
+    if not account or account.client_id != client_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Konto nicht gefunden")
+    return account
+
+
+@router.put("/{client_id}/accounts/{account_id}/credentials", response_model=CredentialStatus)
+def set_credentials(
+    client_id: str,
+    account_id: str,
+    data: CredentialIn,
+    user: User = Depends(require_agency),
+    db: Session = Depends(get_db),
+):
+    """Hinterlegt die Google-API-Zugangsdaten dieses Kontos (verschlüsselt).
+    Manuell pro Kunde – Secrets werden nie wieder ausgegeben."""
+    account = _scoped_account(client_id, account_id, user, db)
+    payload = data.as_payload()
+    cred = account.credential or GoogleCredential(account_id=account.id)
+    cred.encrypted_payload = encrypt_json(payload)
+    db.add(cred)
+    db.commit()
+    return CredentialStatus(configured=True, fields_present=sorted(payload.keys()))
+
+
+@router.get("/{client_id}/accounts/{account_id}/credentials", response_model=CredentialStatus)
+def credential_status(
+    client_id: str, account_id: str,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    account = _scoped_account(client_id, account_id, user, db)
+    if account.credential and account.credential.encrypted_payload:
+        from app.core.crypto import decrypt_json
+        fields = sorted(decrypt_json(account.credential.encrypted_payload).keys())
+        return CredentialStatus(configured=True, fields_present=fields)
+    return CredentialStatus(configured=False)
+
+
+@router.delete("/{client_id}/accounts/{account_id}/credentials", status_code=204)
+def delete_credentials(
+    client_id: str, account_id: str,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    account = _scoped_account(client_id, account_id, user, db)
+    if account.credential:
+        db.delete(account.credential)
+        db.commit()
 
 
 @router.post("/{client_id}/invite", response_model=UserOut, status_code=201)

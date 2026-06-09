@@ -1,0 +1,12 @@
+# Automatisches HTTPS (Let's Encrypt) für die Domain.
+# DOMAIN wird aus der Umgebung gezogen (siehe docker-compose.prod.yml).
+{$DOMAIN} {
+	encode gzip
+
+	# API ans Backend
+	@api path /api/*
+	reverse_proxy @api backend:8000
+
+	# alles andere ans Frontend (statisches Build via nginx)
+	reverse_proxy frontend:80
+}

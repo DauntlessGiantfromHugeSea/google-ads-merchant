@@ -124,6 +124,10 @@ class Account(Base):
         back_populates="account", uselist=False, cascade="all, delete-orphan"
     )
 
+    @property
+    def credentials_configured(self) -> bool:
+        return bool(self.credential and self.credential.encrypted_payload)
+
 
 class GoogleCredential(Base):
     """Verschlüsselt gespeicherte OAuth-Tokens je Konto."""
@@ -134,9 +138,10 @@ class GoogleCredential(Base):
     account_id: Mapped[str] = mapped_column(ForeignKey("accounts.id"), unique=True)
     account: Mapped[Account] = relationship(back_populates="credential")
 
-    # Fernet-verschlüsselt (siehe core/crypto.py)
-    encrypted_refresh_token: Mapped[str] = mapped_column(Text, default="")
-    scopes: Mapped[str] = mapped_column(Text, default="")
+    # Fernet-verschlüsselter JSON-Blob mit den API-Zugangsdaten dieses Kontos
+    # (z.B. developer_token, client_id, client_secret, refresh_token,
+    # login_customer_id). Wird pro Kunde manuell hinterlegt.
+    encrypted_payload: Mapped[str] = mapped_column(Text, default="")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
 

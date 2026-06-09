@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Account, Client, Report, api } from "../api";
 import { useAuth } from "../App";
+import GoogleConnect from "../components/GoogleConnect";
 
 const ACCOUNT_LABELS: Record<string, string> = {
   google_ads: "Google Ads (Customer-ID)",
@@ -156,8 +157,11 @@ export default function ClientDetail() {
       <div className="section form-light">
         <h2>Verknüpfte Konten</h2>
         {accounts.map((a) => (
-          <div key={a.id} className="list-row">
+          <div key={a.id} className="list-row" style={{ display: "block" }}>
             <div><strong>{ACCOUNT_LABELS[a.type] || a.type}</strong> <span className="muted">· {a.external_id}</span></div>
+            {isAgency && (
+              <GoogleConnect clientId={id} account={a} onChange={() => api.accounts(id).then(setAccounts)} />
+            )}
           </div>
         ))}
         {isAgency && (

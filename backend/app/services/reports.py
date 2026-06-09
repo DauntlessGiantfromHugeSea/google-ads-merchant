@@ -6,16 +6,19 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
+from app.core.crypto import decrypt_json
 from app.models import Account, AccountType, Client, ReportRun, ReportStatus
 from app.services import ads, merchant, seo
 
-settings = get_settings()
+
+def _creds(account: Account) -> dict | None:
+    if account.credential and account.credential.encrypted_payload:
+        return decrypt_json(account.credential.encrypted_payload)
+    return None
 
 
 def run_report(db: Session, report: ReportRun) -> ReportRun:
     report.status = ReportStatus.running
-    report.data_source = "live" if settings.use_live_data else "demo"
     db.commit()
 
     try:
@@ -26,15 +29,21 @@ def run_report(db: Session, report: ReportRun) -> ReportRun:
         merch_accs = [a for a in accounts if a.type == AccountType.merchant_center]
         sites = [a for a in accounts if a.type == AccountType.website]
 
+        used_live = False
         if report.type.value in ("ads", "combined") and ads_accs:
+            creds = _creds(ads_accs[0])
+            used_live = used_live or bool(creds)
             report.ads_data = ads.collect_ads_data(
-                ads_accs[0].external_id, report.period_start, report.period_end
+                ads_accs[0].external_id, report.period_start, report.period_end, creds
             )
         if report.type.value in ("merchant", "combined") and merch_accs:
-            report.merchant_data = merchant.collect_merchant_data(merch_accs[0].external_id)
+            creds = _creds(merch_accs[0])
+            used_live = used_live or bool(creds)
+            report.merchant_data = merchant.collect_merchant_data(merch_accs[0].external_id, creds)
         if report.type.value in ("seo", "combined") and sites:
             report.seo_data = seo.analyze_url(sites[0].external_id)
 
+        report.data_source = "live" if used_live else "demo"
         report.status = ReportStatus.completed
         report.completed_at = datetime.now(timezone.utc)
     except Exception as exc:  # pragma: no cover

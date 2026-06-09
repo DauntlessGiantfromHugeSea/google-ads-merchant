@@ -39,6 +39,12 @@ export interface Client {
 export interface Account {
   id: string; type: "google_ads" | "merchant_center" | "website";
   external_id: string; label: string; client_id: string;
+  credentials_configured: boolean;
+}
+export interface CredentialStatus { configured: boolean; fields_present: string[]; }
+export interface CredentialInput {
+  developer_token?: string; client_id?: string; client_secret?: string;
+  refresh_token?: string; login_customer_id?: string;
 }
 export interface Report {
   id: string; type: string; status: string; period_start: string;
@@ -71,6 +77,13 @@ export const api = {
     request<Account>(`/clients/${clientId}/accounts`, { method: "POST", body: JSON.stringify(d) }),
   invite: (clientId: string, d: { email: string; password: string; full_name?: string }) =>
     request<User>(`/clients/${clientId}/invite`, { method: "POST", body: JSON.stringify(d) }),
+
+  setCredentials: (clientId: string, accountId: string, d: CredentialInput) =>
+    request<CredentialStatus>(`/clients/${clientId}/accounts/${accountId}/credentials`, {
+      method: "PUT", body: JSON.stringify(d),
+    }),
+  deleteCredentials: (clientId: string, accountId: string) =>
+    request<void>(`/clients/${clientId}/accounts/${accountId}/credentials`, { method: "DELETE" }),
 
   reports: (clientId: string) => request<Report[]>(`/clients/${clientId}/reports`),
   createReport: (clientId: string, d: { type: string; period_start: string; period_end: string }) =>

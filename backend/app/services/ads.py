@@ -98,8 +98,71 @@ def _demo_ads(external_id: str, period_start: str, period_end: str) -> dict:
     }
 
 
-def collect_ads_data(external_id: str, period_start: str, period_end: str) -> dict:
-    if settings.use_live_data:
-        # TODO (Schritt 7): echter google-ads-Adapter. Bis dahin Demo-Fallback.
-        pass
+def _live_ads(external_id: str, period_start: str, period_end: str, creds: dict) -> dict:
+    """Echte Google-Ads-API (best effort). Nutzt die pro Kunde hinterlegten
+    Zugangsdaten. google-ads wird lazy importiert."""
+    from google.ads.googleads.client import GoogleAdsClient  # noqa: PLC0415
+
+    cfg = {
+        "developer_token": creds["developer_token"],
+        "client_id": creds["client_id"],
+        "client_secret": creds["client_secret"],
+        "refresh_token": creds["refresh_token"],
+        "use_proto_plus": True,
+    }
+    if creds.get("login_customer_id"):
+        cfg["login_customer_id"] = str(creds["login_customer_id"]).replace("-", "")
+    client = GoogleAdsClient.load_from_dict(cfg)
+    customer_id = external_id.replace("-", "")
+    ga_service = client.get_service("GoogleAdsService")
+
+    query = f"""
+      SELECT campaign.name, metrics.impressions, metrics.clicks, metrics.cost_micros,
+             metrics.conversions, metrics.conversions_value, metrics.ctr,
+             metrics.average_cpc
+      FROM campaign
+      WHERE segments.date BETWEEN '{period_start}' AND '{period_end}'
+      ORDER BY metrics.cost_micros DESC
+    """
+    campaigns, tot = [], {"impr": 0, "clk": 0, "cost": 0.0, "conv": 0.0, "val": 0.0}
+    for row in ga_service.search(customer_id=customer_id, query=query):
+        m = row.metrics
+        cost = m.cost_micros / 1_000_000
+        campaigns.append({
+            "name": row.campaign.name,
+            "impressions": m.impressions, "clicks": m.clicks, "cost": round(cost, 2),
+            "conversions": round(m.conversions, 1), "ctr": round(m.ctr * 100, 2),
+            "cpc": round(m.average_cpc / 1_000_000, 2),
+            "roas": round(m.conversions_value / cost, 2) if cost else 0.0,
+        })
+        tot["impr"] += m.impressions; tot["clk"] += m.clicks; tot["cost"] += cost
+        tot["conv"] += m.conversions; tot["val"] += m.conversions_value
+
+    ctr = round(tot["clk"] / tot["impr"] * 100, 2) if tot["impr"] else 0.0
+    cpc = round(tot["cost"] / tot["clk"], 2) if tot["clk"] else 0.0
+    cpconv = round(tot["cost"] / tot["conv"], 2) if tot["conv"] else 0.0
+    return {
+        "account": external_id,
+        "summary": {
+            "impressions": tot["impr"], "clicks": tot["clk"], "cost": round(tot["cost"], 2),
+            "conversions": round(tot["conv"], 1), "conversion_value": round(tot["val"], 2),
+            "ctr": ctr, "cpc": cpc, "cost_per_conversion": cpconv,
+            "roas": round(tot["val"] / tot["cost"], 2) if tot["cost"] else 0.0,
+        },
+        "campaigns": campaigns,
+        "search_terms": [],
+        "weak_keywords": [],
+        "recommendations": ["Live-Daten aus der Google Ads API."],
+    }
+
+
+def collect_ads_data(external_id: str, period_start: str, period_end: str, creds: dict | None = None) -> dict:
+    """Liefert Ads-Auswertung. Mit gültigen Credentials live, sonst Demo."""
+    if creds and creds.get("developer_token") and creds.get("refresh_token"):
+        try:
+            return _live_ads(external_id, period_start, period_end, creds)
+        except Exception as exc:  # pragma: no cover – Demo-Fallback bei API-Fehler
+            data = _demo_ads(external_id, period_start, period_end)
+            data["live_error"] = str(exc)
+            return data
     return _demo_ads(external_id, period_start, period_end)

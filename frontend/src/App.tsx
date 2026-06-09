@@ -54,7 +54,7 @@ function Shell({ children }: { children: React.ReactNode }) {
     <>
       <div className="topbar">
         <span className="logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          North<b>·</b>Lab Reporting
+          North<b> </b>Flow
         </span>
         <div className="right">
           <span>{user?.email}</span>

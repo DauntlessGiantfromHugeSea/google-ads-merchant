@@ -6,6 +6,7 @@ sonst sind gespeicherte Tokens nach Neustart nicht mehr entschlüsselbar.
 """
 import base64
 import hashlib
+import json
 
 from cryptography.fernet import Fernet
 
@@ -33,3 +34,12 @@ def decrypt(token: str) -> str:
     if not token:
         return ""
     return _get_fernet().decrypt(token.encode()).decode()
+
+
+def encrypt_json(data: dict) -> str:
+    return encrypt(json.dumps(data))
+
+
+def decrypt_json(token: str) -> dict:
+    raw = decrypt(token)
+    return json.loads(raw) if raw else {}

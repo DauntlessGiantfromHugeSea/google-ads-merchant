@@ -88,7 +88,60 @@ def _demo_merchant(external_id: str) -> dict:
     }
 
 
-def collect_merchant_data(external_id: str) -> dict:
-    if settings.use_live_data:
-        pass  # TODO (Schritt 7): Content-API-Adapter
+def _live_merchant(external_id: str, creds: dict) -> dict:
+    """Content API for Shopping (best effort). Zählt Produktstatus/Disapprovals."""
+    from google.oauth2.credentials import Credentials  # noqa: PLC0415
+    from googleapiclient.discovery import build  # noqa: PLC0415
+
+    credentials = Credentials(
+        token=None,
+        refresh_token=creds["refresh_token"],
+        client_id=creds["client_id"],
+        client_secret=creds["client_secret"],
+        token_uri="https://oauth2.googleapis.com/token",
+    )
+    service = build("content", "v2.1", credentials=credentials, cache_discovery=False)
+
+    total = approved = disapproved = warnings = 0
+    reasons: dict[str, int] = {}
+    request = service.productstatuses().list(merchantId=external_id, maxResults=250)
+    while request is not None:
+        resp = request.execute()
+        for status in resp.get("resources", []):
+            total += 1
+            dest = (status.get("destinationStatuses") or [{}])[0].get("status", "")
+            if dest == "disapproved":
+                disapproved += 1
+            elif dest == "approved":
+                approved += 1
+            for issue in status.get("itemLevelIssues", []):
+                if issue.get("servability") == "disapproved":
+                    reasons[issue.get("description", "Unbekannt")] = reasons.get(issue.get("description", "Unbekannt"), 0) + 1
+                else:
+                    warnings += 1
+        request = service.productstatuses().list_next(request, resp)
+
+    return {
+        "account": external_id,
+        "summary": {
+            "total_products": total, "approved": approved, "disapproved": disapproved,
+            "warnings": warnings, "out_of_stock": 0, "price_mismatches": 0,
+        },
+        "disapproval_reasons": sorted(
+            [{"reason": k, "count": v} for k, v in reasons.items()],
+            key=lambda x: x["count"], reverse=True),
+        "feed_quality": {"missing_gtin": 0, "missing_description": 0, "missing_image": 0, "short_title": 0},
+        "top_products": [],
+        "recommendations": ["Live-Daten aus der Content API."],
+    }
+
+
+def collect_merchant_data(external_id: str, creds: dict | None = None) -> dict:
+    if creds and creds.get("refresh_token"):
+        try:
+            return _live_merchant(external_id, creds)
+        except Exception as exc:  # pragma: no cover – Demo-Fallback bei API-Fehler
+            data = _demo_merchant(external_id)
+            data["live_error"] = str(exc)
+            return data
     return _demo_merchant(external_id)

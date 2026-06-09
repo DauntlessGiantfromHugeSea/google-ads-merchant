@@ -32,7 +32,7 @@ export default function Login() {
   return (
     <div className="auth-wrap">
       <form className="auth-card" onSubmit={submit}>
-        <div className="logo" style={{ marginBottom: 18 }}>North<b>·</b>Lab</div>
+        <div className="logo" style={{ marginBottom: 18 }}>North<b> </b>Flow</div>
         <h1>{mode === "login" ? "Anmelden" : "Agentur einrichten"}</h1>
         <div className="sub">
           {mode === "login" ? "Reporting-Plattform für deine Kunden." : "Lege deine Agentur und den Admin-Zugang an."}
