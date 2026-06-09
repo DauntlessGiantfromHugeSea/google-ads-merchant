@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Todo, api } from "../api";
+import { useToast } from "../toast";
 
 export default function Todos({ clientId, isAgency, onCount }:
   { clientId: string; isAgency: boolean; onCount?: (open: number) => void }) {
+  const toast = useToast();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
@@ -24,7 +26,10 @@ export default function Todos({ clientId, isAgency, onCount }:
     await api.updateTodo(clientId, t.id, { status: t.status === "done" ? "open" : "done" });
     load();
   };
-  const del = async (t: Todo) => { await api.deleteTodo(clientId, t.id); load(); };
+  const del = async (t: Todo) => {
+    if (!confirm(`„${t.title}" löschen?`)) return;
+    await api.deleteTodo(clientId, t.id); load(); toast("Aufgabe gelöscht.");
+  };
 
   return (
     <div className="section">

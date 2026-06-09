@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Doc, api } from "../api";
+import { useToast } from "../toast";
 
 const fmtSize = (b: number) => b < 1024 ? `${b} B` : b < 1048576 ? `${(b / 1024).toFixed(0)} KB` : `${(b / 1048576).toFixed(1)} MB`;
 
 export default function Documents({ clientId, isAgency }: { clientId: string; isAgency: boolean }) {
+  const toast = useToast();
   const [docs, setDocs] = useState<Doc[]>([]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
 
   const load = () => api.documents(clientId).then(setDocs).catch(() => {});
   useEffect(() => { load(); }, [clientId]);
@@ -14,12 +15,15 @@ export default function Documents({ clientId, isAgency }: { clientId: string; is
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setError(""); setBusy(true);
-    try { await api.uploadDocument(clientId, file); load(); }
-    catch (err) { setError((err as Error).message); }
+    setBusy(true);
+    try { await api.uploadDocument(clientId, file); load(); toast("Dokument hochgeladen."); }
+    catch (err) { toast((err as Error).message, "err"); }
     finally { setBusy(false); e.target.value = ""; }
   };
-  const del = async (d: Doc) => { await api.deleteDocument(clientId, d.id); load(); };
+  const del = async (d: Doc) => {
+    if (!confirm(`„${d.filename}" löschen?`)) return;
+    await api.deleteDocument(clientId, d.id); load(); toast("Dokument gelöscht.");
+  };
 
   return (
     <div className="section">
@@ -32,7 +36,6 @@ export default function Documents({ clientId, isAgency }: { clientId: string; is
           </label>
         )}
       </div>
-      {error && <div className="error">{error}</div>}
       {docs.length === 0 ? <div className="empty">Noch keine Dokumente.</div> : docs.map((d) => (
         <div key={d.id} className="list-row">
           <div>

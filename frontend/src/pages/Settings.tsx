@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { User, api } from "../api";
 import { useAuth } from "../App";
+import { useToast } from "../toast";
 
 function Team() {
   const { user } = useAuth();
+  const toast = useToast();
   const [team, setTeam] = useState<User[]>([]);
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
@@ -15,10 +17,13 @@ function Team() {
 
   const invite = async (e: React.FormEvent) => {
     e.preventDefault(); setError("");
-    try { await api.inviteMember({ email, password: pw, full_name: name }); setEmail(""); setPw(""); setName(""); load(); }
+    try { await api.inviteMember({ email, password: pw, full_name: name }); setEmail(""); setPw(""); setName(""); load(); toast("Mitarbeiter eingeladen."); }
     catch (err) { setError((err as Error).message); }
   };
-  const remove = async (id: string) => { await api.removeMember(id); load(); };
+  const remove = async (id: string) => {
+    if (!confirm("Diesen Mitarbeiter entfernen?")) return;
+    await api.removeMember(id); load(); toast("Mitarbeiter entfernt.");
+  };
 
   return (
     <div className="section">

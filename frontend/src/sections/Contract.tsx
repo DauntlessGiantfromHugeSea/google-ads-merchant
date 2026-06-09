@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Client, api } from "../api";
+import { useToast } from "../toast";
 
 export default function Contract({ client, isAgency, onSaved }:
   { client: Client; isAgency: boolean; onSaved: (c: Client) => void }) {
+  const toast = useToast();
   const [edit, setEdit] = useState(false);
   const [f, setF] = useState({
     contract_package: client.contract_package, contract_status: client.contract_status,
@@ -14,7 +16,8 @@ export default function Contract({ client, isAgency, onSaved }:
 
   const save = async () => {
     setSaving(true);
-    try { onSaved(await api.updateClient(client.id, f)); setEdit(false); }
+    try { onSaved(await api.updateClient(client.id, f)); setEdit(false); toast("Vertragsdaten gespeichert."); }
+    catch (err) { toast((err as Error).message, "err"); }
     finally { setSaving(false); }
   };
 

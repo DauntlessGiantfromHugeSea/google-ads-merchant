@@ -148,12 +148,15 @@ def list_updates(client_id: str, user: User = Depends(get_current_user), db: Ses
 @router.post("/{client_id}/updates", response_model=UpdateOut, status_code=201)
 def create_update(
     client_id: str, data: UpdateCreate,
-    user: User = Depends(require_agency), db: Session = Depends(get_db),
+    user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
-    """Eintrag in den Verlauf laden (nur Agentur). Kunde sieht ihn lesend."""
+    """Eintrag in den Verlauf. Agentur postet Updates/Notizen/Meilensteine;
+    der Kunde kann ebenfalls schreiben (zwei-Wege-Kommunikation, Kategorie
+    'message')."""
     get_scoped_client(client_id, user, db)
+    category = "message" if user.role == UserRole.client_user else data.category
     upd = ClientUpdate(
-        client_id=client_id, title=data.title, body=data.body, category=data.category,
+        client_id=client_id, title=data.title, body=data.body, category=category,
         author_name=user.full_name or user.email,
     )
     db.add(upd)

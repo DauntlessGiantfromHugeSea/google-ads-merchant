@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Client, api } from "../api";
+import { useToast } from "../toast";
 
 export default function Contact({ client, isAgency, onSaved }:
   { client: Client; isAgency: boolean; onSaved: (c: Client) => void }) {
+  const toast = useToast();
   const [edit, setEdit] = useState(false);
   const [f, setF] = useState({
     contact_person: client.contact_person, contact_email: client.contact_email,
@@ -12,7 +14,8 @@ export default function Contact({ client, isAgency, onSaved }:
 
   const save = async () => {
     setSaving(true);
-    try { onSaved(await api.updateClient(client.id, f)); setEdit(false); }
+    try { onSaved(await api.updateClient(client.id, f)); setEdit(false); toast("Kontakt gespeichert."); }
+    catch (err) { toast((err as Error).message, "err"); }
     finally { setSaving(false); }
   };
   const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>

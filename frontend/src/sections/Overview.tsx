@@ -1,33 +1,71 @@
 import { useEffect, useState } from "react";
-import { Client, ClientUpdate, Report, Todo, api } from "../api";
+import { Account, Client, ClientUpdate, Report, Todo, api } from "../api";
+import { useToast } from "../toast";
+
+const initials = (n: string) => n.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
 
 export default function Overview({ client, isAgency, onGo, onSaved }:
   { client: Client; isAgency: boolean; onGo: (s: string) => void; onSaved: (c: Client) => void }) {
+  const toast = useToast();
   const [reports, setReports] = useState<Report[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
   const [updates, setUpdates] = useState<ClientUpdate[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
   useEffect(() => {
     api.reports(client.id).then(setReports).catch(() => {});
     api.todos(client.id).then(setTodos).catch(() => {});
     api.updates(client.id).then(setUpdates).catch(() => {});
+    api.accounts(client.id).then(setAccounts).catch(() => {});
   }, [client.id]);
 
   const openTodos = todos.filter((t) => t.status !== "done").length;
   const lastReport = reports[0];
   const lastUpdate = updates[0];
 
+  const steps = [
+    { ok: !!(client.contact_email || client.contact_person), label: "Kontaktdaten hinterlegen", go: "contact" },
+    { ok: accounts.length > 0, label: "Konto verknüpfen (Ads / Merchant / Website)", go: "reportings" },
+    { ok: !!client.contract_package, label: "Vertrag/Paket hinterlegen", go: "contract" },
+    { ok: reports.length > 0, label: "Ersten Report erzeugen", go: "reportings" },
+  ];
+  const doneCount = steps.filter((s) => s.ok).length;
+
   return (
     <>
-      {isAgency && !client.onboarding_completed && (
-        <div className="section form-light" style={{ borderLeft: "3px solid var(--coral)" }}>
-          <h2>Onboarding offen</h2>
-          <p className="muted" style={{ marginTop: 0 }}>Konten verknüpfen, Vertrags-/Kontaktdaten pflegen, ersten Report erzeugen.</p>
-          <button className="btn btn-primary" onClick={async () => onSaved(await api.completeOnboarding(client.id))}>
-            Onboarding abschließen
-          </button>
+      <div className="section" style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div className="avatar">{initials(client.name) || "?"}</div>
+        <div style={{ flex: 1 }}>
+          <h2 style={{ marginBottom: 2 }}>{client.name}</h2>
+          <div className="muted" style={{ fontSize: 13 }}>
+            {client.contract_package || "Kein Paket"} · {client.contact_email || "keine E-Mail"}
+          </div>
+        </div>
+        <span className={`status-badge st-${["lead","aktiv","pausiert","beendet"].includes(client.status) ? client.status : "aktiv"}`}>
+          {client.status || "aktiv"}
+        </span>
+      </div>
+
+      {isAgency && doneCount < steps.length && (
+        <div className="section">
+          <div className="row-inline" style={{ justifyContent: "space-between" }}>
+            <h2>Onboarding · {doneCount}/{steps.length}</h2>
+            {!client.onboarding_completed && (
+              <button className="btn btn-ghost btn-sm" onClick={async () => { onSaved(await api.completeOnboarding(client.id)); toast("Onboarding abgeschlossen."); }}>
+                Als abgeschlossen markieren
+              </button>
+            )}
+          </div>
+          {steps.map((s) => (
+            <div key={s.label} className={`check ${s.ok ? "done" : "todo"}`}>
+              <span className="dot">{s.ok ? "✓" : ""}</span>
+              <span className="lbl">{s.label}</span>
+              {!s.ok && <button className="btn btn-ghost btn-sm go" onClick={() => onGo(s.go)}>Erledigen</button>}
+            </div>
+          ))}
         </div>
       )}
+
       <div className="grid">
         <div className="card clickable" onClick={() => onGo("contract")}>
           <div className="meta">Vertrag</div>

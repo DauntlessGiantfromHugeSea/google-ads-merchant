@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Account, Report, api } from "../api";
 import GoogleConnect from "../components/GoogleConnect";
+import { useToast } from "../toast";
 
 const ACCOUNT_LABELS: Record<string, string> = {
   google_ads: "Google Ads (Customer-ID)",
@@ -17,6 +18,7 @@ const iso = (off = 0) => { const d = new Date(); d.setDate(d.getDate() + off); r
 
 export default function Reportings({ clientId, clientName, isAgency }:
   { clientId: string; clientName: string; isAgency: boolean }) {
+  const toast = useToast();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [reports, setReports] = useState<Report[]>([]);
   const [error, setError] = useState("");
@@ -33,16 +35,19 @@ export default function Reportings({ clientId, clientName, isAgency }:
 
   const addAccount = async (e: React.FormEvent) => {
     e.preventDefault(); setError("");
-    try { await api.addAccount(clientId, { type: accType, external_id: accExt }); setAccExt(""); loadAccounts(); }
-    catch (err) { setError((err as Error).message); }
+    try { await api.addAccount(clientId, { type: accType, external_id: accExt }); setAccExt(""); loadAccounts(); toast("Konto verknüpft."); }
+    catch (err) { toast((err as Error).message, "err"); }
   };
   const generate = async (e: React.FormEvent) => {
     e.preventDefault(); setError(""); setGenerating(true);
     try {
       const r = await api.createReport(clientId, { type: repType, period_start: start, period_end: end });
       loadReports();
-      if (r.status === "completed") await api.downloadPdf(clientId, r.id, `report-${clientName}-${end}.pdf`);
-    } catch (err) { setError((err as Error).message); }
+      if (r.status === "completed") {
+        await api.downloadPdf(clientId, r.id, `report-${clientName}-${end}.pdf`);
+        toast("Report erstellt – PDF wird geladen.");
+      } else { toast(`Report-Status: ${r.status}`, "err"); }
+    } catch (err) { toast((err as Error).message, "err"); }
     finally { setGenerating(false); }
   };
 

@@ -6,6 +6,7 @@ import { useAuth } from "../App";
 const STATUS = ["lead", "aktiv", "pausiert", "beendet"];
 const statusClass = (s: string) =>
   `status-badge st-${["lead", "aktiv", "pausiert", "beendet"].includes(s) ? s : "aktiv"}`;
+const initials = (n: string) => n.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -115,14 +116,17 @@ export default function Dashboard() {
         <div className="grid">
           {filtered.map((c) => (
             <div key={c.id} className="card clickable" onClick={() => navigate(`/clients/${c.id}`)}>
-              <div className="row-inline" style={{ justifyContent: "space-between" }}>
-                <h3>{c.name}</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div className="avatar">{initials(c.name) || "?"}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ marginBottom: 2 }}>{c.name}</h3>
+                  <div className="meta" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {c.contract_package || c.contact_email || "—"}
+                  </div>
+                </div>
                 <span className={statusClass(c.status)}>{c.status || "aktiv"}</span>
               </div>
-              <div className="meta">{c.contract_package || c.contact_email || "—"}</div>
-              <div style={{ marginTop: 10 }}>
-                {!c.onboarding_completed && <span className="tag coral">Onboarding offen</span>}
-              </div>
+              {!c.onboarding_completed && <div style={{ marginTop: 12 }}><span className="tag coral">Onboarding offen</span></div>}
             </div>
           ))}
         </div>
