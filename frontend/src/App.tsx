@@ -66,17 +66,23 @@ export default function App() {
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout, impersonating, stopImpersonate } = useAuth();
   const navigate = useNavigate();
+  const [menu, setMenu] = useState(false);
+  const go = (path: string) => { setMenu(false); navigate(path); };
   return (
     <>
       <div className="topbar">
-        <span className="logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>North<b> </b>Flow</span>
-        <div className="right">
-          <span>{user?.email}</span>
-          <button className="btn btn-ghost on-dark btn-sm" onClick={() => navigate("/vault")}>Passwort-Safe</button>
+        <span className="logo" onClick={() => go("/")} style={{ cursor: "pointer" }}>North<b> </b>Flow</span>
+        <button className="menu-toggle" aria-label="Menü" onClick={() => setMenu((m) => !m)}>
+          {menu ? "✕" : "☰"}
+        </button>
+        <div className={`right ${menu ? "open" : ""}`}>
+          <span className="who">{user?.email}</span>
+          <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/")}>Kunden</button>
+          <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/vault")}>Passwort-Safe</button>
           {user?.role === "agency_admin" && (
-            <button className="btn btn-ghost on-dark btn-sm" onClick={() => navigate("/settings")}>Einstellungen</button>
+            <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/settings")}>Einstellungen</button>
           )}
-          <button className="btn btn-ghost on-dark btn-sm" onClick={logout}>Abmelden</button>
+          <button className="btn btn-ghost on-dark btn-sm" onClick={() => { setMenu(false); logout(); }}>Abmelden</button>
         </div>
       </div>
       {impersonating && (
