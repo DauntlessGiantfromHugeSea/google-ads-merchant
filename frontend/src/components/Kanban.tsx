@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { Project } from "../api";
 
 const COLS = [
@@ -17,15 +18,28 @@ export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEd
   onOpenClient?: (clientId: string) => void;
   canEdit: boolean;
 }) {
+  const dragged = useRef<Project | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+
   return (
     <div className="kanban">
       {COLS.map((col, ci) => {
         const items = projects.filter((p) => (p.status || "backlog") === col.key);
+        const drop = (e: React.DragEvent) => {
+          e.preventDefault(); setOver(null);
+          const p = dragged.current;
+          if (p && onMove && p.status !== col.key) onMove(p, col.key);
+          dragged.current = null;
+        };
         return (
-          <div key={col.key} className="kcol">
+          <div key={col.key} className={`kcol ${over === col.key ? "over" : ""}`}
+            onDragOver={canEdit ? (e) => { e.preventDefault(); setOver(col.key); } : undefined}
+            onDragLeave={() => setOver((o) => (o === col.key ? null : o))}
+            onDrop={canEdit ? drop : undefined}>
             <h4>{col.label}<span>{items.length}</span></h4>
             {items.map((p) => (
-              <div key={p.id} className="kcard">
+              <div key={p.id} className="kcard" draggable={canEdit}
+                onDragStart={() => { dragged.current = p; }} onDragEnd={() => { dragged.current = null; }}>
                 <div className="t">{p.title}</div>
                 {p.client_name && (
                   <div className="m" style={{ cursor: onOpenClient ? "pointer" : "default" }}
@@ -46,7 +60,7 @@ export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEd
                 </div>
               </div>
             ))}
-            {items.length === 0 && <div className="muted" style={{ fontSize: 12, padding: "4px 2px" }}>—</div>}
+            {items.length === 0 && <div className="muted" style={{ fontSize: 12, padding: "4px 2px" }}>Hierher ziehen</div>}
           </div>
         );
       })}

@@ -62,6 +62,10 @@ export interface Project {
   id: string; client_id: string; title: string; description: string; type: string;
   status: string; assignee: string; due_date: string; created_at: string; client_name?: string;
 }
+export interface Package {
+  id: string; name: string; price: string; interval: string; description: string; active: boolean;
+}
+export type TodoGlobal = Todo & { client_name: string };
 export interface Doc {
   id: string; filename: string; content_type: string; size: number;
   uploaded_by: string; created_at: string; client_id: string;
@@ -130,6 +134,15 @@ export const api = {
   deleteProject: (cid: string, pid: string) =>
     request<void>(`/clients/${cid}/projects/${pid}`, { method: "DELETE" }),
   allProjects: () => request<Project[]>("/projects"),
+
+  allTodos: () => request<TodoGlobal[]>("/todos"),
+
+  packages: () => request<Package[]>("/packages"),
+  createPackage: (d: { name: string; price?: string; interval?: string; description?: string }) =>
+    request<Package>("/packages", { method: "POST", body: JSON.stringify(d) }),
+  updatePackage: (id: string, d: Partial<Package>) =>
+    request<Package>(`/packages/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deletePackage: (id: string) => request<void>(`/packages/${id}`, { method: "DELETE" }),
 
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),

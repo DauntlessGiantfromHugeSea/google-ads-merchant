@@ -1,7 +1,46 @@
 import { useEffect, useState } from "react";
-import { User, api } from "../api";
+import { Package, User, api } from "../api";
 import { useAuth } from "../App";
 import { useToast } from "../toast";
+
+function Packages() {
+  const toast = useToast();
+  const [pkgs, setPkgs] = useState<Package[]>([]);
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [interval, setInterval] = useState("monatlich");
+
+  const load = () => api.packages().then(setPkgs).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const create = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    await api.createPackage({ name, price, interval }); setName(""); setPrice(""); load(); toast("Paket angelegt.");
+  };
+  const del = async (id: string) => { if (!confirm("Paket löschen?")) return; await api.deletePackage(id); load(); toast("Paket gelöscht."); };
+
+  return (
+    <div className="section">
+      <h2>Leistungen & Pakete</h2>
+      <p className="muted" style={{ marginTop: 0 }}>Dein Katalog – steht in den Vertragsdaten zur Auswahl.</p>
+      {pkgs.map((p) => (
+        <div key={p.id} className="list-row">
+          <div><strong>{p.name}</strong> <span className="muted">· {p.price || "—"} · {p.interval}</span></div>
+          <button className="del" onClick={() => del(p.id)}>löschen</button>
+        </div>
+      ))}
+      <form className="row-inline form-light" style={{ marginTop: 14 }} onSubmit={create}>
+        <div className="field" style={{ flex: 2 }}><label>Paketname</label><input className="input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="z.B. SEO Premium" /></div>
+        <div className="field"><label>Preis</label><input className="input" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="990 €" /></div>
+        <div className="field"><label>Intervall</label>
+          <select className="select" value={interval} onChange={(e) => setInterval(e.target.value)}>
+            <option value="monatlich">monatlich</option><option value="jährlich">jährlich</option><option value="einmalig">einmalig</option>
+          </select></div>
+        <button className="btn btn-primary">Hinzufügen</button>
+      </form>
+    </div>
+  );
+}
 
 function Team() {
   const { user } = useAuth();
@@ -132,6 +171,7 @@ export default function Settings() {
         {error && <div className="error">{error}</div>}
       </div>
 
+      <Packages />
       <AgencyContactForm />
       <Team />
     </>

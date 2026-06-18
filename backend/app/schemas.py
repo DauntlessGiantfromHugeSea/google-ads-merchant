@@ -162,6 +162,39 @@ class ProjectGlobalOut(ProjectOut):
     client_name: str = ""
 
 
+class TodoGlobalOut(TodoOut):
+    client_name: str = ""
+
+
+# --- Leistungs-/Paketkatalog ---
+class PackageCreate(BaseModel):
+    name: str
+    price: str = ""
+    interval: str = "monatlich"
+    description: str = ""
+    active: bool = True
+
+
+class PackagePatch(BaseModel):
+    name: str | None = None
+    price: str | None = None
+    interval: str | None = None
+    description: str | None = None
+    active: bool | None = None
+
+
+class PackageOut(BaseModel):
+    id: str
+    name: str
+    price: str
+    interval: str
+    description: str
+    active: bool
+
+    class Config:
+        from_attributes = True
+
+
 # --- Dokumente ---
 class DocumentOut(BaseModel):
     id: str

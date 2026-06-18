@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.api.routes import (
-    auth, branding, clients, dashboard, documents, org, projects, reports, requests,
-    secrets, team,
+    auth, branding, clients, dashboard, documents, org, packages, projects, reports,
+    requests, secrets, tasks, team,
 )
 from app.database import Base, engine
 
@@ -76,6 +76,8 @@ app.include_router(secrets.router)
 app.include_router(requests.router)
 app.include_router(projects.client_router)
 app.include_router(projects.global_router)
+app.include_router(packages.router)
+app.include_router(tasks.router)
 
 
 @app.get("/api/health")

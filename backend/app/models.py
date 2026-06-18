@@ -270,6 +270,21 @@ class Document(Base):
     client: Mapped[Client] = relationship()
 
 
+class ServicePackage(Base):
+    """Leistungs-/Paketkatalog der Agentur (für Vertragsdaten & Auswertung)."""
+
+    __tablename__ = "service_packages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    price: Mapped[str] = mapped_column(String(64), default="")
+    interval: Mapped[str] = mapped_column(String(32), default="monatlich")  # monatlich/jährlich/einmalig
+    description: Mapped[str] = mapped_column(Text, default="")
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class Secret(Base):
     """Ende-zu-Ende verschlüsseltes Einmal-Geheimnis (Passwort-Safe).
     Der Server speichert nur den Chiffretext – der Schlüssel liegt im Link
