@@ -7,6 +7,7 @@ import ClientDetail from "./pages/ClientDetail";
 import Settings from "./pages/Settings";
 import Vault from "./pages/Vault";
 import Reveal from "./pages/Reveal";
+import RequestSubmit from "./pages/RequestSubmit";
 
 interface AuthCtx {
   user: User | null;
@@ -50,8 +51,9 @@ export default function App() {
   return (
     <Ctx.Provider value={{ user, setUser, logout, impersonating, startImpersonate, stopImpersonate }}>
       <Routes>
-        {/* Öffentlich: sicheres Geheimnis abrufen (auch ohne Login) */}
+        {/* Öffentlich (ohne Login): Geheimnis abrufen bzw. einreichen */}
         <Route path="/s/:id" element={<Reveal />} />
+        <Route path="/req/:id" element={<RequestSubmit />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Shell><Dashboard /></Shell> : <Navigate to="/login" />} />
         <Route path="/clients/:id" element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />} />

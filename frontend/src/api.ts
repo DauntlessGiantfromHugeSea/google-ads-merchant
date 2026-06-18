@@ -82,6 +82,8 @@ export interface AgencyContact {
   agency_contact_phone: string; agency_contact_note: string;
 }
 export interface SecretInfo { id: string; views_left: number; note: string; created_by: string; expires_at: string | null; }
+export interface SecretRequest { id: string; label: string; created_by: string; created_at: string; expires_at: string | null; submission_count: number; }
+export interface Submission { id: string; secret: string; note: string; created_at: string; }
 export interface CredentialStatus { configured: boolean; fields_present: string[]; }
 export interface CredentialInput {
   developer_token?: string; client_id?: string; client_secret?: string;
@@ -123,6 +125,16 @@ export const api = {
     request<{ id: string; views_left: number }>("/secrets", { method: "POST", body: JSON.stringify(d) }),
   secretInfo: (id: string) => request<SecretInfo>(`/secrets/${id}`),
   revealSecret: (id: string) => request<{ ciphertext: string; iv: string; views_left: number }>(`/secrets/${id}/reveal`, { method: "POST" }),
+
+  createRequest: (d: { label: string; ttl_hours: number }) =>
+    request<SecretRequest>("/requests", { method: "POST", body: JSON.stringify(d) }),
+  listRequests: () => request<SecretRequest[]>("/requests"),
+  deleteRequest: (id: string) => request<void>(`/requests/${id}`, { method: "DELETE" }),
+  requestPublic: (id: string) => request<{ id: string; label: string }>(`/requests/${id}/public`),
+  submitSecret: (id: string, d: { secret: string; note: string }) =>
+    request<{ ok: boolean }>(`/requests/${id}/submit`, { method: "POST", body: JSON.stringify(d) }),
+  listSubmissions: (id: string) => request<Submission[]>(`/requests/${id}/submissions`),
+  deleteSubmission: (id: string, sid: string) => request<void>(`/requests/${id}/submissions/${sid}`, { method: "DELETE" }),
 
   team: () => request<User[]>("/team"),
   inviteMember: (d: { email: string; password: string; full_name?: string }) =>

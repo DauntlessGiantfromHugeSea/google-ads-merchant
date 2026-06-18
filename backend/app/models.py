@@ -267,3 +267,30 @@ class Secret(Base):
     created_by: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SecretRequest(Base):
+    """Öffentlicher Anforderungs-Link: Dritte können (ohne Login) ein Passwort
+    einreichen. Nur die erstellende Agentur sieht die Einreichungen."""
+
+    __tablename__ = "secret_requests"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Token = Link-ID
+    label: Mapped[str] = mapped_column(String(255), default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SecretSubmission(Base):
+    """Eine über einen Anforderungs-Link eingereichte (serverseitig
+    verschlüsselte) Geheimnis-Antwort."""
+
+    __tablename__ = "secret_submissions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    request_id: Mapped[str] = mapped_column(ForeignKey("secret_requests.id"))
+    ciphertext: Mapped[str] = mapped_column(Text, nullable=False)  # Fernet-verschlüsselt
+    note: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

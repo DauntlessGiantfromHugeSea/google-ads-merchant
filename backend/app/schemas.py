@@ -173,6 +173,38 @@ class AgencyContact(BaseModel):
     agency_contact_note: str = ""
 
 
+# --- Passwort-Anforderung (öffentlicher Einreich-Link) ---
+class RequestCreate(BaseModel):
+    label: str = ""
+    ttl_hours: int = 336  # 14 Tage
+
+
+class RequestOut(BaseModel):
+    id: str
+    label: str
+    created_by: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    submission_count: int = 0
+
+
+class RequestPublicOut(BaseModel):
+    id: str
+    label: str
+
+
+class SubmissionCreate(BaseModel):
+    secret: str
+    note: str = ""
+
+
+class SubmissionOut(BaseModel):
+    id: str
+    secret: str
+    note: str
+    created_at: datetime
+
+
 # --- Verlauf / Updates ---
 class UpdateCreate(BaseModel):
     title: str = ""
