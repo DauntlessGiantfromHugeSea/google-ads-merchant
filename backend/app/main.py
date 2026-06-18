@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.api.routes import (
-    auth, branding, clients, dashboard, documents, org, reports, requests, secrets, team,
+    auth, branding, clients, dashboard, documents, org, projects, reports, requests,
+    secrets, team,
 )
 from app.database import Base, engine
 
@@ -26,7 +27,7 @@ _ORG_COLUMNS = {
     "agency_contact_name": "VARCHAR(255) DEFAULT ''", "agency_contact_email": "VARCHAR(255) DEFAULT ''",
     "agency_contact_phone": "VARCHAR(64) DEFAULT ''", "agency_contact_note": "TEXT DEFAULT ''",
 }
-_TODO_COLUMNS = {"priority": "VARCHAR(16) DEFAULT 'normal'"}
+_TODO_COLUMNS = {"priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''"}
 
 
 def _ensure_columns(insp, table: str, columns: dict) -> None:
@@ -73,6 +74,8 @@ app.include_router(team.router)
 app.include_router(org.router)
 app.include_router(secrets.router)
 app.include_router(requests.router)
+app.include_router(projects.client_router)
+app.include_router(projects.global_router)
 
 
 @app.get("/api/health")

@@ -9,6 +9,7 @@ export default function Todos({ clientId, isAgency, onCount }:
   const [title, setTitle] = useState("");
   const [due, setDue] = useState("");
   const [prio, setPrio] = useState("normal");
+  const [assignee, setAssignee] = useState("");
 
   const load = () => api.todos(clientId).then((t) => {
     setTodos(t);
@@ -19,8 +20,8 @@ export default function Todos({ clientId, isAgency, onCount }:
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    await api.createTodo(clientId, { title, due_date: due, priority: prio });
-    setTitle(""); setDue(""); setPrio("normal"); load();
+    await api.createTodo(clientId, { title, due_date: due, priority: prio, assignee });
+    setTitle(""); setDue(""); setPrio("normal"); setAssignee(""); load();
   };
   const toggle = async (t: Todo) => {
     await api.updateTodo(clientId, t.id, { status: t.status === "done" ? "open" : "done" });
@@ -44,6 +45,8 @@ export default function Todos({ clientId, isAgency, onCount }:
             <select className="select form-light" value={prio} onChange={(e) => setPrio(e.target.value)}>
               <option value="low">niedrig</option><option value="normal">normal</option><option value="high">hoch</option>
             </select></div>
+          <div className="field"><label>Zuständig</label>
+            <input className="input form-light" value={assignee} onChange={(e) => setAssignee(e.target.value)} placeholder="Name" /></div>
           <button className="btn btn-primary">Hinzufügen</button>
         </form>
       )}
@@ -60,8 +63,10 @@ export default function Todos({ clientId, isAgency, onCount }:
                 </span>
               )}
             </div>
-            {(t.due_date || t.description) && (
-              <div className="todo-sub">{t.due_date && `fällig ${t.due_date}`}{t.description && ` · ${t.description}`}</div>
+            {(t.due_date || t.description || t.assignee) && (
+              <div className="todo-sub">
+                {t.assignee && `👤 ${t.assignee}`}{t.due_date && `${t.assignee ? " · " : ""}fällig ${t.due_date}`}{t.description && ` · ${t.description}`}
+              </div>
             )}
           </div>
           {isAgency && <button className="del" onClick={() => del(t)}>löschen</button>}

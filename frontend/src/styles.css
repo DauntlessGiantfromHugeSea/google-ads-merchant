@@ -263,6 +263,25 @@ textarea.input { resize: vertical; min-height: 72px; }
 .tl-item.message::before { background: var(--violet); }
 .bubble-me { color: var(--violet); }
 
+/* Kanban */
+.kanban { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; align-items: start; }
+.kcol { background: rgba(255,255,255,0.4); border: 1px solid var(--glass-border); border-radius: 16px; padding: 12px; min-height: 80px; }
+.kcol h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; }
+.kcard { background: rgba(255,255,255,0.85); border: 1px solid rgba(0,0,0,0.06); border-radius: 12px; padding: 11px 12px; margin-bottom: 10px; box-shadow: 0 4px 14px rgba(31,38,90,0.06); }
+.kcard .t { font-weight: 600; font-size: 14px; }
+.kcard .m { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.kcard .row { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.kmove { border: none; background: rgba(0,0,0,0.05); width: 24px; height: 24px; border-radius: 7px; cursor: pointer; color: var(--ink); font-size: 13px; line-height: 1; }
+.kmove:hover { background: var(--coral); color: var(--coral-ink); }
+.kmove:disabled { opacity: .3; cursor: default; }
+.ptype { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; }
+.pt-design { background: rgba(124,58,237,0.15); color: #6d28d9; }
+.pt-marketing { background: rgba(248,131,107,0.18); color: #b4421f; }
+.pt-web { background: rgba(20,184,166,0.16); color: #0f766e; }
+.pt-seo { background: rgba(5,122,85,0.15); color: #057a55; }
+.pt-social { background: rgba(37,99,235,0.14); color: #1d4ed8; }
+.pt-sonstiges { background: rgba(0,0,0,0.07); color: var(--muted); }
+
 /* Mobile / responsive */
 @media (max-width: 860px) {
   .container { padding: 20px 16px 56px; }
@@ -277,6 +296,8 @@ textarea.input { resize: vertical; min-height: 72px; }
   .page-head h1 { font-size: 24px; }
   .hero-stats { gap: 18px; }
   .section { overflow-x: auto; }
+  .kanban { display: flex; overflow-x: auto; gap: 12px; padding-bottom: 6px; }
+  .kcol { flex: 0 0 78%; }
 }
 @media (max-width: 480px) {
   .grid { grid-template-columns: 1fr; }

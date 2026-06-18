@@ -97,6 +97,7 @@ class TodoCreate(BaseModel):
     due_date: str = ""
     status: str = "open"
     priority: str = "normal"
+    assignee: str = ""
 
 
 class TodoPatch(BaseModel):
@@ -105,6 +106,7 @@ class TodoPatch(BaseModel):
     due_date: str | None = None
     status: str | None = None
     priority: str | None = None
+    assignee: str | None = None
 
 
 class TodoOut(BaseModel):
@@ -113,12 +115,51 @@ class TodoOut(BaseModel):
     description: str
     status: str
     priority: str
+    assignee: str
     due_date: str
     created_at: datetime
     client_id: str
 
     class Config:
         from_attributes = True
+
+
+# --- Projekte (Kanban) ---
+class ProjectCreate(BaseModel):
+    title: str
+    description: str = ""
+    type: str = "design"
+    status: str = "backlog"
+    assignee: str = ""
+    due_date: str = ""
+
+
+class ProjectPatch(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    type: str | None = None
+    status: str | None = None
+    assignee: str | None = None
+    due_date: str | None = None
+
+
+class ProjectOut(BaseModel):
+    id: str
+    client_id: str
+    title: str
+    description: str
+    type: str
+    status: str
+    assignee: str
+    due_date: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectGlobalOut(ProjectOut):
+    client_name: str = ""
 
 
 # --- Dokumente ---

@@ -211,11 +211,30 @@ class Todo(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     status: Mapped[str] = mapped_column(String(32), default="open")  # open/in_progress/done
     priority: Mapped[str] = mapped_column(String(16), default="normal")  # low/normal/high
+    assignee: Mapped[str] = mapped_column(String(255), default="")  # Name/E-Mail des Team-Mitglieds
     due_date: Mapped[str] = mapped_column(String(10), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
     client: Mapped[Client] = relationship(back_populates="todos")
+
+
+class Project(Base):
+    """Projekt/Kampagne zu einem Kunden – Kern der Agenturarbeit (Kanban)."""
+
+    __tablename__ = "projects"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    type: Mapped[str] = mapped_column(String(32), default="design")   # design/marketing/web/seo/social/sonstiges
+    status: Mapped[str] = mapped_column(String(32), default="backlog")  # backlog/in_progress/review/done
+    assignee: Mapped[str] = mapped_column(String(255), default="")
+    due_date: Mapped[str] = mapped_column(String(10), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship()
 
 
 class ClientUpdate(Base):

@@ -56,7 +56,11 @@ export interface Client {
 }
 export interface Todo {
   id: string; title: string; description: string; status: string; priority: string;
-  due_date: string; created_at: string; client_id: string;
+  assignee: string; due_date: string; created_at: string; client_id: string;
+}
+export interface Project {
+  id: string; client_id: string; title: string; description: string; type: string;
+  status: string; assignee: string; due_date: string; created_at: string; client_name?: string;
 }
 export interface Doc {
   id: string; filename: string; content_type: string; size: number;
@@ -118,6 +122,15 @@ export const api = {
 
   dashboard: () => request<DashboardData>("/dashboard"),
 
+  projects: (cid: string) => request<Project[]>(`/clients/${cid}/projects`),
+  createProject: (cid: string, d: Partial<Project>) =>
+    request<Project>(`/clients/${cid}/projects`, { method: "POST", body: JSON.stringify(d) }),
+  updateProject: (cid: string, pid: string, d: Partial<Project>) =>
+    request<Project>(`/clients/${cid}/projects/${pid}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteProject: (cid: string, pid: string) =>
+    request<void>(`/clients/${cid}/projects/${pid}`, { method: "DELETE" }),
+  allProjects: () => request<Project[]>("/projects"),
+
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),
 
@@ -172,7 +185,7 @@ export const api = {
     request<{ access_token: string }>(`/clients/${id}/impersonate`, { method: "POST" }),
 
   todos: (id: string) => request<Todo[]>(`/clients/${id}/todos`),
-  createTodo: (id: string, d: { title: string; description?: string; due_date?: string; priority?: string }) =>
+  createTodo: (id: string, d: { title: string; description?: string; due_date?: string; priority?: string; assignee?: string }) =>
     request<Todo>(`/clients/${id}/todos`, { method: "POST", body: JSON.stringify(d) }),
   updateTodo: (id: string, todoId: string, d: Partial<Todo>) =>
     request<Todo>(`/clients/${id}/todos/${todoId}`, { method: "PATCH", body: JSON.stringify(d) }),

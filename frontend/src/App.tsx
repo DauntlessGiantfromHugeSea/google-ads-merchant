@@ -8,6 +8,7 @@ import Settings from "./pages/Settings";
 import Vault from "./pages/Vault";
 import Reveal from "./pages/Reveal";
 import RequestSubmit from "./pages/RequestSubmit";
+import ProjectsBoard from "./pages/Projects";
 
 interface AuthCtx {
   user: User | null;
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/clients/:id" element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />} />
         <Route path="/settings" element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />} />
         <Route path="/vault" element={user ? <Shell><Vault /></Shell> : <Navigate to="/login" />} />
+        <Route path="/projects" element={user && user.role !== "client_user" ? <Shell><ProjectsBoard /></Shell> : <Navigate to="/" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Ctx.Provider>
@@ -80,6 +82,9 @@ function Shell({ children }: { children: React.ReactNode }) {
         <div className={`right ${menu ? "open" : ""}`}>
           <span className="who">{user?.email}</span>
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/")}>Kunden</button>
+          {user?.role !== "client_user" && (
+            <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/projects")}>Projekte</button>
+          )}
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/vault")}>Passwort-Safe</button>
           {user?.role === "agency_admin" && (
             <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/settings")}>Einstellungen</button>

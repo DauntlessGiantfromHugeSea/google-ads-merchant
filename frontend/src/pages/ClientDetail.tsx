@@ -9,9 +9,11 @@ import Contact from "../sections/Contact";
 import Todos from "../sections/Todos";
 import Updates from "../sections/Updates";
 import Documents from "../sections/Documents";
+import Projects from "../sections/Projects";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
+  { key: "projects", label: "Projekte" },
   { key: "reportings", label: "Reportings" },
   { key: "contract", label: "Vertragsdaten" },
   { key: "documents", label: "Dokumente" },
@@ -90,6 +92,9 @@ export default function ClientDetail() {
         <div className="client-content">
           {section === "overview" && (
             <Overview client={client} isAgency={isAgency} onGo={setSection} onSaved={setClient} />
+          )}
+          {section === "projects" && (
+            <Projects clientId={id} isAgency={isAgency} />
           )}
           {section === "reportings" && (
             <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
