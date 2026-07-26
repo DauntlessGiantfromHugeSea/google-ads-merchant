@@ -118,6 +118,12 @@ class Client(Base):
     website: Mapped[str] = mapped_column(String(512), default="")
     address: Mapped[str] = mapped_column(Text, default="")
 
+    # Rechnungsdaten (RE)
+    company: Mapped[str] = mapped_column(String(255), default="")
+    billing_address: Mapped[str] = mapped_column(Text, default="")
+    vat_id: Mapped[str] = mapped_column(String(64), default="")        # USt-IdNr
+    billing_email: Mapped[str] = mapped_column(String(255), default="")
+
     # Vertragsdaten
     contract_package: Mapped[str] = mapped_column(String(255), default="")
     contract_status: Mapped[str] = mapped_column(String(64), default="")  # aktiv/pausiert/beendet
@@ -327,4 +333,30 @@ class SecretSubmission(Base):
     request_id: Mapped[str] = mapped_column(ForeignKey("secret_requests.id"))
     ciphertext: Mapped[str] = mapped_column(Text, nullable=False)  # Fernet-verschlüsselt
     note: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class IntakeForm(Base):
+    """Öffentliches Kundendaten-Formular (Onboarding/Rechnungsdaten per Link)."""
+
+    __tablename__ = "intake_forms"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Token = Link-ID
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    label: Mapped[str] = mapped_column(String(255), default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class IntakeSubmission(Base):
+    """Eine über ein Intake-Formular eingereichte Kundendaten-Antwort."""
+
+    __tablename__ = "intake_submissions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    form_id: Mapped[str] = mapped_column(ForeignKey("intake_forms.id"))
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    applied: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

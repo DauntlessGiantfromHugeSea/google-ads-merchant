@@ -6,8 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.api.routes import (
-    auth, branding, clients, dashboard, documents, org, packages, projects, reports,
-    requests, secrets, tasks, team,
+    auth, branding, clients, dashboard, documents, intake, org, packages, projects,
+    reports, requests, secrets, tasks, team,
 )
 from app.database import Base, engine
 
@@ -21,6 +21,8 @@ _CLIENT_COLUMNS = {
     "contract_fee": "VARCHAR(64) DEFAULT ''", "contract_billing": "VARCHAR(64) DEFAULT ''",
     "contract_notes": "TEXT DEFAULT ''",
     "status": "VARCHAR(32) DEFAULT 'aktiv'", "tags": "TEXT DEFAULT ''",
+    "company": "VARCHAR(255) DEFAULT ''", "billing_address": "TEXT DEFAULT ''",
+    "vat_id": "VARCHAR(64) DEFAULT ''", "billing_email": "VARCHAR(255) DEFAULT ''",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",
@@ -78,6 +80,7 @@ app.include_router(projects.client_router)
 app.include_router(projects.global_router)
 app.include_router(packages.router)
 app.include_router(tasks.router)
+app.include_router(intake.router)
 
 
 @app.get("/api/health")

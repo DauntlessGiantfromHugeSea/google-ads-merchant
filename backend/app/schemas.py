@@ -65,6 +65,10 @@ class ClientOut(BaseModel):
     contract_fee: str
     contract_billing: str
     contract_notes: str
+    company: str = ""
+    billing_address: str = ""
+    vat_id: str = ""
+    billing_email: str = ""
 
     class Config:
         from_attributes = True
@@ -77,6 +81,10 @@ class ClientPatch(BaseModel):
     status: str | None = None
     tags: str | None = None
     contact_email: str | None = None
+    company: str | None = None
+    billing_address: str | None = None
+    vat_id: str | None = None
+    billing_email: str | None = None
     contact_person: str | None = None
     phone: str | None = None
     website: str | None = None
@@ -193,6 +201,47 @@ class PackageOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# --- Kundendaten-Formular (Intake) ---
+class IntakeCreate(BaseModel):
+    label: str = ""
+    client_id: str | None = None
+    ttl_hours: int = 720  # 30 Tage
+
+
+class IntakeFormOut(BaseModel):
+    id: str
+    label: str
+    client_id: str | None = None
+    created_by: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    submission_count: int = 0
+
+
+class IntakePublicOut(BaseModel):
+    id: str
+    label: str
+
+
+class IntakeSubmit(BaseModel):
+    company: str = ""
+    contact_person: str = ""
+    email: str = ""
+    phone: str = ""
+    website: str = ""
+    billing_address: str = ""
+    vat_id: str = ""
+    billing_email: str = ""
+    notes: str = ""
+
+
+class IntakeSubmissionOut(BaseModel):
+    id: str
+    data: dict
+    applied: bool
+    created_at: datetime
 
 
 # --- Dokumente ---

@@ -10,6 +10,8 @@ import Reveal from "./pages/Reveal";
 import RequestSubmit from "./pages/RequestSubmit";
 import ProjectsBoard from "./pages/Projects";
 import Tasks from "./pages/Tasks";
+import Forms from "./pages/Forms";
+import Intake from "./pages/Intake";
 
 interface AuthCtx {
   user: User | null;
@@ -56,6 +58,7 @@ export default function App() {
         {/* Öffentlich (ohne Login): Geheimnis abrufen bzw. einreichen */}
         <Route path="/s/:id" element={<Reveal />} />
         <Route path="/req/:id" element={<RequestSubmit />} />
+        <Route path="/intake/:id" element={<Intake />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Shell><Dashboard /></Shell> : <Navigate to="/login" />} />
         <Route path="/clients/:id" element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />} />
@@ -63,6 +66,7 @@ export default function App() {
         <Route path="/vault" element={user ? <Shell><Vault /></Shell> : <Navigate to="/login" />} />
         <Route path="/projects" element={user && user.role !== "client_user" ? <Shell><ProjectsBoard /></Shell> : <Navigate to="/" />} />
         <Route path="/tasks" element={user && user.role !== "client_user" ? <Shell><Tasks /></Shell> : <Navigate to="/" />} />
+        <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Ctx.Provider>
@@ -88,6 +92,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/projects")}>Projekte</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/tasks")}>Aufgaben</button>
+              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>
             </>
           )}
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/vault")}>Passwort-Safe</button>

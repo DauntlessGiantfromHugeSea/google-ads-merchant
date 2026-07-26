@@ -53,6 +53,14 @@ export interface Client {
   contact_email: string; contact_person: string; phone: string; website: string; address: string;
   contract_package: string; contract_status: string; contract_start: string; contract_end: string;
   contract_fee: string; contract_billing: string; contract_notes: string;
+  company: string; billing_address: string; vat_id: string; billing_email: string;
+}
+export interface IntakeForm {
+  id: string; label: string; client_id: string | null; created_by: string;
+  created_at: string; expires_at: string | null; submission_count: number;
+}
+export interface IntakeSubmission {
+  id: string; data: Record<string, string>; applied: boolean; created_at: string;
 }
 export interface Todo {
   id: string; title: string; description: string; status: string; priority: string;
@@ -136,6 +144,19 @@ export const api = {
   allProjects: () => request<Project[]>("/projects"),
 
   allTodos: () => request<TodoGlobal[]>("/todos"),
+
+  intakeForms: () => request<IntakeForm[]>("/intake"),
+  createIntake: (d: { label: string; client_id?: string | null }) =>
+    request<IntakeForm>("/intake", { method: "POST", body: JSON.stringify(d) }),
+  deleteIntake: (id: string) => request<void>(`/intake/${id}`, { method: "DELETE" }),
+  intakeSubmissions: (id: string) => request<IntakeSubmission[]>(`/intake/${id}/submissions`),
+  applyIntake: (id: string, sid: string) =>
+    request<{ client_id: string }>(`/intake/${id}/submissions/${sid}/apply`, { method: "POST" }),
+  deleteIntakeSubmission: (id: string, sid: string) =>
+    request<void>(`/intake/${id}/submissions/${sid}`, { method: "DELETE" }),
+  intakePublic: (id: string) => request<{ id: string; label: string }>(`/intake/${id}/public`),
+  submitIntake: (id: string, d: Record<string, string>) =>
+    request<{ ok: boolean }>(`/intake/${id}/submit`, { method: "POST", body: JSON.stringify(d) }),
 
   packages: () => request<Package[]>("/packages"),
   createPackage: (d: { name: string; price?: string; interval?: string; description?: string }) =>
