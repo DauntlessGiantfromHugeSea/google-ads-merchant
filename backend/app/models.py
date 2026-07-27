@@ -76,6 +76,10 @@ class Organization(Base):
     agency_contact_phone: Mapped[str] = mapped_column(String(64), default="")
     agency_contact_note: Mapped[str] = mapped_column(Text, default="")
 
+    # Microsoft-Mail (OAuth): verschlüsselter Refresh-Token + verbundene Adresse
+    ms_refresh_token: Mapped[str] = mapped_column(Text, default="")
+    ms_email: Mapped[str] = mapped_column(String(255), default="")
+
     users: Mapped[list[User]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     clients: Mapped[list[Client]] = relationship(back_populates="organization", cascade="all, delete-orphan")
 
@@ -274,6 +278,21 @@ class Document(Base):
 
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
     client: Mapped[Client] = relationship()
+
+
+class AdsActivity(Base):
+    """Google-Ads-Aktivitätsprotokoll je Kunde (Aktivitäten/Änderungen/Updates)."""
+
+    __tablename__ = "ads_activities"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    date: Mapped[str] = mapped_column(String(10), default="")
+    category: Mapped[str] = mapped_column(String(32), default="aktivitaet")  # aktivitaet/aenderung/update
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    body: Mapped[str] = mapped_column(Text, default="")
+    author: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class ServicePackage(Base):

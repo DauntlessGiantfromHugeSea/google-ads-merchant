@@ -83,6 +83,15 @@
     {% endfor %}
   </table>
   <div class="recs"><strong>Empfehlungen</strong><ul>{% for r in a.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
+  {% if a.activities %}
+  <h3>Durchgeführte Maßnahmen im Zeitraum</h3>
+  <table>
+    <tr><th>Datum</th><th>Art</th><th>Maßnahme</th></tr>
+    {% for act in a.activities %}
+    <tr><td>{{ act.date or "—" }}</td><td>{{ act.category }}</td><td>{{ act.title }}{% if act.body %} – {{ act.body }}{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
   {% endif %}
 
   {% if report.merchant_data %}

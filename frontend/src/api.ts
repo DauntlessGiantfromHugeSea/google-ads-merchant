@@ -62,6 +62,11 @@ export interface IntakeForm {
 export interface IntakeSubmission {
   id: string; data: Record<string, string>; applied: boolean; created_at: string;
 }
+export interface AdsActivity {
+  id: string; client_id: string; date: string; category: string;
+  title: string; body: string; author: string; created_at: string;
+}
+export interface MailStatus { connected: boolean; email: string; configured: boolean; }
 export interface Todo {
   id: string; title: string; description: string; status: string; priority: string;
   assignee: string; due_date: string; created_at: string; client_id: string;
@@ -157,6 +162,18 @@ export const api = {
   intakePublic: (id: string) => request<{ id: string; label: string }>(`/intake/${id}/public`),
   submitIntake: (id: string, d: Record<string, string>) =>
     request<{ ok: boolean }>(`/intake/${id}/submit`, { method: "POST", body: JSON.stringify(d) }),
+
+  adsActivities: (cid: string) => request<AdsActivity[]>(`/clients/${cid}/ads-activities`),
+  createAdsActivity: (cid: string, d: { date?: string; category?: string; title: string; body?: string }) =>
+    request<AdsActivity>(`/clients/${cid}/ads-activities`, { method: "POST", body: JSON.stringify(d) }),
+  deleteAdsActivity: (cid: string, id: string) =>
+    request<void>(`/clients/${cid}/ads-activities/${id}`, { method: "DELETE" }),
+
+  mailStatus: () => request<MailStatus>("/mail/status"),
+  mailConnect: () => request<{ url: string }>("/mail/connect"),
+  mailDisconnect: () => request<void>("/mail/disconnect", { method: "POST" }),
+  mailSend: (d: { to: string; subject: string; body: string; html?: boolean }) =>
+    request<{ ok: boolean }>("/mail/send", { method: "POST", body: JSON.stringify(d) }),
 
   packages: () => request<Package[]>("/packages"),
   createPackage: (d: { name: string; price?: string; interval?: string; description?: string }) =>

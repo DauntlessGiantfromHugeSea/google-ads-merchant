@@ -3,6 +3,49 @@ import { Package, User, api } from "../api";
 import { useAuth } from "../App";
 import { useToast } from "../toast";
 
+function MailSettings() {
+  const toast = useToast();
+  const [st, setSt] = useState<{ connected: boolean; email: string; configured: boolean } | null>(null);
+
+  const load = () => api.mailStatus().then(setSt).catch(() => {});
+  useEffect(() => {
+    load();
+    const p = new URLSearchParams(window.location.search).get("mail");
+    if (p === "connected") toast("Microsoft-Konto verbunden.");
+    if (p === "error") toast("Verbindung fehlgeschlagen.", "err");
+    if (p) window.history.replaceState({}, "", "/settings");
+  }, []);
+
+  const connect = async () => {
+    try { const r = await api.mailConnect(); window.location.href = r.url; }
+    catch (err) { toast((err as Error).message, "err"); }
+  };
+  const disconnect = async () => { await api.mailDisconnect(); load(); toast("Microsoft-Konto getrennt."); };
+
+  return (
+    <div className="section">
+      <h2>E-Mail (Microsoft 365)</h2>
+      {!st ? <div className="muted">Lädt…</div> : !st.configured ? (
+        <p className="muted" style={{ marginTop: 0 }}>
+          Microsoft ist serverseitig noch nicht konfiguriert (MICROSOFT_CLIENT_ID/SECRET). Siehe Anleitung – danach
+          erscheint hier „Mit Microsoft anmelden".
+        </p>
+      ) : st.connected ? (
+        <div className="row-inline" style={{ alignItems: "center" }}>
+          <span className="tag done">verbunden</span>
+          <span className="muted">{st.email}</span>
+          <button className="btn btn-ghost btn-sm" onClick={disconnect}>Trennen</button>
+        </div>
+      ) : (
+        <>
+          <p className="muted" style={{ marginTop: 0 }}>Verbinde dein Microsoft-Postfach, um E-Mails direkt aus dem Tool zu senden.</p>
+          <button className="btn btn-primary" onClick={connect}>Mit Microsoft anmelden</button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Packages() {
   const toast = useToast();
   const [pkgs, setPkgs] = useState<Package[]>([]);
@@ -171,6 +214,7 @@ export default function Settings() {
         {error && <div className="error">{error}</div>}
       </div>
 
+      <MailSettings />
       <Packages />
       <AgencyContactForm />
       <Team />

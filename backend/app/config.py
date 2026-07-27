@@ -31,6 +31,14 @@ class Settings(BaseSettings):
     # Max. Anzahl Unterseiten, die der SEO-Crawler pro Lauf prüft.
     seo_max_pages: int = 40
 
+    # Öffentliche Basis-URL (für OAuth-Redirects), z.B. https://north-flow.de
+    public_base_url: str = "http://localhost:8000"
+
+    # Microsoft 365 / Outlook (Mail senden via Graph)
+    microsoft_client_id: str = ""
+    microsoft_client_secret: str = ""
+    microsoft_tenant: str = "common"
+
     # Briefpapier: Pfad zur eigenen Vorlage (PDF empfohlen, auch PNG/JPG/SVG).
     # Leer = automatische Suche nach templates/letterhead.{pdf,png,jpg,svg}.
     letterhead_path: str = ""

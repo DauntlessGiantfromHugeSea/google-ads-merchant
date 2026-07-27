@@ -244,6 +244,42 @@ class IntakeSubmissionOut(BaseModel):
     created_at: datetime
 
 
+# --- Google-Ads-Aktivitätsprotokoll ---
+class AdsActivityCreate(BaseModel):
+    date: str = ""
+    category: str = "aktivitaet"
+    title: str
+    body: str = ""
+
+
+class AdsActivityOut(BaseModel):
+    id: str
+    client_id: str
+    date: str
+    category: str
+    title: str
+    body: str
+    author: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- Microsoft-Mail ---
+class MailStatus(BaseModel):
+    connected: bool
+    email: str = ""
+    configured: bool = False
+
+
+class MailSend(BaseModel):
+    to: str
+    subject: str = ""
+    body: str = ""
+    html: bool = False
+
+
 # --- Dokumente ---
 class DocumentOut(BaseModel):
     id: str

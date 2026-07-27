@@ -10,6 +10,7 @@ import Todos from "../sections/Todos";
 import Updates from "../sections/Updates";
 import Documents from "../sections/Documents";
 import Projects from "../sections/Projects";
+import MailCompose from "../sections/MailCompose";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -111,6 +112,7 @@ export default function ClientDetail() {
           {section === "contact" && (
             <>
               <Contact client={client} isAgency={isAgency} onSaved={setClient} />
+              {isAgency && <MailCompose client={client} />}
               {isAgency && (
                 <div className="section form-light">
                   <h2>Kunden-Zugang</h2>

@@ -1,7 +1,52 @@
 import { useEffect, useState } from "react";
-import { Account, Report, api } from "../api";
+import { Account, AdsActivity, Report, api } from "../api";
 import GoogleConnect from "../components/GoogleConnect";
 import { useToast } from "../toast";
+
+const ACT_CATS: Record<string, string> = { aktivitaet: "Aktivität", aenderung: "Änderung", update: "Update" };
+
+function AdsActivities({ clientId, isAgency }: { clientId: string; isAgency: boolean }) {
+  const toast = useToast();
+  const [acts, setActs] = useState<AdsActivity[]>([]);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [cat, setCat] = useState("aktivitaet");
+
+  const load = () => api.adsActivities(clientId).then(setActs).catch(() => {});
+  useEffect(() => { load(); }, [clientId]);
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!title.trim()) return;
+    await api.createAdsActivity(clientId, { date, category: cat, title, body }); setTitle(""); setBody(""); load(); toast("Eintrag gespeichert.");
+  };
+  const del = async (id: string) => { if (!confirm("Eintrag löschen?")) return; await api.deleteAdsActivity(clientId, id); load(); };
+
+  return (
+    <div className="section">
+      <h2>Google-Ads-Aktivitäten</h2>
+      <p className="muted" style={{ marginTop: 0 }}>Aktivitäten, Änderungen und Updates – erscheinen im Report als „Durchgeführte Maßnahmen".</p>
+      {isAgency && (
+        <form className="row-inline form-light" style={{ marginBottom: 14 }} onSubmit={add}>
+          <div className="field"><label>Datum</label><input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="field"><label>Art</label>
+            <select className="select" value={cat} onChange={(e) => setCat(e.target.value)}>
+              {Object.entries(ACT_CATS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select></div>
+          <div className="field" style={{ flex: 2 }}><label>Maßnahme</label><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z.B. Gebote angepasst" /></div>
+          <div className="field" style={{ flex: 2 }}><label>Details (optional)</label><input className="input" value={body} onChange={(e) => setBody(e.target.value)} /></div>
+          <button className="btn btn-primary">Eintragen</button>
+        </form>
+      )}
+      {acts.length === 0 ? <div className="empty">Noch keine Einträge.</div> : acts.map((a) => (
+        <div key={a.id} className="list-row">
+          <div><strong>{a.title}</strong> <span className="muted">· {ACT_CATS[a.category] || a.category}{a.date ? ` · ${a.date}` : ""}</span>
+            {a.body && <div className="muted" style={{ fontSize: 12 }}>{a.body}</div>}</div>
+          {isAgency && <button className="del" onClick={() => del(a.id)}>löschen</button>}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const ACCOUNT_LABELS: Record<string, string> = {
   google_ads: "Google Ads (Customer-ID)",
@@ -117,6 +162,8 @@ export default function Reportings({ clientId, clientName, isAgency }:
           Tipp: Mehrere Websites möglich – jede wird im SEO-Report einzeln analysiert.
         </div>
       </div>
+
+      <AdsActivities clientId={clientId} isAgency={isAgency} />
     </>
   );
 }

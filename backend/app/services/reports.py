@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from app.core.crypto import decrypt_json
-from app.models import Account, AccountType, Client, ReportRun, ReportStatus
+from app.models import Account, AccountType, AdsActivity, Client, ReportRun, ReportStatus
 from app.services import ads, merchant, seo
 
 
@@ -36,6 +36,15 @@ def run_report(db: Session, report: ReportRun) -> ReportRun:
             report.ads_data = ads.collect_ads_data(
                 ads_accs[0].external_id, report.period_start, report.period_end, creds
             )
+            # Durchgeführte Maßnahmen im Zeitraum (Ads-Aktivitätsprotokoll)
+            acts = (db.query(AdsActivity)
+                    .filter(AdsActivity.client_id == report.client_id)
+                    .order_by(AdsActivity.date.desc()).all())
+            ps, pe = report.period_start, report.period_end
+            report.ads_data["activities"] = [
+                {"date": a.date, "category": a.category, "title": a.title, "body": a.body}
+                for a in acts if (not a.date) or (ps <= a.date <= pe) or (not ps and not pe)
+            ]
         if report.type.value in ("merchant", "combined") and merch_accs:
             creds = _creds(merch_accs[0])
             used_live = used_live or bool(creds)
