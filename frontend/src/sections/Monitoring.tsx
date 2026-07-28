@@ -10,7 +10,6 @@ export default function Monitoring({ clientId, isAgency }: { clientId: string; i
   const [mine, setMine] = useState<Monitor[]>([]);
   const [all, setAll] = useState<Monitor[]>([]);
   const [events, setEvents] = useState<MonitorEvent[]>([]);
-  const [pick, setPick] = useState("");
 
   const load = () => {
     api.clientMonitors(clientId).then(setMine).catch(() => {});
@@ -19,43 +18,54 @@ export default function Monitoring({ clientId, isAgency }: { clientId: string; i
   };
   useEffect(() => { load(); }, [clientId]);
 
-  const assign = async (id: string) => { await api.assignMonitor(id, clientId); setPick(""); load(); toast("Monitor zugeordnet."); };
-  const unassign = async (m: Monitor) => { await api.assignMonitor(m.id, null); load(); toast("Zuordnung gelöst."); };
+  const toggle = async (m: Monitor, checked: boolean) => {
+    await api.assignMonitor(m.id, checked ? clientId : null);
+    load();
+    toast(checked ? "Zugeordnet." : "Zuordnung gelöst.");
+  };
   const del = async (m: Monitor) => { if (!confirm(`Monitor „${m.name}" löschen?`)) return; await api.deleteMonitor(m.id); load(); toast("Monitor gelöscht."); };
   const fmt = (s: string) => new Date(s).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
-  const unassigned = all.filter((m) => m.client_id !== clientId);
 
   return (
     <>
       <div className="section">
         <h2>Website-Monitoring</h2>
-        {mine.length === 0 ? <div className="empty">Diesem Kunden ist noch kein Monitor zugeordnet.</div> : mine.map((m) => (
-          <div key={m.id} className="list-row">
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span className={`due-dot ${dot(m.status)}`} />
-              <div><strong>{m.name}</strong><div className="muted" style={{ fontSize: 12 }}>{m.url}{m.message ? ` · ${m.message}` : ""}</div></div>
-            </div>
-            <div className="row-inline" style={{ alignItems: "center" }}>
+
+        {/* Agentur: Mehrfachauswahl – beliebig viele Monitore diesem Kunden zuordnen */}
+        {isAgency ? (
+          all.length === 0 ? <div className="empty">Noch keine Monitore. Webhook in den Einstellungen einrichten.</div> : (
+            <>
+              <p className="muted" style={{ marginTop: 0 }}>Hake alle Monitore an, die zu diesem Kunden gehören (mehrere möglich).</p>
+              {all.map((m) => (
+                <div key={m.id} className="todo" style={{ alignItems: "center" }}>
+                  <input className="todo-check" type="checkbox" checked={m.client_id === clientId}
+                    onChange={(e) => toggle(m, e.target.checked)} />
+                  <div className="todo-body" style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <span className={`due-dot ${dot(m.status)}`} />
+                    <div>
+                      <div className="todo-title">{m.name} <span className="muted" style={{ fontSize: 12 }}>· {label(m.status)}</span></div>
+                      <div className="todo-sub">{m.url}
+                        {m.client_id && m.client_id !== clientId ? ` · aktuell: ${m.client_name}` : ""}</div>
+                    </div>
+                  </div>
+                  <button className="del" onClick={() => del(m)}>löschen</button>
+                </div>
+              ))}
+              <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+                Monitore kommen aus Uptime Kuma (Webhook in den Einstellungen). Meldung erfolgt bei Status-Wechsel – Test-Einträge kannst du löschen.
+              </div>
+            </>
+          )
+        ) : (
+          mine.length === 0 ? <div className="empty">Kein Monitoring aktiv.</div> : mine.map((m) => (
+            <div key={m.id} className="list-row">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className={`due-dot ${dot(m.status)}`} />
+                <div><strong>{m.name}</strong><div className="muted" style={{ fontSize: 12 }}>{m.url}</div></div>
+              </div>
               <span className={`status-badge ${m.status === "down" ? "st-pausiert" : m.status === "up" ? "st-aktiv" : "st-beendet"}`}>{label(m.status)}</span>
-              {isAgency && <button className="btn btn-ghost btn-sm" onClick={() => unassign(m)}>lösen</button>}
-              {isAgency && <button className="del" onClick={() => del(m)}>löschen</button>}
             </div>
-          </div>
-        ))}
-        {isAgency && unassigned.length > 0 && (
-          <div className="row-inline form-light" style={{ marginTop: 12, alignItems: "flex-end" }}>
-            <div className="field" style={{ flex: 1 }}><label>Monitor zuordnen</label>
-              <select className="select" value={pick} onChange={(e) => setPick(e.target.value)}>
-                <option value="">— auswählen —</option>
-                {unassigned.map((m) => <option key={m.id} value={m.id}>{m.name} ({label(m.status)}){m.client_name ? ` · aktuell: ${m.client_name}` : ""}</option>)}
-              </select></div>
-            <button className="btn btn-primary" disabled={!pick} onClick={() => assign(pick)}>Zuordnen</button>
-          </div>
-        )}
-        {isAgency && (
-          <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-            Monitore kommen aus Uptime Kuma (Webhook in den Einstellungen). Uptime meldet bei Status-Wechsel – der Test-Eintrag lässt sich hier löschen.
-          </div>
+          ))
         )}
       </div>
 
