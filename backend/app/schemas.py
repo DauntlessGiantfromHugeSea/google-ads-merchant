@@ -314,6 +314,8 @@ class OfferOut(BaseModel):
 
 class OfferAccept(BaseModel):
     name: str = ""
+    email: str = ""
+    code: str = ""
 
 
 # --- Kundendaten-Formular (Intake) ---

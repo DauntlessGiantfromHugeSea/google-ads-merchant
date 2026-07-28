@@ -48,6 +48,10 @@ _PACKAGE_COLUMNS = {
     "unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0",
     "category": "VARCHAR(80) DEFAULT ''",
 }
+_OFFER_COLUMNS = {
+    "accepted_email": "VARCHAR(255) DEFAULT ''", "accept_code": "VARCHAR(16) DEFAULT ''",
+    "accept_code_expires": "TIMESTAMP",
+}
 
 
 def _ensure_columns(insp, table: str, columns: dict) -> None:
@@ -63,6 +67,7 @@ def _ensure_columns(insp, table: str, columns: dict) -> None:
 def _ensure_schema() -> None:
     insp = inspect(engine)
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
+    _ensure_columns(insp, "offers", _OFFER_COLUMNS)
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)
     _ensure_columns(insp, "todos", _TODO_COLUMNS)
     _ensure_columns(insp, "users", _USER_COLUMNS)

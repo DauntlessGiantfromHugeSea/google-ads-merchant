@@ -1,7 +1,7 @@
 """Angebote: erstellen, PDF (Briefpapier), per Mail senden, online ansehen/annehmen."""
 import io
 import secrets as pysecrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -13,6 +13,7 @@ from app.database import get_db
 from app.models import Client, Offer, OfferItem, Organization, User
 from app.schemas import OfferAccept, OfferCreate, OfferItemOut, OfferOut, OfferUpdate
 from app.services import pdf
+from app.services.notify import _agency_user_ids, notify_users
 
 settings = get_settings()
 client_router = APIRouter(prefix="/api/clients/{client_id}/offers", tags=["offers"])
@@ -119,6 +120,30 @@ def get_offer(client_id: str, offer_id: str, user: User = Depends(get_current_us
     return _out(_load(client_id, offer_id, user, db), db)
 
 
+@client_router.post("/{offer_id}/accept", response_model=OfferOut)
+def accept_offer_inapp(client_id: str, offer_id: str,
+                       user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Angenommen durch einen eingeloggten Nutzer (Kunde/Agentur) – bereits per
+    Login verifiziert, daher ohne Code."""
+    offer = _load(client_id, offer_id, user, db)
+    if offer.status != "accepted":
+        offer.status = "accepted"
+        offer.accepted_by = user.full_name or user.email
+        offer.accepted_email = user.email
+        offer.accepted_at = datetime.now(timezone.utc)
+        client = db.get(Client, client_id)
+        if client and client.status == "lead":
+            client.status = "aktiv"
+        notify_users(db, _agency_user_ids(db, offer.organization_id),
+                     org_id=offer.organization_id, client_id=client_id,
+                     type_="offer_accepted", title=f"Angebot {offer.number} angenommen",
+                     body=f"{offer.accepted_by} · {client.name if client else ''}",
+                     link=f"/clients/{client_id}")
+        db.commit()
+        db.refresh(offer)
+    return _out(offer, db)
+
+
 @client_router.patch("/{offer_id}", response_model=OfferOut)
 def update_offer(client_id: str, offer_id: str, data: OfferUpdate,
                  user: User = Depends(require_agency), db: Session = Depends(get_db)):
@@ -182,17 +207,71 @@ def _by_token(token: str, db: Session) -> Offer:
     return offer
 
 
+def _client_email(client: Client | None) -> str:
+    if not client:
+        return ""
+    return (client.billing_email or client.contact_email or "").strip()
+
+
+def _mask_email(email: str) -> str:
+    if not email or "@" not in email:
+        return ""
+    local, _, domain = email.partition("@")
+    dl = (local[0] + "•" * max(1, len(local) - 1)) if local else ""
+    dom_name, _, tld = domain.partition(".")
+    dd = (dom_name[0] + "•" * max(1, len(dom_name) - 1)) if dom_name else ""
+    return f"{dl}@{dd}.{tld}" if tld else f"{dl}@{dd}"
+
+
+def _mail_ready(offer: Offer, client: Client | None, db: Session) -> bool:
+    org = db.get(Organization, offer.organization_id)
+    return bool(org and org.ms_refresh_token and _client_email(client))
+
+
 @public_router.get("/{token}")
 def public_offer(token: str, db: Session = Depends(get_db)) -> dict:
     offer = _by_token(token, db)
     org = db.get(Organization, offer.organization_id)
+    client = db.get(Client, offer.client_id)
     out = _out(offer, db).model_dump()
     out["net_str"] = _eur(out["net"]); out["vat_str"] = _eur(out["vat"]); out["gross_str"] = _eur(out["gross"])
     out["items"] = [{**it, "line_total_str": _eur(it["line_total"]), "quantity_str": _qty(it["quantity"])}
                     for it in out["items"]]
     out["agency"] = {"name": getattr(org, "agency_contact_name", "") or (org.name if org else ""),
                      "email": getattr(org, "agency_contact_email", "") or ""}
+    # Verifizierungs-Infos für die Annahme
+    out["verify"] = {
+        "email_hint": _mask_email(_client_email(client)),
+        "mail": _mail_ready(offer, client, db),  # Code per Mail möglich?
+        "has_email": bool(_client_email(client)),
+    }
     return out
+
+
+@public_router.post("/{token}/request-code")
+def request_accept_code(token: str, db: Session = Depends(get_db)) -> dict:
+    """Sendet einen 6-stelligen Bestätigungscode an die hinterlegte Kunden-Mail."""
+    offer = _by_token(token, db)
+    if offer.status == "accepted":
+        return {"already": True}
+    client = db.get(Client, offer.client_id)
+    to = _client_email(client)
+    if not to:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Für diesen Kunden ist keine E-Mail hinterlegt.")
+    org = db.get(Organization, offer.organization_id)
+    if not (org and org.ms_refresh_token):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "E-Mail-Versand ist nicht eingerichtet.")
+    code = f"{pysecrets.randbelow(1000000):06d}"
+    offer.accept_code = code
+    offer.accept_code_expires = datetime.now(timezone.utc) + timedelta(minutes=15)
+    from app.api.routes.mail import render_email_html, send_via_graph
+    body = (f"Guten Tag,\n\nzur verbindlichen Annahme von Angebot {offer.number} lautet dein "
+            f"Bestätigungscode:\n\n    {code}\n\nDer Code ist 15 Minuten gültig. Wenn du das Angebot "
+            f"nicht annehmen möchtest, ignoriere diese E-Mail einfach.")
+    send_via_graph(org, to, f"Bestätigungscode für Angebot {offer.number}",
+                   render_email_html(org, body), html=True)
+    db.commit()
+    return {"sent": True, "email_hint": _mask_email(to)}
 
 
 @public_router.post("/{token}/accept")
@@ -200,12 +279,50 @@ def accept_offer(token: str, data: OfferAccept, db: Session = Depends(get_db)) -
     offer = _by_token(token, db)
     if offer.status == "accepted":
         return {"ok": True, "already": True}
-    offer.status = "accepted"
-    offer.accepted_by = data.name[:255]
-    offer.accepted_at = datetime.now(timezone.utc)
-    # Kunde von Lead -> aktiv
     client = db.get(Client, offer.client_id)
+    target = _client_email(client).lower()
+    entered = (data.email or "").strip().lower()
+
+    if _mail_ready(offer, client, db):
+        # Code-Verifizierung (Code ging an die hinterlegte Kunden-Mail)
+        now = datetime.now(timezone.utc)
+        exp = offer.accept_code_expires
+        if exp is not None and exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if not offer.accept_code:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte zuerst einen Bestätigungscode anfordern.")
+        if not exp or exp < now:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Der Code ist abgelaufen. Bitte neu anfordern.")
+        if (data.code or "").strip() != offer.accept_code:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code ungültig.")
+        verified_email = _client_email(client)
+    elif target:
+        # Fallback ohne Mailversand: eingegebene Adresse muss zur hinterlegten passen.
+        if not entered:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte deine E-Mail-Adresse zur Bestätigung eingeben.")
+        if entered != target:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                                "Die E-Mail-Adresse stimmt nicht mit der hinterlegten Adresse überein.")
+        verified_email = _client_email(client)
+    else:
+        # Kein E-Mail-Bezug hinterlegt: nur Name, aber Adresse mitschreiben.
+        if not entered:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte deine E-Mail-Adresse eingeben.")
+        verified_email = data.email.strip()
+
+    offer.status = "accepted"
+    offer.accepted_by = (data.name or verified_email)[:255]
+    offer.accepted_email = verified_email[:255]
+    offer.accepted_at = datetime.now(timezone.utc)
+    offer.accept_code = ""
+    offer.accept_code_expires = None
     if client and client.status == "lead":
         client.status = "aktiv"
+    # Agentur benachrichtigen
+    notify_users(db, _agency_user_ids(db, offer.organization_id),
+                 org_id=offer.organization_id, client_id=offer.client_id,
+                 type_="offer_accepted", title=f"Angebot {offer.number} angenommen",
+                 body=f"{offer.accepted_by} · {client.name if client else ''}",
+                 link=f"/clients/{offer.client_id}")
     db.commit()
     return {"ok": True}

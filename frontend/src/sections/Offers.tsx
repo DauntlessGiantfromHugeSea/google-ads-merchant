@@ -39,7 +39,7 @@ export default function Offers({ clientId, isAgency }: { clientId: string; isAge
   const send = async (o: Offer) => { try { const r = await api.sendOffer(clientId, o.id); load(); toast(`Angebot an ${r.to} gesendet.`); } catch (err) { toast((err as Error).message, "err"); } };
   const copyLink = (o: Offer) => { navigator.clipboard.writeText(`${location.origin}/angebot/${o.public_token}`); toast("Link kopiert."); };
   const del = async (o: Offer) => { if (!confirm(`Angebot ${o.number} löschen?`)) return; await api.deleteOffer(clientId, o.id); load(); toast("Gelöscht."); };
-  const accept = async (o: Offer) => { await api.acceptOffer(o.public_token, ""); load(); toast("Angebot angenommen."); };
+  const accept = async (o: Offer) => { await api.acceptOfferInApp(clientId, o.id); load(); toast("Angebot angenommen."); };
 
   return (
     <div className="section">

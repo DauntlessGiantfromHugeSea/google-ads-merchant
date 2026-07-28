@@ -270,7 +270,11 @@ export const api = {
   deleteOffer: (cid: string, id: string) => request<void>(`/clients/${cid}/offers/${id}`, { method: "DELETE" }),
   sendOffer: (cid: string, id: string) => request<{ ok: boolean; to: string; link: string }>(`/clients/${cid}/offers/${id}/send`, { method: "POST" }),
   publicOffer: (token: string) => request<any>(`/offers/${token}`),
-  acceptOffer: (token: string, name: string) => request<{ ok: boolean }>(`/offers/${token}/accept`, { method: "POST", body: JSON.stringify({ name }) }),
+  requestOfferCode: (token: string) => request<{ sent?: boolean; already?: boolean; email_hint?: string }>(`/offers/${token}/request-code`, { method: "POST" }),
+  acceptOffer: (token: string, d: { name?: string; email?: string; code?: string }) =>
+    request<{ ok: boolean }>(`/offers/${token}/accept`, { method: "POST", body: JSON.stringify(d) }),
+  acceptOfferInApp: (cid: string, offerId: string) =>
+    request<Offer>(`/clients/${cid}/offers/${offerId}/accept`, { method: "POST" }),
   async downloadOfferPdf(cid: string, id: string, number: string) {
     const res = await fetch(`/api/clients/${cid}/offers/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("PDF fehlgeschlagen");

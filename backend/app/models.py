@@ -409,6 +409,10 @@ class Offer(Base):
     vat_rate: Mapped[float] = mapped_column(Float, default=0.0)        # % (0 = keine USt ausweisen)
     public_token: Mapped[str] = mapped_column(String(64), default="")
     accepted_by: Mapped[str] = mapped_column(String(255), default="")
+    accepted_email: Mapped[str] = mapped_column(String(255), default="")
+    # E-Mail-Verifizierung der Annahme (Code an die hinterlegte Kunden-Adresse).
+    accept_code: Mapped[str] = mapped_column(String(16), default="")
+    accept_code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
