@@ -1,8 +1,12 @@
 """Kundenverwaltung + Onboarding (Konten verknüpfen, Kunden-User einladen)."""
+import secrets as pysecrets
+from datetime import datetime, timedelta, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
+from app.config import get_settings
 from app.core.crypto import encrypt_json
 from app.core.security import create_access_token, hash_password
 from app.database import get_db
@@ -11,10 +15,13 @@ from app.models import (
     Client,
     ClientUpdate,
     GoogleCredential,
+    Organization,
     Todo,
     User,
     UserRole,
 )
+
+_settings = get_settings()
 from app.schemas import (
     AccountCreate,
     AccountOut,
@@ -251,32 +258,54 @@ def delete_credentials(
         db.commit()
 
 
-@router.post("/{client_id}/invite", response_model=UserOut, status_code=201)
+@router.post("/{client_id}/invite", status_code=201)
 def invite_client_user(
     client_id: str,
     data: InviteClientUser,
     user: User = Depends(require_agency),
     db: Session = Depends(get_db),
-):
-    """Legt einen Kunden-Login an, der nur diesen Kunden sieht.
-
-    (MVP: Passwort wird direkt gesetzt. Später: Einladungs-E-Mail mit Link.)
-    """
+) -> dict:
+    """Legt einen Kunden-Login an. Ohne Passwort wird ein Einladungslink
+    erzeugt (Kunde legt sein Passwort selbst fest) und – falls Microsoft
+    verbunden – per E-Mail versendet."""
     client = get_scoped_client(client_id, user, db)
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "E-Mail bereits registriert")
+
+    invite_mode = not data.password
+    token = pysecrets.token_urlsafe(24) if invite_mode else ""
     new_user = User(
         email=data.email,
         full_name=data.full_name,
-        hashed_password=hash_password(data.password),
+        hashed_password=hash_password(data.password or pysecrets.token_urlsafe(16)),
         role=UserRole.client_user,
         organization_id=user.organization_id,
         client_id=client.id,
+        invite_token=token,
+        invite_expires=(datetime.now(timezone.utc) + timedelta(days=14)) if invite_mode else None,
     )
     db.add(new_user)
     db.commit()
-    db.refresh(new_user)
-    return new_user
+
+    result: dict = {"id": new_user.id, "email": new_user.email, "invite": invite_mode}
+    if invite_mode:
+        base = _settings.public_base_url.rstrip("/")
+        link = f"{base}/einladung/{token}"
+        result["invite_url"] = link
+        result["emailed"] = False
+        org = db.get(Organization, user.organization_id)
+        if org and org.ms_refresh_token:
+            try:
+                from app.api.routes.mail import render_email_html, send_via_graph
+                body = (f"Hallo{(' ' + data.full_name) if data.full_name else ''},\n\n"
+                        f"du wurdest zum Kundenportal eingeladen. Bitte lege hier dein Passwort fest:\n\n"
+                        f"{link}\n\nDer Link ist 14 Tage gültig.\n\nBeste Grüße")
+                send_via_graph(org, data.email, "Deine Einladung zum Kundenportal",
+                               render_email_html(org, body), html=True)
+                result["emailed"] = True
+            except Exception as exc:  # noqa: BLE001
+                result["email_error"] = str(exc)[:200]
+    return result
 
 
 @router.post("/{client_id}/complete-onboarding", response_model=ClientOut)

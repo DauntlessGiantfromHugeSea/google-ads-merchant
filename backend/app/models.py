@@ -104,6 +104,10 @@ class User(Base):
     # Nur für client_user gesetzt: an welchen Kunden dieser Login gebunden ist.
     client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
 
+    # Einladung: Token zum Passwort-Selbstfestlegen (bis gesetzt)
+    invite_token: Mapped[str] = mapped_column(String(64), default="")
+    invite_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
 
 class Client(Base):
     __tablename__ = "clients"
@@ -329,6 +333,21 @@ class MonitorStatus(Base):
     message: Mapped[str] = mapped_column(Text, default="")
     client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class MonitorEvent(Base):
+    """Verlauf: einzelne Status-Meldung eines Monitors (Up/Down-Historie)."""
+
+    __tablename__ = "monitor_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    name: Mapped[str] = mapped_column(String(255), default="")
+    url: Mapped[str] = mapped_column(String(512), default="")
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    message: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class AdsActivity(Base):

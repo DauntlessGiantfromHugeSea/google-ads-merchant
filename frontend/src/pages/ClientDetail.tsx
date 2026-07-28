@@ -12,12 +12,14 @@ import Documents from "../sections/Documents";
 import Projects from "../sections/Projects";
 import MailCompose from "../sections/MailCompose";
 import Launch from "../sections/Launch";
+import Monitoring from "../sections/Monitoring";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
   { key: "launch", label: "Launch" },
   { key: "projects", label: "Projekte" },
   { key: "reportings", label: "Reportings" },
+  { key: "monitoring", label: "Monitoring" },
   { key: "contract", label: "Vertragsdaten" },
   { key: "documents", label: "Dokumente" },
   { key: "todos", label: "To-Dos" },
@@ -46,8 +48,9 @@ export default function ClientDetail() {
 
   // Einladung (Kunden-Zugang)
   const [invEmail, setInvEmail] = useState("");
-  const [invPw, setInvPw] = useState("");
+  const [invName, setInvName] = useState("");
   const [invMsg, setInvMsg] = useState("");
+  const [invLink, setInvLink] = useState("");
 
   useEffect(() => {
     api.client(id).then(setClient).catch((e) => setError((e as Error).message));
@@ -58,10 +61,12 @@ export default function ClientDetail() {
   if (!client) return <div className="empty">Lädt…</div>;
 
   const invite = async (e: React.FormEvent) => {
-    e.preventDefault(); setInvMsg("");
+    e.preventDefault(); setInvMsg(""); setInvLink("");
     try {
-      await api.invite(id, { email: invEmail, password: invPw });
-      setInvEmail(""); setInvPw(""); setInvMsg("Kunden-Zugang angelegt.");
+      const r = await api.invite(id, { email: invEmail, full_name: invName });
+      setInvEmail(""); setInvName("");
+      setInvMsg(r.emailed ? "Einladung per E-Mail gesendet." : "Zugang erstellt – bitte den Link teilen:");
+      setInvLink(r.invite_url || "");
     } catch (err) { setInvMsg((err as Error).message); }
   };
 
@@ -105,6 +110,9 @@ export default function ClientDetail() {
           {section === "reportings" && (
             <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
           )}
+          {section === "monitoring" && (
+            <Monitoring clientId={id} isAgency={isAgency} />
+          )}
           {section === "contract" && (
             <Contract client={client} isAgency={isAgency} onSaved={setClient} />
           )}
@@ -121,15 +129,21 @@ export default function ClientDetail() {
               {isAgency && (
                 <div className="section form-light">
                   <h2>Kunden-Zugang</h2>
-                  <p className="muted" style={{ marginTop: 0 }}>Legt einen Login an, der nur diesen Kunden sieht.</p>
+                  <p className="muted" style={{ marginTop: 0 }}>
+                    Lädt den Kunden per E-Mail ein – er legt sein Passwort selbst fest. Ist Microsoft verbunden,
+                    wird die Einladung automatisch gemailt; sonst teilst du den angezeigten Link.
+                  </p>
                   <form className="row-inline" onSubmit={invite}>
+                    <div className="field"><label>Name</label>
+                      <input className="input" value={invName} onChange={(e) => setInvName(e.target.value)} /></div>
                     <div className="field" style={{ flex: 2 }}><label>E-Mail</label>
                       <input className="input" type="email" value={invEmail} onChange={(e) => setInvEmail(e.target.value)} required /></div>
-                    <div className="field"><label>Start-Passwort</label>
-                      <input className="input" value={invPw} onChange={(e) => setInvPw(e.target.value)} required /></div>
                     <button className="btn btn-primary">Einladen</button>
                   </form>
                   {invMsg && <div className="muted" style={{ marginTop: 8 }}>{invMsg}</div>}
+                  {invLink && (
+                    <input className="input" readOnly value={invLink} onFocus={(e) => e.currentTarget.select()} style={{ marginTop: 6 }} />
+                  )}
                 </div>
               )}
             </>

@@ -32,6 +32,7 @@ _ORG_COLUMNS = {
     "monitor_token": "VARCHAR(64) DEFAULT ''",
 }
 _TODO_COLUMNS = {"priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''"}
+_USER_COLUMNS = {"invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP"}
 
 
 def _ensure_columns(insp, table: str, columns: dict) -> None:
@@ -49,6 +50,7 @@ def _ensure_schema() -> None:
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)
     _ensure_columns(insp, "todos", _TODO_COLUMNS)
+    _ensure_columns(insp, "users", _USER_COLUMNS)
 
 
 @asynccontextmanager

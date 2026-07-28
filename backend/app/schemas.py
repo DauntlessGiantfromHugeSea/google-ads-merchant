@@ -338,6 +338,18 @@ class MonitorOut(BaseModel):
         from_attributes = True
 
 
+class MonitorEventOut(BaseModel):
+    id: str
+    name: str
+    url: str
+    status: str
+    message: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # --- Microsoft-Mail ---
 class MailStatus(BaseModel):
     connected: bool
@@ -500,8 +512,12 @@ class CredentialStatus(BaseModel):
 # --- Client user invitation ---
 class InviteClientUser(BaseModel):
     email: EmailStr
-    password: str
+    password: str = ""       # leer = Einladungslink (Passwort selbst festlegen)
     full_name: str = ""
+
+
+class SetPasswordRequest(BaseModel):
+    password: str
 
 
 # --- Reports ---

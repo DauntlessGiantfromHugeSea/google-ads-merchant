@@ -12,6 +12,7 @@ import ProjectsBoard from "./pages/Projects";
 import Tasks from "./pages/Tasks";
 import Forms from "./pages/Forms";
 import Intake from "./pages/Intake";
+import SetPassword from "./pages/SetPassword";
 
 interface AuthCtx {
   user: User | null;
@@ -59,6 +60,7 @@ export default function App() {
         <Route path="/s/:id" element={<Reveal />} />
         <Route path="/req/:id" element={<RequestSubmit />} />
         <Route path="/intake/:id" element={<Intake />} />
+        <Route path="/einladung/:token" element={<SetPassword />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Shell><Dashboard /></Shell> : <Navigate to="/login" />} />
         <Route path="/clients/:id" element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />} />

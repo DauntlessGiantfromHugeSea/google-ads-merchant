@@ -11,11 +11,13 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_agency
+from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.config import get_settings
 from app.database import get_db
-from app.models import Account, AccountType, Client, MonitorStatus, Organization, User
-from app.schemas import MonitorOut
+from app.models import (
+    Account, AccountType, Client, MonitorEvent, MonitorStatus, Organization, User,
+)
+from app.schemas import MonitorEventOut, MonitorOut
 
 settings = get_settings()
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
@@ -70,6 +72,14 @@ def list_monitors(user: User = Depends(require_agency), db: Session = Depends(ge
                        changed_at=m.changed_at) for m in mons]
 
 
+@router.delete("/{monitor_id}", status_code=204)
+def delete_monitor(monitor_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    mon = db.get(MonitorStatus, monitor_id)
+    if mon and mon.organization_id == user.organization_id:
+        db.delete(mon)
+        db.commit()
+
+
 @router.post("/webhook/{token}")
 async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -> dict:
     org = db.query(Organization).filter(Organization.monitor_token == token).first()
@@ -99,8 +109,33 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
     if not existing.client_id:
         existing.client_id = _match_client(db, org.id, url)
     existing.changed_at = datetime.now(timezone.utc)
+    # Verlauf-Eintrag
+    db.add(MonitorEvent(organization_id=org.id, client_id=existing.client_id,
+                        name=name, url=existing.url, status=st, message=str(msg)[:2000]))
     db.commit()
     return {"ok": True}
+
+
+@router.get("/client/{client_id}", response_model=list[MonitorOut])
+def client_monitors(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Monitore eines Kunden (auch für den Kunden-Login sichtbar)."""
+    get_scoped_client(client_id, user, db)
+    mons = (db.query(MonitorStatus)
+            .filter(MonitorStatus.organization_id == user.organization_id, MonitorStatus.client_id == client_id)
+            .order_by(MonitorStatus.status.desc()).all())
+    client = db.get(Client, client_id)
+    return [MonitorOut(id=m.id, name=m.name, url=m.url, status=m.status, message=m.message,
+                       client_id=m.client_id, client_name=client.name if client else "",
+                       changed_at=m.changed_at) for m in mons]
+
+
+@router.get("/client/{client_id}/events", response_model=list[MonitorEventOut])
+def client_events(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Up/Down-Verlauf eines Kunden."""
+    get_scoped_client(client_id, user, db)
+    return (db.query(MonitorEvent)
+            .filter(MonitorEvent.organization_id == user.organization_id, MonitorEvent.client_id == client_id)
+            .order_by(MonitorEvent.created_at.desc()).limit(50).all())
 
 
 @router.patch("/{monitor_id}", response_model=MonitorOut)

@@ -71,6 +71,12 @@ export interface Monitor {
   id: string; name: string; url: string; status: string; message: string;
   client_id: string | null; client_name: string; changed_at: string;
 }
+export interface MonitorEvent {
+  id: string; name: string; url: string; status: string; message: string; created_at: string;
+}
+export interface InviteResult {
+  id: string; email: string; invite: boolean; invite_url?: string; emailed?: boolean; email_error?: string;
+}
 export interface Milestone {
   id: string; client_id: string; title: string; description: string;
   status: string; date: string; position: number; created_at: string;
@@ -141,6 +147,12 @@ export const api = {
   },
   me: () => request<User>("/auth/me"),
   registrationOpen: () => request<{ open: boolean }>("/auth/registration-open"),
+  inviteInfo: (token: string) => request<{ email: string; full_name: string }>(`/auth/invite/${token}`),
+  setInvitePassword: async (token: string, password: string) => {
+    const r = await request<{ access_token: string }>(`/auth/invite/${token}`, { method: "POST", body: JSON.stringify({ password }) });
+    auth.set(r.access_token);
+    return r;
+  },
 
   uploadLogo: (file: File) => {
     const fd = new FormData();
@@ -155,6 +167,9 @@ export const api = {
   monitoringWebhookUrl: () => request<{ url: string }>("/monitoring/webhook-url"),
   assignMonitor: (id: string, clientId: string | null) =>
     request<Monitor>(`/monitoring/${id}`, { method: "PATCH", body: JSON.stringify({ client_id: clientId }) }),
+  deleteMonitor: (id: string) => request<void>(`/monitoring/${id}`, { method: "DELETE" }),
+  clientMonitors: (cid: string) => request<Monitor[]>(`/monitoring/client/${cid}`),
+  clientMonitorEvents: (cid: string) => request<MonitorEvent[]>(`/monitoring/client/${cid}/events`),
 
   projects: (cid: string) => request<Project[]>(`/clients/${cid}/projects`),
   createProject: (cid: string, d: Partial<Project>) =>
@@ -291,8 +306,8 @@ export const api = {
   accounts: (clientId: string) => request<Account[]>(`/clients/${clientId}/accounts`),
   addAccount: (clientId: string, d: { type: string; external_id: string; label?: string }) =>
     request<Account>(`/clients/${clientId}/accounts`, { method: "POST", body: JSON.stringify(d) }),
-  invite: (clientId: string, d: { email: string; password: string; full_name?: string }) =>
-    request<User>(`/clients/${clientId}/invite`, { method: "POST", body: JSON.stringify(d) }),
+  invite: (clientId: string, d: { email: string; password?: string; full_name?: string }) =>
+    request<InviteResult>(`/clients/${clientId}/invite`, { method: "POST", body: JSON.stringify(d) }),
 
   setCredentials: (clientId: string, accountId: string, d: CredentialInput) =>
     request<CredentialStatus>(`/clients/${clientId}/accounts/${accountId}/credentials`, {

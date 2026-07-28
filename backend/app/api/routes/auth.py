@@ -1,4 +1,6 @@
 """Registrierung (Agentur + Admin) und Login."""
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -7,9 +9,41 @@ from app.api.deps import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.models import Organization, User, UserRole
-from app.schemas import RegisterRequest, Token, UserOut
+from app.schemas import RegisterRequest, SetPasswordRequest, Token, UserOut
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+
+def _invite_user(token: str, db: Session) -> User:
+    u = db.query(User).filter(User.invite_token == token).first()
+    if not u or not token:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Einladung ungültig")
+    exp = u.invite_expires
+    if exp is not None:
+        if exp.tzinfo is None:
+            exp = exp.replace(tzinfo=timezone.utc)
+        if exp < datetime.now(timezone.utc):
+            raise HTTPException(status.HTTP_410_GONE, "Einladung abgelaufen")
+    return u
+
+
+@router.get("/invite/{token}")
+def invite_info(token: str, db: Session = Depends(get_db)) -> dict:
+    u = _invite_user(token, db)
+    return {"email": u.email, "full_name": u.full_name}
+
+
+@router.post("/invite/{token}", response_model=Token)
+def invite_set_password(token: str, data: SetPasswordRequest, db: Session = Depends(get_db)) -> Token:
+    if len(data.password) < 6:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Passwort zu kurz (min. 6 Zeichen)")
+    u = _invite_user(token, db)
+    u.hashed_password = hash_password(data.password)
+    u.invite_token = ""
+    u.invite_expires = None
+    db.commit()
+    tok = create_access_token(u.id, {"role": u.role.value, "org": u.organization_id})
+    return Token(access_token=tok)
 
 
 @router.get("/registration-open")
