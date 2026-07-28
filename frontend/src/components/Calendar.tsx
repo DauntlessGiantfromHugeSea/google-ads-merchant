@@ -11,7 +11,7 @@ export interface WorkItem {
   assignee: string;
   priority: string;  // nur To-Dos: low/normal/high
   type: string;      // nur Projekte: design/web/…
-  projectTitle?: string; // nur To-Dos: zugeordnetes Projekt
+  projectTitle?: string;
 }
 
 const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -23,13 +23,12 @@ const ymd = (d: Date) =>
 
 export const isDone = (i: WorkItem) => i.status === "done";
 
-/** Fälligkeits-Farbklasse für ein Item relativ zu heute. */
-export function dueClass(i: WorkItem, todayStr: string): string {
+/** Minimalistische Fälligkeits-Klasse: rot=überfällig, gelb=heute, grün=erledigt, sonst neutral. */
+function chipClass(i: WorkItem, todayStr: string): string {
   if (isDone(i)) return "done";
-  if (!i.dueDate) return i.kind === "project" ? "project" : "todo";
-  if (i.dueDate < todayStr) return "overdue";
+  if (i.dueDate && i.dueDate < todayStr) return "overdue";
   if (i.dueDate === todayStr) return "today";
-  return i.kind === "project" ? "project" : "todo";
+  return "";
 }
 
 export default function Calendar({ items, onOpen }: { items: WorkItem[]; onOpen: (i: WorkItem) => void }) {
@@ -60,16 +59,14 @@ export default function Calendar({ items, onOpen }: { items: WorkItem[]; onOpen:
   const next = () => setCur((c) => (c.m === 11 ? { y: c.y + 1, m: 0 } : { y: c.y, m: c.m + 1 }));
   const goToday = () => { const d = new Date(); setCur({ y: d.getFullYear(), m: d.getMonth() }); };
 
-  const undated = items.filter((i) => !i.dueDate && !isDone(i));
-
   return (
     <>
       <div className="cal-head">
         <div className="cal-title">{MONTHS[cur.m]} {cur.y}</div>
-        <div className="row-inline" style={{ alignItems: "center" }}>
-          <button className="btn btn-ghost btn-sm" onClick={prev}>‹</button>
+        <div className="row-inline" style={{ alignItems: "center", gap: 6 }}>
+          <button className="btn btn-ghost btn-sm" onClick={prev} aria-label="Vorheriger Monat">‹</button>
           <button className="btn btn-ghost btn-sm" onClick={goToday}>Heute</button>
-          <button className="btn btn-ghost btn-sm" onClick={next}>›</button>
+          <button className="btn btn-ghost btn-sm" onClick={next} aria-label="Nächster Monat">›</button>
         </div>
       </div>
 
@@ -80,50 +77,22 @@ export default function Calendar({ items, onOpen }: { items: WorkItem[]; onOpen:
           if (!d) return <div key={`e${i}`} className="cal-cell empty" />;
           const key = ymd(d);
           const dayItems = byDay[key] || [];
-          const shown = dayItems.slice(0, 3);
+          const shown = dayItems.slice(0, 2);
           const extra = dayItems.length - shown.length;
           return (
             <div key={key} className={`cal-cell ${key === todayStr ? "today" : ""}`}>
               <div className="cal-daynum">{d.getDate()}</div>
               {shown.map((it) => (
-                <button key={it.kind + it.id} className={`cal-item ci-${dueClass(it, todayStr)}`}
+                <button key={it.kind + it.id} className={`cal-item ci-${chipClass(it, todayStr) || "plain"}`}
                   title={`${it.title} · ${it.clientName}`} onClick={() => onOpen(it)}>
                   <span className="ci-dot" />{it.title}
                 </button>
               ))}
-              {extra > 0 && <div className="cal-more">+{extra} weitere</div>}
+              {extra > 0 && <div className="cal-more">+{extra}</div>}
             </div>
           );
         })}
       </div>
-
-      <div className="cal-legend">
-        <span><i className="ci-dot d-overdue" /> überfällig</span>
-        <span><i className="ci-dot d-today" /> heute fällig</span>
-        <span><i className="ci-dot d-project" /> Projekt</span>
-        <span><i className="ci-dot d-todo" /> Aufgabe</span>
-        <span><i className="ci-dot d-done" /> erledigt</span>
-      </div>
-
-      {undated.length > 0 && (
-        <div className="section" style={{ marginTop: 16 }}>
-          <h2>Ohne Termin</h2>
-          {undated.map((it) => (
-            <div key={it.kind + it.id} className="list-row">
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span className={`due-dot ${it.kind === "project" ? "due-none" : "due-none"}`} />
-                <div>
-                  <strong>{it.title}</strong>
-                  <div className="muted" style={{ fontSize: 12 }}>
-                    {it.clientName}{it.assignee ? ` · 👤 ${it.assignee}` : ""}
-                  </div>
-                </div>
-              </div>
-              <button className="btn btn-ghost btn-sm" onClick={() => onOpen(it)}>öffnen</button>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }

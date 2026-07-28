@@ -91,7 +91,10 @@ function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout, impersonating, stopImpersonate } = useAuth();
   const navigate = useNavigate();
   const [menu, setMenu] = useState(false);
-  const go = (path: string) => { setMenu(false); navigate(path); };
+  const [userMenu, setUserMenu] = useState(false);
+  const go = (path: string) => { setMenu(false); setUserMenu(false); navigate(path); };
+  const isAgency = user?.role !== "client_user";
+  const initials = (user?.full_name || user?.email || "?").slice(0, 2).toUpperCase();
   return (
     <>
       <div className="topbar">
@@ -100,20 +103,36 @@ function Shell({ children }: { children: React.ReactNode }) {
           {menu ? "✕" : "☰"}
         </button>
         <div className={`right ${menu ? "open" : ""}`}>
-          <span className="who">{user?.email}</span>
+          {/* Primäre Navigation – kurz gehalten */}
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/")}>Kunden</button>
-          {user?.role !== "client_user" && (
+          {isAgency && (
             <>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/planner")}>Planner</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>
             </>
           )}
-          <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/vault")}>Passwort-Safe</button>
-          {user?.role === "agency_admin" && (
-            <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/settings")}>Einstellungen</button>
-          )}
-          <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/hilfe")}>Hilfe</button>
-          <button className="btn btn-ghost on-dark btn-sm" onClick={() => { setMenu(false); logout(); }}>Abmelden</button>
+          {/* Alles Sekundäre im Nutzer-Menü */}
+          <div className="user-menu">
+            <button className="user-btn" onClick={() => setUserMenu((v) => !v)} aria-label="Konto">
+              <span className="avatar avatar-sm">{initials}</span>
+              <span className="user-btn-caret">▾</span>
+            </button>
+            {userMenu && (
+              <>
+                <div className="user-backdrop" onClick={() => setUserMenu(false)} />
+                <div className="user-dropdown">
+                  <div className="user-dropdown-email">{user?.email}</div>
+                  <button onClick={() => go("/vault")}>🔑 Passwort-Safe</button>
+                  <button onClick={() => go("/hilfe")}>❓ Hilfe</button>
+                  {user?.role === "agency_admin" && (
+                    <button onClick={() => go("/settings")}>⚙️ Einstellungen</button>
+                  )}
+                  <div className="user-dropdown-sep" />
+                  <button onClick={() => { setUserMenu(false); setMenu(false); logout(); }}>↩ Abmelden</button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
       {impersonating && (
