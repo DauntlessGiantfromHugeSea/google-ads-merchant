@@ -6,9 +6,12 @@ from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
 from app.models import Client, Project, Todo, User
 from app.schemas import ProjectCreate, ProjectGlobalOut, ProjectOut, ProjectPatch
+from app.services.notify import notify_client_users
 
 client_router = APIRouter(prefix="/api/clients/{client_id}/projects", tags=["projects"])
 global_router = APIRouter(prefix="/api/projects", tags=["projects"])
+
+_STATUS_LABEL = {"backlog": "Backlog", "in_progress": "In Arbeit", "review": "Review", "done": "Fertig"}
 
 
 @client_router.get("", response_model=list[ProjectOut])
@@ -36,8 +39,17 @@ def update_project(client_id: str, project_id: str, data: ProjectPatch,
     proj = db.get(Project, project_id)
     if not proj or proj.client_id != client_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Projekt nicht gefunden")
-    for field, value in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    old_status = proj.status
+    for field, value in updates.items():
         setattr(proj, field, value)
+    # Statusänderung -> Kunde benachrichtigen (Projekte sind im Kundenportal sichtbar).
+    if "status" in updates and proj.status != old_status:
+        client = db.get(Client, client_id)
+        notify_client_users(db, client_id, org_id=user.organization_id,
+                            type_="project_status", title="Projekt aktualisiert",
+                            body=f"{proj.title}: {_STATUS_LABEL.get(proj.status, proj.status)}",
+                            link=f"/clients/{client_id}", exclude_user_id=user.id)
     db.commit()
     db.refresh(proj)
     return proj
@@ -67,6 +79,7 @@ def all_projects(user: User = Depends(require_agency), db: Session = Depends(get
         out.append(ProjectGlobalOut(
             id=proj.id, client_id=proj.client_id, title=proj.title, description=proj.description,
             type=proj.type, status=proj.status, assignee=proj.assignee, due_date=proj.due_date,
+            brief=proj.brief, budget=proj.budget, hours_quota=proj.hours_quota,
             created_at=proj.created_at, client_name=cname,
         ))
     return out

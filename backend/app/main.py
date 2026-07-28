@@ -39,6 +39,11 @@ _ORG_COLUMNS = {
 _TODO_COLUMNS = {
     "priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''",
     "project_id": "VARCHAR(36)", "assignee_id": "VARCHAR(36)",
+    "overdue_notified": "BOOLEAN DEFAULT FALSE",
+}
+_PROJECT_COLUMNS = {
+    "brief": "TEXT DEFAULT ''", "budget": "DOUBLE PRECISION DEFAULT 0",
+    "hours_quota": "DOUBLE PRECISION DEFAULT 0",
 }
 _USER_COLUMNS = {
     "invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP",
@@ -70,6 +75,7 @@ def _ensure_schema() -> None:
     _ensure_columns(insp, "offers", _OFFER_COLUMNS)
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)
     _ensure_columns(insp, "todos", _TODO_COLUMNS)
+    _ensure_columns(insp, "projects", _PROJECT_COLUMNS)
     _ensure_columns(insp, "users", _USER_COLUMNS)
     _ensure_columns(insp, "service_packages", _PACKAGE_COLUMNS)
 

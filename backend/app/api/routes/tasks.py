@@ -1,4 +1,6 @@
 """Globales Aufgaben-Board: alle To-Dos über alle Kunden der Agentur."""
+from datetime import date
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -6,8 +8,27 @@ from app.api.deps import get_current_user, require_agency
 from app.database import get_db
 from app.models import Client, Project, Todo, User, UserRole
 from app.schemas import TodoGlobalOut
+from app.services.notify import notify_users
 
 router = APIRouter(prefix="/api/todos", tags=["tasks"])
+
+
+def _remind_overdue(db: Session, user: User, rows) -> None:
+    """Einmalige Erinnerung je Aufgabe, sobald sie überfällig ist (der/die
+    Zuständige wird benachrichtigt). Läuft beim Abruf der eigenen Aufgaben."""
+    today = date.today().isoformat()
+    changed = False
+    for t, cname, _ptitle in rows:
+        if (t.due_date and t.due_date < today and not t.overdue_notified
+                and t.status != "done" and t.assignee_id):
+            notify_users(db, [t.assignee_id], org_id=user.organization_id, client_id=t.client_id,
+                         type_="todo_overdue", title="Aufgabe überfällig",
+                         body=f"{t.title} · {cname} (fällig {t.due_date})",
+                         link=f"/clients/{t.client_id}")
+            t.overdue_notified = True
+            changed = True
+    if changed:
+        db.commit()
 
 
 def _org_names(org_id: str, db: Session) -> dict[str, str]:
@@ -32,6 +53,7 @@ def all_todos(user: User = Depends(require_agency), db: Session = Depends(get_db
             .outerjoin(Project, Todo.project_id == Project.id)
             .filter(Client.organization_id == user.organization_id)
             .order_by(Todo.created_at.desc()).all())
+    _remind_overdue(db, user, rows)
     return _rows_to_out(rows, _org_names(user.organization_id, db))
 
 

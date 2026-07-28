@@ -244,6 +244,8 @@ class Todo(Base):
     project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
     # Optionale Zuordnung zu einem Nutzer (Agentur-Mitarbeiter/Admin oder Kunde).
     assignee_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    # Wurde für diese Aufgabe schon eine Überfällig-Erinnerung erzeugt?
+    overdue_notified: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
 class Project(Base):
@@ -258,6 +260,10 @@ class Project(Base):
     status: Mapped[str] = mapped_column(String(32), default="backlog")  # backlog/in_progress/review/done
     assignee: Mapped[str] = mapped_column(String(255), default="")
     due_date: Mapped[str] = mapped_column(String(10), default="")
+    # Briefing/Projektziel, Budget (€) und Stundenkontingent.
+    brief: Mapped[str] = mapped_column(Text, default="")
+    budget: Mapped[float] = mapped_column(Float, default=0.0)
+    hours_quota: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))

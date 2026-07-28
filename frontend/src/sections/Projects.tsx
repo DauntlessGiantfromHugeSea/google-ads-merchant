@@ -4,6 +4,7 @@ import { useToast } from "../toast";
 import Kanban from "../components/Kanban";
 
 const TYPES = ["design", "marketing", "web", "seo", "social", "sonstiges"];
+const num = (v: string) => parseFloat(v.replace(",", ".")) || 0;
 
 export default function Projects({ clientId, isAgency, onCount }:
   { clientId: string; isAgency: boolean; onCount?: (open: number) => void }) {
@@ -15,6 +16,10 @@ export default function Projects({ clientId, isAgency, onCount }:
   const [type, setType] = useState("design");
   const [assignee, setAssignee] = useState("");
   const [due, setDue] = useState("");
+  const [brief, setBrief] = useState("");
+  const [budget, setBudget] = useState("");
+  const [hours, setHours] = useState("");
+  const [edit, setEdit] = useState<Project | null>(null);
 
   const load = () => api.projects(clientId).then((p) => {
     setProjects(p);
@@ -35,8 +40,19 @@ export default function Projects({ clientId, isAgency, onCount }:
     e.preventDefault();
     if (!title.trim()) return;
     try {
-      await api.createProject(clientId, { title, type, assignee, due_date: due });
-      setTitle(""); setAssignee(""); setDue(""); setShow(false); load(); toast("Projekt angelegt.");
+      await api.createProject(clientId, { title, type, assignee, due_date: due, brief, budget: num(budget), hours_quota: num(hours) });
+      setTitle(""); setAssignee(""); setDue(""); setBrief(""); setBudget(""); setHours(""); setShow(false); load(); toast("Projekt angelegt.");
+    } catch (err) { toast((err as Error).message, "err"); }
+  };
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!edit) return;
+    try {
+      await api.updateProject(clientId, edit.id, {
+        title: edit.title, type: edit.type, assignee: edit.assignee, due_date: edit.due_date,
+        brief: edit.brief, budget: edit.budget, hours_quota: edit.hours_quota,
+      });
+      setEdit(null); load(); toast("Projekt gespeichert.");
     } catch (err) { toast((err as Error).message, "err"); }
   };
   const move = async (p: Project, status: string) => {
@@ -44,9 +60,11 @@ export default function Projects({ clientId, isAgency, onCount }:
     setProjects((ps) => ps.map((x) => (x.id === p.id ? { ...x, status } : x)));
   };
   const del = async (p: Project) => {
-    if (!confirm(`Projekt „${p.title}" löschen?`)) return;
+    if (!confirm(`Projekt „${p.title}“ löschen?`)) return;
     await api.deleteProject(clientId, p.id); load(); toast("Projekt gelöscht.");
   };
+
+  const editField = (patch: Partial<Project>) => setEdit((p) => (p ? { ...p, ...patch } : p));
 
   return (
     <div className="section">
@@ -55,23 +73,61 @@ export default function Projects({ clientId, isAgency, onCount }:
         {isAgency && <button className="btn btn-primary btn-sm" onClick={() => setShow((s) => !s)}>{show ? "Abbrechen" : "+ Projekt"}</button>}
       </div>
       {show && (
-        <form className="row-inline form-light" style={{ margin: "10px 0 16px" }} onSubmit={create}>
-          <div className="field" style={{ flex: 2 }}><label>Titel</label>
-            <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="z.B. Logo Redesign" /></div>
-          <div className="field"><label>Typ</label>
-            <select className="select" value={type} onChange={(e) => setType(e.target.value)}>
-              {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-            </select></div>
-          <div className="field"><label>Verantwortlich</label>
-            <input className="input" value={assignee} onChange={(e) => setAssignee(e.target.value)} /></div>
-          <div className="field"><label>Fällig</label>
-            <input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} /></div>
+        <form className="form-light" style={{ margin: "10px 0 16px" }} onSubmit={create}>
+          <div className="row-inline">
+            <div className="field" style={{ flex: 2 }}><label>Titel</label>
+              <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} required placeholder="z.B. Logo Redesign" /></div>
+            <div className="field"><label>Typ</label>
+              <select className="select" value={type} onChange={(e) => setType(e.target.value)}>
+                {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select></div>
+            <div className="field"><label>Verantwortlich</label>
+              <input className="input" value={assignee} onChange={(e) => setAssignee(e.target.value)} /></div>
+            <div className="field"><label>Fällig</label>
+              <input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} /></div>
+            <div className="field" style={{ width: 110 }}><label>Budget €</label>
+              <input className="input" value={budget} onChange={(e) => setBudget(e.target.value)} placeholder="0" /></div>
+            <div className="field" style={{ width: 110 }}><label>Stunden</label>
+              <input className="input" value={hours} onChange={(e) => setHours(e.target.value)} placeholder="0" /></div>
+          </div>
+          <div className="field"><label>Briefing / Projektziel</label>
+            <textarea className="input" value={brief} onChange={(e) => setBrief(e.target.value)} rows={2} placeholder="Ziel, Zielgruppe, Rahmen …" /></div>
           <button className="btn btn-primary">Anlegen</button>
         </form>
       )}
+
+      {edit && (
+        <form className="form-light" style={{ margin: "10px 0 16px", border: "1px solid var(--glass-border)", borderRadius: 12, padding: 12 }} onSubmit={saveEdit}>
+          <div className="row-inline" style={{ justifyContent: "space-between" }}>
+            <strong>Projekt bearbeiten</strong>
+            <button type="button" className="del" onClick={() => setEdit(null)}>abbrechen</button>
+          </div>
+          <div className="row-inline">
+            <div className="field" style={{ flex: 2 }}><label>Titel</label>
+              <input className="input" value={edit.title} onChange={(e) => editField({ title: e.target.value })} required /></div>
+            <div className="field"><label>Typ</label>
+              <select className="select" value={edit.type} onChange={(e) => editField({ type: e.target.value })}>
+                {TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select></div>
+            <div className="field"><label>Verantwortlich</label>
+              <input className="input" value={edit.assignee} onChange={(e) => editField({ assignee: e.target.value })} /></div>
+            <div className="field"><label>Fällig</label>
+              <input className="input" type="date" value={edit.due_date} onChange={(e) => editField({ due_date: e.target.value })} /></div>
+            <div className="field" style={{ width: 110 }}><label>Budget €</label>
+              <input className="input" value={edit.budget || ""} onChange={(e) => editField({ budget: num(e.target.value) })} /></div>
+            <div className="field" style={{ width: 110 }}><label>Stunden</label>
+              <input className="input" value={edit.hours_quota || ""} onChange={(e) => editField({ hours_quota: num(e.target.value) })} /></div>
+          </div>
+          <div className="field"><label>Briefing / Projektziel</label>
+            <textarea className="input" value={edit.brief} onChange={(e) => editField({ brief: e.target.value })} rows={3} /></div>
+          <button className="btn btn-primary">Speichern</button>
+        </form>
+      )}
+
       {projects.length === 0
         ? <div className="empty">Noch keine Projekte.</div>
-        : <Kanban projects={projects} canEdit={isAgency} onMove={move} onDelete={del} todoCounts={todoCounts} />}
+        : <Kanban projects={projects} canEdit={isAgency} onMove={move} onDelete={del}
+            onEdit={isAgency ? (p) => setEdit(p) : undefined} todoCounts={todoCounts} />}
     </div>
   );
 }

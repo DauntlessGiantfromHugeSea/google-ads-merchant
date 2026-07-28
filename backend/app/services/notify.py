@@ -40,6 +40,13 @@ def _client_user_ids(db: Session, client_id: str) -> list[str]:
         User.client_id == client_id, User.is_active.is_(True)).all()]
 
 
+def notify_client_users(db: Session, client_id: str, *, org_id: str, type_: str,
+                        title: str, body: str = "", link: str = "",
+                        exclude_user_id: str | None = None) -> None:
+    notify_users(db, _client_user_ids(db, client_id), org_id=org_id, client_id=client_id,
+                 type_=type_, title=title, body=body, link=link, exclude_user_id=exclude_user_id)
+
+
 def notify_counterparts(db: Session, *, author: User, org_id: str, client_id: str,
                         type_: str, title: str, body: str = "", link: str = "") -> None:
     """Benachrichtigt die jeweils andere Seite (Agentur <-> Kunde)."""

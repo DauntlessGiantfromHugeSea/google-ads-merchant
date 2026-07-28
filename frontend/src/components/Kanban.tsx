@@ -11,14 +11,16 @@ const TYPES: Record<string, string> = {
   design: "Design", marketing: "Marketing", web: "Web", seo: "SEO", social: "Social", sonstiges: "Sonstiges",
 };
 
-export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEdit, todoCounts }: {
+export default function Kanban({ projects, onMove, onDelete, onEdit, onOpenClient, canEdit, todoCounts }: {
   projects: Project[];
   onMove?: (p: Project, status: string) => void;
   onDelete?: (p: Project) => void;
+  onEdit?: (p: Project) => void;
   onOpenClient?: (clientId: string) => void;
   canEdit: boolean;
   todoCounts?: Record<string, number>;
 }) {
+  const eur = (n: number) => n.toLocaleString("de-DE") + " €";
   const dragged = useRef<Project | null>(null);
   const [over, setOver] = useState<string | null>(null);
 
@@ -47,6 +49,9 @@ export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEd
                     onClick={() => onOpenClient?.(p.client_id)}>{p.client_name}</div>
                 )}
                 <div className="m">{p.assignee || "—"}{p.due_date ? ` · bis ${p.due_date}` : ""}</div>
+                {(p.budget > 0 || p.hours_quota > 0) && (
+                  <div className="m">{p.budget > 0 ? eur(p.budget) : ""}{p.budget > 0 && p.hours_quota > 0 ? " · " : ""}{p.hours_quota > 0 ? `${p.hours_quota} Std.` : ""}</div>
+                )}
                 <div className="row">
                   <span className={`ptype pt-${TYPES[p.type] ? p.type : "sonstiges"}`}>{TYPES[p.type] || p.type}</span>
                   {todoCounts && todoCounts[p.id] > 0 && (
@@ -60,6 +65,7 @@ export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEd
                         onClick={() => onMove(p, COLS[ci + 1].key)}>▶</button>
                     </>
                   )}
+                  {canEdit && onEdit && <button className="kmove" title="Bearbeiten" onClick={() => onEdit(p)}>✎</button>}
                   {canEdit && onDelete && <button className="del" onClick={() => onDelete(p)}>löschen</button>}
                 </div>
               </div>

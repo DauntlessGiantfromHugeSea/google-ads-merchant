@@ -102,6 +102,7 @@ export interface Assignee {
 export interface Project {
   id: string; client_id: string; title: string; description: string; type: string;
   status: string; assignee: string; due_date: string; created_at: string; client_name?: string;
+  brief: string; budget: number; hours_quota: number;
 }
 export interface Package {
   id: string; name: string; category: string; price: string; interval: string; description: string;

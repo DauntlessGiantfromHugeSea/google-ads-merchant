@@ -183,6 +183,9 @@ class ProjectCreate(BaseModel):
     status: str = "backlog"
     assignee: str = ""
     due_date: str = ""
+    brief: str = ""
+    budget: float = 0.0
+    hours_quota: float = 0.0
 
 
 class ProjectPatch(BaseModel):
@@ -192,6 +195,9 @@ class ProjectPatch(BaseModel):
     status: str | None = None
     assignee: str | None = None
     due_date: str | None = None
+    brief: str | None = None
+    budget: float | None = None
+    hours_quota: float | None = None
 
 
 class ProjectOut(BaseModel):
@@ -203,6 +209,9 @@ class ProjectOut(BaseModel):
     status: str
     assignee: str
     due_date: str
+    brief: str = ""
+    budget: float = 0.0
+    hours_quota: float = 0.0
     created_at: datetime
 
     class Config:

@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Notification, api } from "../api";
 
 const ICON: Record<string, string> = {
-  message: "💬", task_assigned: "✅", approval_requested: "📝", approval_responded: "👍", info: "🔔",
+  message: "💬", task_assigned: "✅", approval_requested: "📝", approval_responded: "👍",
+  todo_overdue: "⏰", project_status: "📊", offer_accepted: "🤝", info: "🔔",
 };
 
 function ago(iso: string): string {
