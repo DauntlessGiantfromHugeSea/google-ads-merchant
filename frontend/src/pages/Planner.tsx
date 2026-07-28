@@ -47,7 +47,8 @@ export default function Planner() {
     }));
     const t: WorkItem[] = todos.map((x) => ({
       id: x.id, kind: "todo", title: x.title, clientId: x.client_id, clientName: x.client_name || "",
-      status: x.status, dueDate: x.due_date || "", assignee: x.assignee || "", priority: x.priority || "normal", type: "",
+      status: x.status, dueDate: x.due_date || "", assignee: x.assignee || "", priority: x.priority || "normal",
+      type: "", projectTitle: x.project_title || "",
     }));
     return [...p, ...t];
   }, [projects, todos]);
@@ -154,9 +155,14 @@ export default function Planner() {
                 <div className="todo-body">
                   <div className="todo-title">
                     {i.title}
-                    <span className={`tag ${i.kind === "project" ? "" : ""}`} style={{ marginLeft: 8, fontSize: 10 }}>
+                    <span className="tag" style={{ marginLeft: 8, fontSize: 10 }}>
                       {i.kind === "project" ? "Projekt" : "Aufgabe"}
                     </span>
+                    {i.kind === "todo" && i.projectTitle && (
+                      <span className="tag" style={{ marginLeft: 6, fontSize: 10, background: "rgba(167,139,250,0.18)", color: "#c9b8ff" }}>
+                        ↳ {i.projectTitle}
+                      </span>
+                    )}
                     {i.priority === "high" && <span className="prio prio-high" style={{ marginLeft: 6 }}>hoch</span>}
                   </div>
                   <div className="todo-sub">

@@ -88,6 +88,7 @@ export interface Approval {
 export interface Todo {
   id: string; title: string; description: string; status: string; priority: string;
   assignee: string; due_date: string; created_at: string; client_id: string;
+  project_id: string | null;
 }
 export interface Project {
   id: string; client_id: string; title: string; description: string; type: string;
@@ -106,7 +107,7 @@ export interface Offer {
   created_at: string; sent_at: string | null; accepted_at: string | null;
   items: OfferItem[]; net: number; vat: number; gross: number;
 }
-export type TodoGlobal = Todo & { client_name: string };
+export type TodoGlobal = Todo & { client_name: string; project_title: string };
 export interface Doc {
   id: string; filename: string; content_type: string; size: number;
   uploaded_by: string; created_at: string; client_id: string;
@@ -318,7 +319,7 @@ export const api = {
     request<{ access_token: string }>(`/clients/${id}/impersonate`, { method: "POST" }),
 
   todos: (id: string) => request<Todo[]>(`/clients/${id}/todos`),
-  createTodo: (id: string, d: { title: string; description?: string; due_date?: string; priority?: string; assignee?: string }) =>
+  createTodo: (id: string, d: { title: string; description?: string; due_date?: string; priority?: string; assignee?: string; project_id?: string | null }) =>
     request<Todo>(`/clients/${id}/todos`, { method: "POST", body: JSON.stringify(d) }),
   updateTodo: (id: string, todoId: string, d: Partial<Todo>) =>
     request<Todo>(`/clients/${id}/todos/${todoId}`, { method: "PATCH", body: JSON.stringify(d) }),

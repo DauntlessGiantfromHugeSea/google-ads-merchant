@@ -91,6 +91,9 @@ def delete_client(client_id: str, user: User = Depends(require_admin), db: Sessi
     offer_ids = [o.id for o in db.query(Offer).filter(Offer.client_id == client_id).all()]
     if offer_ids:
         db.query(OfferItem).filter(OfferItem.offer_id.in_(offer_ids)).delete(synchronize_session=False)
+    # To-Do-Verweise auf Projekte lösen, bevor Projekte gelöscht werden (FK).
+    db.query(Todo).filter(Todo.client_id == client_id).update(
+        {Todo.project_id: None}, synchronize_session=False)
     for model in (Offer, Project, Milestone, Approval, AdsActivity, Document, MonitorEvent):
         db.query(model).filter(model.client_id == client_id).delete(synchronize_session=False)
     # Nullbare Verweise lösen
@@ -137,13 +140,25 @@ def list_todos(client_id: str, user: User = Depends(get_current_user), db: Sessi
             .order_by(Todo.created_at.desc()).all())
 
 
+def _resolve_project_id(raw: str | None, client_id: str, db: Session) -> str | None:
+    """Leeren Wert zu NULL machen und prüfen, dass das Projekt zum Kunden gehört."""
+    if not raw:
+        return None
+    project = db.get(Project, raw)
+    if not project or project.client_id != client_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Projekt gehört nicht zu diesem Kunden")
+    return raw
+
+
 @router.post("/{client_id}/todos", response_model=TodoOut, status_code=201)
 def create_todo(
     client_id: str, data: TodoCreate,
     user: User = Depends(require_agency), db: Session = Depends(get_db),
 ):
     get_scoped_client(client_id, user, db)
-    todo = Todo(client_id=client_id, **data.model_dump())
+    payload = data.model_dump()
+    payload["project_id"] = _resolve_project_id(payload.get("project_id"), client_id, db)
+    todo = Todo(client_id=client_id, **payload)
     db.add(todo)
     db.commit()
     db.refresh(todo)
@@ -159,7 +174,10 @@ def update_todo(
     todo = db.get(Todo, todo_id)
     if not todo or todo.client_id != client_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "To-Do nicht gefunden")
-    for field, value in data.model_dump(exclude_unset=True).items():
+    updates = data.model_dump(exclude_unset=True)
+    if "project_id" in updates:
+        updates["project_id"] = _resolve_project_id(updates["project_id"], client_id, db)
+    for field, value in updates.items():
         setattr(todo, field, value)
     db.commit()
     db.refresh(todo)

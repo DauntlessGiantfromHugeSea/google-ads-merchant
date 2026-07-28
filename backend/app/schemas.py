@@ -108,6 +108,7 @@ class TodoCreate(BaseModel):
     status: str = "open"
     priority: str = "normal"
     assignee: str = ""
+    project_id: str | None = None
 
 
 class TodoPatch(BaseModel):
@@ -117,6 +118,7 @@ class TodoPatch(BaseModel):
     status: str | None = None
     priority: str | None = None
     assignee: str | None = None
+    project_id: str | None = None
 
 
 class TodoOut(BaseModel):
@@ -129,6 +131,7 @@ class TodoOut(BaseModel):
     due_date: str
     created_at: datetime
     client_id: str
+    project_id: str | None = None
 
     class Config:
         from_attributes = True
@@ -174,6 +177,7 @@ class ProjectGlobalOut(ProjectOut):
 
 class TodoGlobalOut(TodoOut):
     client_name: str = ""
+    project_title: str = ""
 
 
 # --- Leistungs-/Paketkatalog ---

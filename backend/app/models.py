@@ -236,6 +236,9 @@ class Todo(Base):
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
     client: Mapped[Client] = relationship(back_populates="todos")
 
+    # Optionale Zuordnung zu einem Projekt des Kunden.
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+
 
 class Project(Base):
     """Projekt/Kampagne zu einem Kunden – Kern der Agenturarbeit (Kanban)."""

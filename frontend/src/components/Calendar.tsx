@@ -11,6 +11,7 @@ export interface WorkItem {
   assignee: string;
   priority: string;  // nur To-Dos: low/normal/high
   type: string;      // nur Projekte: design/web/…
+  projectTitle?: string; // nur To-Dos: zugeordnetes Projekt
 }
 
 const MONTHS = ["Januar", "Februar", "März", "April", "Mai", "Juni",

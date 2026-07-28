@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
-from app.models import Client, Project, User
+from app.models import Client, Project, Todo, User
 from app.schemas import ProjectCreate, ProjectGlobalOut, ProjectOut, ProjectPatch
 
 client_router = APIRouter(prefix="/api/clients/{client_id}/projects", tags=["projects"])
@@ -49,6 +49,9 @@ def delete_project(client_id: str, project_id: str,
     get_scoped_client(client_id, user, db)
     proj = db.get(Project, project_id)
     if proj and proj.client_id == client_id:
+        # Zugeordnete To-Dos behalten, aber die Projektzuordnung lösen (FK).
+        db.query(Todo).filter(Todo.project_id == project_id).update(
+            {Todo.project_id: None}, synchronize_session=False)
         db.delete(proj)
         db.commit()
 
