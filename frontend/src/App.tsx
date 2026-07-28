@@ -8,8 +8,7 @@ import Settings from "./pages/Settings";
 import Vault from "./pages/Vault";
 import Reveal from "./pages/Reveal";
 import RequestSubmit from "./pages/RequestSubmit";
-import ProjectsBoard from "./pages/Projects";
-import Tasks from "./pages/Tasks";
+import Planner from "./pages/Planner";
 import Forms from "./pages/Forms";
 import Intake from "./pages/Intake";
 import SetPassword from "./pages/SetPassword";
@@ -69,8 +68,9 @@ export default function App() {
         <Route path="/clients/:id" element={user ? <Shell><ClientDetail /></Shell> : <Navigate to="/login" />} />
         <Route path="/settings" element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />} />
         <Route path="/vault" element={user ? <Shell><Vault /></Shell> : <Navigate to="/login" />} />
-        <Route path="/projects" element={user && user.role !== "client_user" ? <Shell><ProjectsBoard /></Shell> : <Navigate to="/" />} />
-        <Route path="/tasks" element={user && user.role !== "client_user" ? <Shell><Tasks /></Shell> : <Navigate to="/" />} />
+        <Route path="/planner" element={user && user.role !== "client_user" ? <Shell><Planner /></Shell> : <Navigate to="/" />} />
+        <Route path="/projects" element={<Navigate to="/planner" />} />
+        <Route path="/tasks" element={<Navigate to="/planner" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
         <Route path="/hilfe" element={user ? <Shell><Help /></Shell> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
@@ -96,8 +96,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/")}>Kunden</button>
           {user?.role !== "client_user" && (
             <>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/projects")}>Projekte</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/tasks")}>Aufgaben</button>
+              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/planner")}>Planner</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>
             </>
           )}

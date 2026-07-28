@@ -14,6 +14,7 @@ import MailCompose from "../sections/MailCompose";
 import Launch from "../sections/Launch";
 import Monitoring from "../sections/Monitoring";
 import Offers from "../sections/Offers";
+import WorkCalendar from "../sections/WorkCalendar";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -111,6 +112,7 @@ export default function ClientDetail() {
               <Launch clientId={id} isAgency={isAgency} />
               <Projects clientId={id} isAgency={isAgency} />
               <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />
+              <WorkCalendar clientId={id} clientName={client.name} />
             </>
           )}
           {section === "reporting" && (
