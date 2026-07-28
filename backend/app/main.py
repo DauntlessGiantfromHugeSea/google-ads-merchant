@@ -7,7 +7,7 @@ from sqlalchemy import inspect, text
 
 from app.api.routes import (
     ads_activity, auth, branding, clients, dashboard, documents, intake, launch, mail,
-    monitoring, org, packages, projects, reports, requests, secrets, tasks, team,
+    monitoring, offers, org, packages, projects, reports, requests, secrets, tasks, team,
 )
 from app.database import Base, engine
 
@@ -33,6 +33,7 @@ _ORG_COLUMNS = {
 }
 _TODO_COLUMNS = {"priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''"}
 _USER_COLUMNS = {"invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP"}
+_PACKAGE_COLUMNS = {"unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0"}
 
 
 def _ensure_columns(insp, table: str, columns: dict) -> None:
@@ -51,6 +52,7 @@ def _ensure_schema() -> None:
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)
     _ensure_columns(insp, "todos", _TODO_COLUMNS)
     _ensure_columns(insp, "users", _USER_COLUMNS)
+    _ensure_columns(insp, "service_packages", _PACKAGE_COLUMNS)
 
 
 @asynccontextmanager
@@ -89,6 +91,8 @@ app.include_router(ads_activity.router)
 app.include_router(mail.router)
 app.include_router(launch.router)
 app.include_router(monitoring.router)
+app.include_router(offers.client_router)
+app.include_router(offers.public_router)
 
 
 @app.get("/api/health")

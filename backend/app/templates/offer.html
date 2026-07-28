@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {
+    size: A4; margin: 4cm 5cm 3.2cm 2.8cm;
+    @bottom-right { content: "Seite " counter(page) " / " counter(pages); font-size: 8px; color: #aaa; margin-bottom: 0.4cm; }
+  }
+  html, body { background: transparent; }
+  .letterhead { position: fixed; top: -4cm; left: -2.8cm; width: 210mm; height: 297mm; z-index: -1; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 22px; letter-spacing: 3px; margin: 0 0 18px; color: #2b1a33; }
+  .top { display: flex; justify-content: space-between; margin-bottom: 20px; }
+  .recipient { font-size: 12px; }
+  .recipient .co { font-weight: 700; }
+  .meta { text-align: right; font-size: 11px; }
+  .meta b { display: inline-block; min-width: 120px; text-align: left; }
+  .intro { margin: 8px 0 16px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; color: #52606d; border-bottom: 1.5px solid #2b1a33; padding: 6px 6px; }
+  td { padding: 8px 6px; border-bottom: 1px solid #eceef1; vertical-align: top; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .pos-title { font-weight: 700; }
+  .pos-desc { color: #52606d; font-size: 10px; margin-top: 3px; }
+  .totals { margin-top: 14px; width: 100%; }
+  .totals td { border: none; padding: 3px 6px; }
+  .totals .lbl { text-align: right; color: #52606d; }
+  .totals .val { text-align: right; white-space: nowrap; width: 120px; }
+  .grand { font-size: 14px; font-weight: 800; color: #2b1a33; border-top: 1.5px solid #2b1a33; }
+  .accepted { margin-top: 16px; padding: 8px 12px; background: #def7ec; color: #03543f; border-radius: 6px; font-size: 11px; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
+  <h1>ANGEBOT</h1>
+  <div class="top">
+    <div class="recipient">
+      {% if offer.recipient.company %}<div class="co">{{ offer.recipient.company }}</div>{% endif %}
+      {% if offer.recipient.name %}<div>{{ offer.recipient.name }}</div>{% endif %}
+      <div style="white-space:pre-line;">{{ offer.recipient.address }}</div>
+    </div>
+    <div class="meta">
+      <div><b>Angebotsnummer:</b> {{ offer.number }}</div>
+      <div><b>Angebotsdatum:</b> {{ offer.date }}</div>
+      {% if offer.title %}<div><b>Betreff:</b> {{ offer.title }}</div>{% endif %}
+    </div>
+  </div>
+
+  {% if offer.intro %}<div class="intro" style="white-space:pre-line;">{{ offer.intro }}</div>{% endif %}
+
+  <table>
+    <tr><th style="width:18px;">#</th><th>Beschreibung</th><th class="num">Menge</th><th>Einheit</th><th class="num">Betrag</th></tr>
+    {% for it in offer.positions %}
+    <tr>
+      <td>{{ it.position }}</td>
+      <td><div class="pos-title">{{ it.title }}</div>{% if it.desc %}<div class="pos-desc">{{ it.desc }}</div>{% endif %}</td>
+      <td class="num">{{ it.quantity_str }}</td>
+      <td>{{ it.unit }}</td>
+      <td class="num">{{ it.amount_str }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <table class="totals">
+    {% if offer.show_vat %}
+    <tr><td class="lbl">Nettobetrag</td><td class="val">{{ offer.net_str }}</td></tr>
+    <tr><td class="lbl">zzgl. {{ offer.vat_rate_str }} % USt</td><td class="val">{{ offer.vat_str }}</td></tr>
+    <tr><td class="lbl grand">Gesamtbetrag</td><td class="val grand">{{ offer.gross_str }}</td></tr>
+    {% else %}
+    <tr><td class="lbl grand">Gesamtbetrag</td><td class="val grand">{{ offer.gross_str }}</td></tr>
+    {% endif %}
+  </table>
+
+  {% if offer.accepted_at %}
+  <div class="accepted">✓ Angebot angenommen am {{ offer.accepted_at }}{% if offer.accepted_by %} von {{ offer.accepted_by }}{% endif %}.</div>
+  {% endif %}
+</body>
+</html>

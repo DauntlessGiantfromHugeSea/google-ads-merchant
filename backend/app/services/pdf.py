@@ -67,20 +67,32 @@ def _overlay_on_pdf(content_pdf: bytes, letterhead: Path) -> bytes:
     return out.getvalue()
 
 
-def render_report_pdf(report: dict) -> bytes:
-    letterhead = _find_letterhead()
-    image_url = (
-        letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
-    )
-
-    html = render_report_html(report, letterhead_image=image_url)
+def _pdf_from_html(html: str, letterhead: Path | None) -> bytes:
+    """Rendert HTML zu PDF und legt es (bei PDF-Briefpapier) aufs Briefpapier."""
     try:
         from weasyprint import HTML  # noqa: PLC0415
     except Exception as exc:  # pragma: no cover
         raise RuntimeError(f"WeasyPrint nicht verfügbar: {exc}") from exc
-
     content_pdf = HTML(string=html, base_url=str(_TEMPLATE_DIR)).write_pdf()
-
     if letterhead and letterhead.suffix.lower() == ".pdf":
         return _overlay_on_pdf(content_pdf, letterhead)
     return content_pdf
+
+
+def render_report_pdf(report: dict) -> bytes:
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    html = render_report_html(report, letterhead_image=image_url)
+    return _pdf_from_html(html, letterhead)
+
+
+def render_offer_html(offer: dict, letterhead_image: str | None = None) -> str:
+    template = _env.get_template("offer.html")
+    return template.render(offer=offer, letterhead_image=letterhead_image)
+
+
+def render_offer_pdf(offer: dict) -> bytes:
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    html = render_offer_html(offer, letterhead_image=image_url)
+    return _pdf_from_html(html, letterhead)

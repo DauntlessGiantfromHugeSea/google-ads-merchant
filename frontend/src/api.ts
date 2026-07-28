@@ -94,7 +94,17 @@ export interface Project {
   status: string; assignee: string; due_date: string; created_at: string; client_name?: string;
 }
 export interface Package {
-  id: string; name: string; price: string; interval: string; description: string; active: boolean;
+  id: string; name: string; price: string; interval: string; description: string;
+  unit: string; unit_price: number; active: boolean;
+}
+export interface OfferItem {
+  id?: string; position?: number; description: string; quantity: number; unit: string; unit_price: number; line_total?: number;
+}
+export interface Offer {
+  id: string; client_id: string; client_name: string; number: string; date: string; title: string;
+  intro: string; status: string; vat_rate: number; public_token: string; accepted_by: string;
+  created_at: string; sent_at: string | null; accepted_at: string | null;
+  items: OfferItem[]; net: number; vat: number; gross: number;
 }
 export type TodoGlobal = Todo & { client_name: string };
 export interface Doc {
@@ -229,8 +239,24 @@ export const api = {
     request<{ ok: boolean }>(`/clients/${cid}/documents/${docId}/send`, { method: "POST", body: JSON.stringify(d) }),
 
   packages: () => request<Package[]>("/packages"),
-  createPackage: (d: { name: string; price?: string; interval?: string; description?: string }) =>
+  createPackage: (d: { name: string; price?: string; interval?: string; description?: string; unit?: string; unit_price?: number }) =>
     request<Package>("/packages", { method: "POST", body: JSON.stringify(d) }),
+
+  offers: (cid: string) => request<Offer[]>(`/clients/${cid}/offers`),
+  createOffer: (cid: string, d: Partial<Offer>) =>
+    request<Offer>(`/clients/${cid}/offers`, { method: "POST", body: JSON.stringify(d) }),
+  updateOffer: (cid: string, id: string, d: Partial<Offer>) =>
+    request<Offer>(`/clients/${cid}/offers/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteOffer: (cid: string, id: string) => request<void>(`/clients/${cid}/offers/${id}`, { method: "DELETE" }),
+  sendOffer: (cid: string, id: string) => request<{ ok: boolean; to: string; link: string }>(`/clients/${cid}/offers/${id}/send`, { method: "POST" }),
+  publicOffer: (token: string) => request<any>(`/offers/${token}`),
+  acceptOffer: (token: string, name: string) => request<{ ok: boolean }>(`/offers/${token}/accept`, { method: "POST", body: JSON.stringify({ name }) }),
+  async downloadOfferPdf(cid: string, id: string, number: string) {
+    const res = await fetch(`/api/clients/${cid}/offers/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `Angebot-${number}.pdf`; a.click(); URL.revokeObjectURL(url);
+  },
   updatePackage: (id: string, d: Partial<Package>) =>
     request<Package>(`/packages/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deletePackage: (id: string) => request<void>(`/packages/${id}`, { method: "DELETE" }),

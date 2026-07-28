@@ -376,8 +376,50 @@ class ServicePackage(Base):
     price: Mapped[str] = mapped_column(String(64), default="")
     interval: Mapped[str] = mapped_column(String(32), default="monatlich")  # monatlich/jährlich/einmalig
     description: Mapped[str] = mapped_column(Text, default="")
+    unit: Mapped[str] = mapped_column(String(32), default="Stunden")       # Stunden/Monat/Pauschal
+    unit_price: Mapped[float] = mapped_column(Float, default=0.0)          # Stundensatz/Einzelpreis
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Offer(Base):
+    """Angebot je Kunde/Lead (Positionen, Gesamtbetrag, online annehmbar)."""
+
+    __tablename__ = "offers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    number: Mapped[str] = mapped_column(String(64), default="")
+    date: Mapped[str] = mapped_column(String(10), default="")
+    title: Mapped[str] = mapped_column(String(512), default="")
+    intro: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default="draft")  # draft/sent/accepted/declined
+    vat_rate: Mapped[float] = mapped_column(Float, default=0.0)        # % (0 = keine USt ausweisen)
+    public_token: Mapped[str] = mapped_column(String(64), default="")
+    accepted_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    items: Mapped[list[OfferItem]] = relationship(
+        back_populates="offer", cascade="all, delete-orphan", order_by="OfferItem.position")
+
+
+class OfferItem(Base):
+    """Angebotsposition."""
+
+    __tablename__ = "offer_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    offer_id: Mapped[str] = mapped_column(ForeignKey("offers.id"))
+    position: Mapped[int] = mapped_column(default=0)
+    description: Mapped[str] = mapped_column(Text, default="")
+    quantity: Mapped[float] = mapped_column(Float, default=1.0)
+    unit: Mapped[str] = mapped_column(String(32), default="Stunden")
+    unit_price: Mapped[float] = mapped_column(Float, default=0.0)
+
+    offer: Mapped[Offer] = relationship(back_populates="items")
 
 
 class Secret(Base):

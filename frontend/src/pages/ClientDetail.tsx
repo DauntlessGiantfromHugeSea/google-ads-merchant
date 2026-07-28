@@ -13,6 +13,7 @@ import Projects from "../sections/Projects";
 import MailCompose from "../sections/MailCompose";
 import Launch from "../sections/Launch";
 import Monitoring from "../sections/Monitoring";
+import Offers from "../sections/Offers";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -20,6 +21,7 @@ const NAV = [
   { key: "projects", label: "Projekte" },
   { key: "reportings", label: "Reportings" },
   { key: "monitoring", label: "Monitoring" },
+  { key: "offers", label: "Angebote" },
   { key: "contract", label: "Vertragsdaten" },
   { key: "documents", label: "Dokumente" },
   { key: "todos", label: "To-Dos" },
@@ -112,6 +114,9 @@ export default function ClientDetail() {
           )}
           {section === "monitoring" && (
             <Monitoring clientId={id} isAgency={isAgency} />
+          )}
+          {section === "offers" && (
+            <Offers clientId={id} isAgency={isAgency} />
           )}
           {section === "contract" && (
             <Contract client={client} isAgency={isAgency} onSaved={setClient} />

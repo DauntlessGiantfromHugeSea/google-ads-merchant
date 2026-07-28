@@ -86,13 +86,16 @@ function Packages() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [interval, setInterval] = useState("monatlich");
+  const [unit, setUnit] = useState("Stunden");
+  const [rate, setRate] = useState("");
 
   const load = () => api.packages().then(setPkgs).catch(() => {});
   useEffect(() => { load(); }, []);
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    await api.createPackage({ name, price, interval }); setName(""); setPrice(""); load(); toast("Paket angelegt.");
+    await api.createPackage({ name, price, interval, unit, unit_price: parseFloat(rate.replace(",", ".")) || 0 });
+    setName(""); setPrice(""); setRate(""); load(); toast("Paket angelegt.");
   };
   const del = async (id: string) => { if (!confirm("Paket löschen?")) return; await api.deletePackage(id); load(); toast("Paket gelöscht."); };
 
@@ -102,17 +105,22 @@ function Packages() {
       <p className="muted" style={{ marginTop: 0 }}>Dein Katalog – steht in den Vertragsdaten zur Auswahl.</p>
       {pkgs.map((p) => (
         <div key={p.id} className="list-row">
-          <div><strong>{p.name}</strong> <span className="muted">· {p.price || "—"} · {p.interval}</span></div>
+          <div><strong>{p.name}</strong> <span className="muted">· {p.price || "—"} · {p.interval}{p.unit_price ? ` · ${p.unit_price} €/${p.unit}` : ""}</span></div>
           <button className="del" onClick={() => del(p.id)}>löschen</button>
         </div>
       ))}
       <form className="row-inline form-light" style={{ marginTop: 14 }} onSubmit={create}>
         <div className="field" style={{ flex: 2 }}><label>Paketname</label><input className="input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="z.B. SEO Premium" /></div>
-        <div className="field"><label>Preis</label><input className="input" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="990 €" /></div>
+        <div className="field"><label>Preis (Anzeige)</label><input className="input" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="990 €" /></div>
         <div className="field"><label>Intervall</label>
           <select className="select" value={interval} onChange={(e) => setInterval(e.target.value)}>
             <option value="monatlich">monatlich</option><option value="jährlich">jährlich</option><option value="einmalig">einmalig</option>
           </select></div>
+        <div className="field"><label>Einheit</label>
+          <select className="select" value={unit} onChange={(e) => setUnit(e.target.value)}>
+            <option>Stunden</option><option>Monat</option><option>Pauschal</option>
+          </select></div>
+        <div className="field"><label>Stundensatz/Preis (€)</label><input className="input" value={rate} onChange={(e) => setRate(e.target.value)} placeholder="15,90" /></div>
         <button className="btn btn-primary">Hinzufügen</button>
       </form>
     </div>

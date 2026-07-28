@@ -180,6 +180,8 @@ class PackageCreate(BaseModel):
     price: str = ""
     interval: str = "monatlich"
     description: str = ""
+    unit: str = "Stunden"
+    unit_price: float = 0.0
     active: bool = True
 
 
@@ -188,6 +190,8 @@ class PackagePatch(BaseModel):
     price: str | None = None
     interval: str | None = None
     description: str | None = None
+    unit: str | None = None
+    unit_price: float | None = None
     active: bool | None = None
 
 
@@ -197,10 +201,72 @@ class PackageOut(BaseModel):
     price: str
     interval: str
     description: str
+    unit: str
+    unit_price: float
     active: bool
 
     class Config:
         from_attributes = True
+
+
+# --- Angebote ---
+class OfferItemIn(BaseModel):
+    description: str = ""
+    quantity: float = 1.0
+    unit: str = "Stunden"
+    unit_price: float = 0.0
+
+
+class OfferItemOut(OfferItemIn):
+    id: str
+    position: int
+    line_total: float = 0.0
+
+    class Config:
+        from_attributes = True
+
+
+class OfferCreate(BaseModel):
+    title: str = ""
+    number: str = ""
+    date: str = ""
+    intro: str = ""
+    vat_rate: float = 0.0
+    items: list[OfferItemIn] = []
+
+
+class OfferUpdate(BaseModel):
+    title: str | None = None
+    number: str | None = None
+    date: str | None = None
+    intro: str | None = None
+    vat_rate: float | None = None
+    items: list[OfferItemIn] | None = None
+
+
+class OfferOut(BaseModel):
+    id: str
+    client_id: str
+    client_name: str = ""
+    number: str
+    date: str
+    title: str
+    intro: str
+    status: str
+    vat_rate: float
+    public_token: str
+    accepted_by: str
+    created_at: datetime
+    sent_at: datetime | None = None
+    accepted_at: datetime | None = None
+    items: list[OfferItemOut] = []
+    net: float = 0.0
+    vat: float = 0.0
+    gross: float = 0.0
+
+
+class OfferAccept(BaseModel):
+    name: str = ""
 
 
 # --- Kundendaten-Formular (Intake) ---
