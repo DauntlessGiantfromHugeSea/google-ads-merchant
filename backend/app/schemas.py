@@ -49,6 +49,20 @@ class TwoFACode(BaseModel):
     code: str
 
 
+class NotificationOut(BaseModel):
+    id: str
+    type: str
+    title: str
+    body: str
+    link: str
+    read: bool
+    client_id: str | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # --- Clients ---
 class ClientCreate(BaseModel):
     name: str

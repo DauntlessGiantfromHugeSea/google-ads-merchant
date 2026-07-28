@@ -10,6 +10,7 @@ from app.api.deps import get_current_user, get_scoped_client, require_admin, req
 from app.config import get_settings
 from app.core.crypto import encrypt_json
 from app.core.security import create_access_token, hash_password
+from app.services.notify import notify_counterparts, notify_users
 from app.database import get_db
 from app.models import (
     Account,
@@ -164,6 +165,15 @@ def _resolve_assignee_id(raw: str | None, client_id: str, org_id: str, db: Sessi
     return raw
 
 
+def _notify_assignee(db: Session, todo: Todo, actor: User, client: Client) -> None:
+    """Benachrichtigt den zugewiesenen Nutzer (außer er weist sich selbst zu)."""
+    if not todo.assignee_id or todo.assignee_id == actor.id:
+        return
+    notify_users(db, [todo.assignee_id], org_id=actor.organization_id, client_id=client.id,
+                 type_="task_assigned", title="Neue Aufgabe für dich",
+                 body=f"{todo.title} · {client.name}", link=f"/clients/{client.id}")
+
+
 def _with_assignee_name(todo: Todo, names: dict[str, str]) -> TodoOut:
     out = TodoOut.model_validate(todo)
     out.assignee_name = names.get(todo.assignee_id or "", "")
@@ -205,12 +215,13 @@ def create_todo(
     client_id: str, data: TodoCreate,
     user: User = Depends(require_agency), db: Session = Depends(get_db),
 ):
-    get_scoped_client(client_id, user, db)
+    client = get_scoped_client(client_id, user, db)
     payload = data.model_dump()
     payload["project_id"] = _resolve_project_id(payload.get("project_id"), client_id, db)
     payload["assignee_id"] = _resolve_assignee_id(payload.get("assignee_id"), client_id, user.organization_id, db)
     todo = Todo(client_id=client_id, **payload)
     db.add(todo)
+    _notify_assignee(db, todo, user, client)
     db.commit()
     db.refresh(todo)
     names = _assignee_name_map(client_id, user.organization_id, db)
@@ -231,8 +242,11 @@ def update_todo(
         updates["project_id"] = _resolve_project_id(updates["project_id"], client_id, db)
     if "assignee_id" in updates:
         updates["assignee_id"] = _resolve_assignee_id(updates["assignee_id"], client_id, user.organization_id, db)
+    prev_assignee = todo.assignee_id
     for field, value in updates.items():
         setattr(todo, field, value)
+    if "assignee_id" in updates and todo.assignee_id and todo.assignee_id != prev_assignee:
+        _notify_assignee(db, todo, user, get_scoped_client(client_id, user, db))
     db.commit()
     db.refresh(todo)
     names = _assignee_name_map(client_id, user.organization_id, db)
@@ -267,13 +281,21 @@ def create_update(
     """Eintrag in den Verlauf. Agentur postet Updates/Notizen/Meilensteine;
     der Kunde kann ebenfalls schreiben (zwei-Wege-Kommunikation, Kategorie
     'message')."""
-    get_scoped_client(client_id, user, db)
+    client = get_scoped_client(client_id, user, db)
     category = "message" if user.role == UserRole.client_user else data.category
     upd = ClientUpdate(
         client_id=client_id, title=data.title, body=data.body, category=category,
         author_name=user.full_name or user.email,
     )
     db.add(upd)
+    notify_counterparts(
+        db, author=user, org_id=user.organization_id, client_id=client_id,
+        type_="message",
+        title=f"Neue Nachricht: {client.name}" if user.role != UserRole.client_user
+              else f"Nachricht von {client.name}",
+        body=(data.title or data.body)[:140],
+        link=f"/clients/{client_id}",
+    )
     db.commit()
     db.refresh(upd)
     return upd

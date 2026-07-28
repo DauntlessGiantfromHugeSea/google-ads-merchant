@@ -7,7 +7,8 @@ from sqlalchemy import inspect, text
 
 from app.api.routes import (
     ads_activity, auth, branding, clients, dashboard, documents, intake, launch, mail,
-    monitoring, offers, org, packages, projects, reports, requests, secrets, tasks, team,
+    monitoring, notifications, offers, org, packages, projects, reports, requests,
+    secrets, tasks, team,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -123,6 +124,7 @@ app.include_router(launch.router)
 app.include_router(monitoring.router)
 app.include_router(offers.client_router)
 app.include_router(offers.public_router)
+app.include_router(notifications.router)
 
 
 @app.get("/api/health")

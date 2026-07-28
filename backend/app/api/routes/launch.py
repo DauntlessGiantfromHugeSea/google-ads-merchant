@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
+from app.services.notify import notify_counterparts
 from app.database import get_db
 from app.models import Approval, Milestone, User
 from app.schemas import (
@@ -74,9 +75,12 @@ def list_approvals(client_id: str, user: User = Depends(get_current_user), db: S
 @router.post("/approvals", response_model=ApprovalOut, status_code=201)
 def create_approval(client_id: str, data: ApprovalCreate,
                     user: User = Depends(require_agency), db: Session = Depends(get_db)):
-    get_scoped_client(client_id, user, db)
+    client = get_scoped_client(client_id, user, db)
     ap = Approval(client_id=client_id, **data.model_dump())
     db.add(ap)
+    notify_counterparts(db, author=user, org_id=user.organization_id, client_id=client_id,
+                        type_="approval_requested", title="Freigabe angefragt",
+                        body=f"{ap.title} · {client.name}", link=f"/clients/{client_id}")
     db.commit()
     db.refresh(ap)
     return ap
@@ -96,6 +100,10 @@ def respond_approval(client_id: str, ap_id: str, data: ApprovalRespond,
     ap.response_comment = data.comment
     ap.responded_by = user.full_name or user.email
     ap.responded_at = datetime.now(timezone.utc)
+    label = "freigegeben" if data.decision == "approved" else "Änderungen angefragt"
+    notify_counterparts(db, author=user, org_id=user.organization_id, client_id=client_id,
+                        type_="approval_responded", title=f"Freigabe: {label}",
+                        body=ap.title, link=f"/clients/{client_id}")
     db.commit()
     db.refresh(ap)
     return ap

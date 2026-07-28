@@ -47,6 +47,10 @@ export interface User {
   organization_id: string; client_id: string | null; totp_enabled: boolean;
 }
 export interface TwoFASetup { secret: string; otpauth_uri: string; qr_svg: string; }
+export interface Notification {
+  id: string; type: string; title: string; body: string; link: string;
+  read: boolean; client_id: string | null; created_at: string;
+}
 export interface Client {
   id: string; name: string; notes: string;
   onboarding_completed: boolean; created_at: string;
@@ -167,6 +171,11 @@ export const api = {
   twoFASetup: () => request<TwoFASetup>("/auth/2fa/setup", { method: "POST" }),
   twoFAEnable: (code: string) => request<User>("/auth/2fa/enable", { method: "POST", body: JSON.stringify({ code }) }),
   twoFADisable: (code: string) => request<User>("/auth/2fa/disable", { method: "POST", body: JSON.stringify({ code }) }),
+
+  notifications: () => request<Notification[]>("/notifications"),
+  notificationsUnread: () => request<{ count: number }>("/notifications/unread-count"),
+  notificationsReadAll: () => request<void>("/notifications/read-all", { method: "POST" }),
+  notificationRead: (id: string) => request<void>(`/notifications/${id}/read`, { method: "POST" }),
   registrationOpen: () => request<{ open: boolean }>("/auth/registration-open"),
   inviteInfo: (token: string) => request<{ email: string; full_name: string }>(`/auth/invite/${token}`),
   setInvitePassword: async (token: string, password: string) => {

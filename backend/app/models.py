@@ -501,3 +501,20 @@ class IntakeSubmission(Base):
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     applied: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Notification(Base):
+    """In-App-Benachrichtigung für einen Nutzer (Glocke im Header)."""
+
+    __tablename__ = "notifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    type: Mapped[str] = mapped_column(String(40), default="info")
+    title: Mapped[str] = mapped_column(String(255), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    link: Mapped[str] = mapped_column(String(255), default="")  # Frontend-Pfad, z.B. /clients/<id>
+    read: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

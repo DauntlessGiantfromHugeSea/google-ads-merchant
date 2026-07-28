@@ -2,6 +2,7 @@ import { createContext, lazy, Suspense, useContext, useEffect, useState } from "
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { api, auth, User } from "./api";
 import Login from "./pages/Login";
+import NotificationBell from "./components/NotificationBell";
 
 // Route-basiertes Code-Splitting: nur die tatsächlich geöffnete Seite wird geladen.
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -113,6 +114,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>
             </>
           )}
+          <NotificationBell />
           {/* Alles Sekundäre im Nutzer-Menü */}
           <div className="user-menu">
             <button className="user-btn" onClick={() => setUserMenu((v) => !v)} aria-label="Konto">
