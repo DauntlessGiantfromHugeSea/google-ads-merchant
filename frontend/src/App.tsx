@@ -14,6 +14,7 @@ import Forms from "./pages/Forms";
 import Intake from "./pages/Intake";
 import SetPassword from "./pages/SetPassword";
 import Angebot from "./pages/Angebot";
+import Help from "./pages/Help";
 
 interface AuthCtx {
   user: User | null;
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="/projects" element={user && user.role !== "client_user" ? <Shell><ProjectsBoard /></Shell> : <Navigate to="/" />} />
         <Route path="/tasks" element={user && user.role !== "client_user" ? <Shell><Tasks /></Shell> : <Navigate to="/" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
+        <Route path="/hilfe" element={user ? <Shell><Help /></Shell> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Ctx.Provider>
@@ -103,6 +105,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           {user?.role === "agency_admin" && (
             <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/settings")}>Einstellungen</button>
           )}
+          <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/hilfe")}>Hilfe</button>
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => { setMenu(false); logout(); }}>Abmelden</button>
         </div>
       </div>

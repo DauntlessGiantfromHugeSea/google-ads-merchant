@@ -19,6 +19,11 @@ export default function ProjectsBoard() {
     await api.updateProject(p.client_id, p.id, { status });
     setProjects((ps) => ps.map((x) => (x.id === p.id ? { ...x, status } : x)));
   };
+  const del = async (p: Project) => {
+    if (!confirm(`Projekt „${p.title}" löschen?`)) return;
+    await api.deleteProject(p.client_id, p.id);
+    setProjects((ps) => ps.filter((x) => x.id !== p.id));
+  };
 
   return (
     <>
@@ -42,7 +47,7 @@ export default function ProjectsBoard() {
       {error && <div className="error">{error}</div>}
       {projects.length === 0
         ? <div className="empty">Noch keine Projekte. Lege sie im Kundenprofil unter „Projekte" an.</div>
-        : <Kanban projects={filtered} canEdit onMove={move} onOpenClient={(cid) => navigate(`/clients/${cid}`)} />}
+        : <Kanban projects={filtered} canEdit onMove={move} onDelete={del} onOpenClient={(cid) => navigate(`/clients/${cid}`)} />}
     </>
   );
 }

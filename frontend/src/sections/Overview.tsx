@@ -31,9 +31,9 @@ export default function Overview({ client, isAgency, onGo, onSaved }:
 
   const steps = [
     { ok: !!(client.contact_email || client.contact_person), label: "Kontaktdaten hinterlegen", go: "contact" },
-    { ok: accounts.length > 0, label: "Konto verknüpfen (Ads / Merchant / Website)", go: "reportings" },
-    { ok: !!client.contract_package, label: "Vertrag/Paket hinterlegen", go: "contract" },
-    { ok: reports.length > 0, label: "Ersten Report erzeugen", go: "reportings" },
+    { ok: accounts.length > 0, label: "Konto verknüpfen (Ads / Merchant / Website)", go: "reporting" },
+    { ok: !!client.contract_package, label: "Vertrag/Paket hinterlegen", go: "business" },
+    { ok: reports.length > 0, label: "Ersten Report erzeugen", go: "reporting" },
   ];
   const doneCount = steps.filter((s) => s.ok).length;
 
@@ -73,22 +73,22 @@ export default function Overview({ client, isAgency, onGo, onSaved }:
       )}
 
       <div className="grid">
-        <div className="card clickable" onClick={() => onGo("contract")}>
+        <div className="card clickable" onClick={() => onGo("business")}>
           <div className="meta">Vertrag</div>
           <h3>{client.contract_status || "—"}</h3>
           <div className="meta">{client.contract_package || "kein Paket hinterlegt"}</div>
         </div>
-        <div className="card clickable" onClick={() => onGo("todos")}>
+        <div className="card clickable" onClick={() => onGo("work")}>
           <div className="meta">Offene To-Dos</div>
           <h3>{openTodos}</h3>
           <div className="meta">{todos.length} insgesamt</div>
         </div>
-        <div className="card clickable" onClick={() => onGo("reportings")}>
+        <div className="card clickable" onClick={() => onGo("reporting")}>
           <div className="meta">Letzter Report</div>
           <h3>{lastReport ? lastReport.type : "—"}</h3>
           <div className="meta">{lastReport ? `${lastReport.period_start} – ${lastReport.period_end}` : "noch keiner"}</div>
         </div>
-        <div className="card clickable" onClick={() => onGo("updates")}>
+        <div className="card clickable" onClick={() => onGo("contact")}>
           <div className="meta">Letztes Update</div>
           <h3 style={{ fontSize: 15 }}>{lastUpdate ? (lastUpdate.title || lastUpdate.body.slice(0, 40)) : "—"}</h3>
           <div className="meta">{lastUpdate ? new Date(lastUpdate.created_at).toLocaleDateString("de-DE") : "noch keins"}</div>

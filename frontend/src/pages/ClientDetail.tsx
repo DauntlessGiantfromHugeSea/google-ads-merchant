@@ -17,16 +17,10 @@ import Offers from "../sections/Offers";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
-  { key: "launch", label: "Launch" },
-  { key: "projects", label: "Projekte" },
-  { key: "reportings", label: "Reportings" },
-  { key: "monitoring", label: "Monitoring" },
-  { key: "offers", label: "Angebote" },
-  { key: "contract", label: "Vertragsdaten" },
-  { key: "documents", label: "Dokumente" },
-  { key: "todos", label: "To-Dos" },
-  { key: "contact", label: "Kontakt" },
-  { key: "updates", label: "Verlauf" },
+  { key: "work", label: "Projekte & Aufgaben" },
+  { key: "reporting", label: "Reporting" },
+  { key: "business", label: "Angebote & Vertrag" },
+  { key: "contact", label: "Kontakt & Verlauf" },
 ];
 const STATUS = ["lead", "aktiv", "pausiert", "beendet"];
 
@@ -103,7 +97,7 @@ export default function ClientDetail() {
             <button key={n.key} className={`nav-item ${section === n.key ? "active" : ""}`}
               onClick={() => setSection(n.key)}>
               {n.label}
-              {n.key === "todos" && openTodos ? <span className="badge-count">{openTodos}</span> : null}
+              {n.key === "work" && openTodos ? <span className="badge-count">{openTodos}</span> : null}
             </button>
           ))}
         </nav>
@@ -112,33 +106,30 @@ export default function ClientDetail() {
           {section === "overview" && (
             <Overview client={client} isAgency={isAgency} onGo={setSection} onSaved={setClient} />
           )}
-          {section === "launch" && (
-            <Launch clientId={id} isAgency={isAgency} />
+          {section === "work" && (
+            <>
+              <Launch clientId={id} isAgency={isAgency} />
+              <Projects clientId={id} isAgency={isAgency} />
+              <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />
+            </>
           )}
-          {section === "projects" && (
-            <Projects clientId={id} isAgency={isAgency} />
+          {section === "reporting" && (
+            <>
+              <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
+              <Monitoring clientId={id} isAgency={isAgency} />
+            </>
           )}
-          {section === "reportings" && (
-            <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
-          )}
-          {section === "monitoring" && (
-            <Monitoring clientId={id} isAgency={isAgency} />
-          )}
-          {section === "offers" && (
-            <Offers clientId={id} isAgency={isAgency} />
-          )}
-          {section === "contract" && (
-            <Contract client={client} isAgency={isAgency} onSaved={setClient} />
-          )}
-          {section === "documents" && (
-            <Documents clientId={id} isAgency={isAgency} client={client} />
-          )}
-          {section === "todos" && (
-            <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />
+          {section === "business" && (
+            <>
+              <Offers clientId={id} isAgency={isAgency} />
+              <Contract client={client} isAgency={isAgency} onSaved={setClient} />
+              <Documents clientId={id} isAgency={isAgency} client={client} />
+            </>
           )}
           {section === "contact" && (
             <>
               <Contact client={client} isAgency={isAgency} onSaved={setClient} />
+              <Updates clientId={id} isAgency={isAgency} />
               {isAgency && <MailCompose client={client} />}
               {isAgency && (
                 <div className="section form-light">
@@ -161,9 +152,6 @@ export default function ClientDetail() {
                 </div>
               )}
             </>
-          )}
-          {section === "updates" && (
-            <Updates clientId={id} isAgency={isAgency} />
           )}
         </div>
       </div>
