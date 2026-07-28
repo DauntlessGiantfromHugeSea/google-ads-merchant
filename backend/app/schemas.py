@@ -109,6 +109,7 @@ class TodoCreate(BaseModel):
     priority: str = "normal"
     assignee: str = ""
     project_id: str | None = None
+    assignee_id: str | None = None
 
 
 class TodoPatch(BaseModel):
@@ -119,6 +120,7 @@ class TodoPatch(BaseModel):
     priority: str | None = None
     assignee: str | None = None
     project_id: str | None = None
+    assignee_id: str | None = None
 
 
 class TodoOut(BaseModel):
@@ -132,9 +134,20 @@ class TodoOut(BaseModel):
     created_at: datetime
     client_id: str
     project_id: str | None = None
+    assignee_id: str | None = None
+    assignee_name: str = ""
 
     class Config:
         from_attributes = True
+
+
+class AssigneeOut(BaseModel):
+    """Zuweisbarer Nutzer für Aufgaben (Agentur-Team oder Kunden-Login)."""
+    id: str
+    full_name: str
+    email: EmailStr
+    role: UserRole
+    kind: str  # "agency" | "client"
 
 
 # --- Projekte (Kanban) ---

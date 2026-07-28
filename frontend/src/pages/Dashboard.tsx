@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Client, DashboardData, Monitor, api } from "../api";
+import { Client, DashboardData, Monitor, MyTodo, api } from "../api";
 import { useAuth } from "../App";
 
 const STATUS = ["lead", "aktiv", "pausiert", "beendet"];
+function dueInfo(due: string): { cls: string; label: string } {
+  if (!due) return { cls: "due-none", label: "kein Termin" };
+  const d = new Date(due + "T00:00:00");
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (days < 0) return { cls: "due-red", label: `überfällig · ${due}` };
+  if (days === 0) return { cls: "due-amber", label: "heute fällig" };
+  if (days <= 3) return { cls: "due-amber", label: `in ${days} Tag${days === 1 ? "" : "en"}` };
+  return { cls: "due-green", label: `fällig ${due}` };
+}
 const statusClass = (s: string) =>
   `status-badge st-${["lead", "aktiv", "pausiert", "beendet"].includes(s) ? s : "aktiv"}`;
 const initials = (n: string) => n.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
@@ -16,6 +26,7 @@ export default function Dashboard() {
   const [clients, setClients] = useState<Client[]>([]);
   const [dash, setDash] = useState<DashboardData | null>(null);
   const [monitors, setMonitors] = useState<Monitor[]>([]);
+  const [myTasks, setMyTasks] = useState<MyTodo[]>([]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -26,6 +37,7 @@ export default function Dashboard() {
 
   const load = () => {
     api.clients().then(setClients).catch((e) => setError((e as Error).message));
+    api.myTodos().then(setMyTasks).catch(() => {});
     if (isAgency) { api.dashboard().then(setDash).catch(() => {}); api.monitors().then(setMonitors).catch(() => {}); }
   };
   useEffect(() => { load(); }, []);
@@ -56,6 +68,34 @@ export default function Dashboard() {
             <div className="hero-stat"><div className="v">{dash.reports_total}</div><div className="l">Reports</div></div>
             <div className="hero-stat"><div className="v">{dash.status_counts["aktiv"] || 0}</div><div className="l">Aktiv</div></div>
           </div>
+        </div>
+      )}
+
+      {myTasks.length > 0 && (
+        <div className="section">
+          <div className="row-inline" style={{ justifyContent: "space-between" }}>
+            <h2>Meine offenen Aufgaben</h2>
+            <span className="muted" style={{ fontSize: 13 }}>{myTasks.length}</span>
+          </div>
+          {myTasks.map((t) => {
+            const di = dueInfo(t.due_date);
+            return (
+              <div key={t.id} className="list-row clickable" onClick={() => navigate(`/clients/${t.client_id}`)}
+                style={{ cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                  <span className={`due-dot ${di.cls}`} />
+                  <div style={{ minWidth: 0 }}>
+                    <strong>{t.title}</strong>
+                    {t.priority === "high" && <span className="prio prio-high" style={{ marginLeft: 8 }}>hoch</span>}
+                    <div className="muted" style={{ fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {t.client_name}{t.project_title ? ` · ↳ ${t.project_title}` : ""}
+                    </div>
+                  </div>
+                </div>
+                <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap" }}>{di.label}</span>
+              </div>
+            );
+          })}
         </div>
       )}
 

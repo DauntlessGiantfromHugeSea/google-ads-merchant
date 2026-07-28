@@ -1,13 +1,19 @@
 {
+  "id": "/",
   "name": "North Flow",
   "short_name": "North Flow",
   "description": "Kundenmanagement & Reporting",
+  "lang": "de",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0c0c10",
   "theme_color": "#0c0c10",
+  "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
   ]
 }

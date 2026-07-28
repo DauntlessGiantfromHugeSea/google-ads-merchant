@@ -3,6 +3,7 @@ import secrets as pysecrets
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_admin, require_agency
@@ -36,6 +37,7 @@ _settings = get_settings()
 from app.schemas import (
     AccountCreate,
     AccountOut,
+    AssigneeOut,
     ClientCreate,
     ClientOut,
     ClientPatch,
@@ -133,11 +135,59 @@ def update_client(
 
 
 # --- To-Dos ---
+def _display_name(u: User) -> str:
+    return u.full_name or u.email
+
+
+def _assignable_users(client_id: str, org_id: str, db: Session) -> list[User]:
+    """Agentur-Team der Organisation + Kunden-Logins genau dieses Kunden."""
+    return (db.query(User).filter(
+        User.organization_id == org_id,
+        or_(User.role != UserRole.client_user, User.client_id == client_id),
+        User.is_active.is_(True),
+    ).all())
+
+
+def _assignee_name_map(client_id: str, org_id: str, db: Session) -> dict[str, str]:
+    return {u.id: _display_name(u) for u in _assignable_users(client_id, org_id, db)}
+
+
+def _resolve_assignee_id(raw: str | None, client_id: str, org_id: str, db: Session) -> str | None:
+    """Leeren Wert zu NULL machen; Nutzer muss zuweisbar für diesen Kunden sein."""
+    if not raw:
+        return None
+    u = db.get(User, raw)
+    ok = u and u.organization_id == org_id and (
+        u.role != UserRole.client_user or u.client_id == client_id)
+    if not ok:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nutzer kann dieser Aufgabe nicht zugewiesen werden")
+    return raw
+
+
+def _with_assignee_name(todo: Todo, names: dict[str, str]) -> TodoOut:
+    out = TodoOut.model_validate(todo)
+    out.assignee_name = names.get(todo.assignee_id or "", "")
+    return out
+
+
+@router.get("/{client_id}/assignees", response_model=list[AssigneeOut])
+def list_assignees(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Zuweisbare Nutzer: Agentur-Team + Kunden-Logins dieses Kunden (nur Agentur)."""
+    get_scoped_client(client_id, user, db)
+    users = _assignable_users(client_id, user.organization_id, db)
+    return [AssigneeOut(
+        id=u.id, full_name=_display_name(u), email=u.email, role=u.role,
+        kind="client" if u.role == UserRole.client_user else "agency",
+    ) for u in users]
+
+
 @router.get("/{client_id}/todos", response_model=list[TodoOut])
 def list_todos(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     get_scoped_client(client_id, user, db)
-    return (db.query(Todo).filter(Todo.client_id == client_id)
-            .order_by(Todo.created_at.desc()).all())
+    names = _assignee_name_map(client_id, user.organization_id, db)
+    todos = (db.query(Todo).filter(Todo.client_id == client_id)
+             .order_by(Todo.created_at.desc()).all())
+    return [_with_assignee_name(t, names) for t in todos]
 
 
 def _resolve_project_id(raw: str | None, client_id: str, db: Session) -> str | None:
@@ -158,11 +208,13 @@ def create_todo(
     get_scoped_client(client_id, user, db)
     payload = data.model_dump()
     payload["project_id"] = _resolve_project_id(payload.get("project_id"), client_id, db)
+    payload["assignee_id"] = _resolve_assignee_id(payload.get("assignee_id"), client_id, user.organization_id, db)
     todo = Todo(client_id=client_id, **payload)
     db.add(todo)
     db.commit()
     db.refresh(todo)
-    return todo
+    names = _assignee_name_map(client_id, user.organization_id, db)
+    return _with_assignee_name(todo, names)
 
 
 @router.patch("/{client_id}/todos/{todo_id}", response_model=TodoOut)
@@ -177,11 +229,14 @@ def update_todo(
     updates = data.model_dump(exclude_unset=True)
     if "project_id" in updates:
         updates["project_id"] = _resolve_project_id(updates["project_id"], client_id, db)
+    if "assignee_id" in updates:
+        updates["assignee_id"] = _resolve_assignee_id(updates["assignee_id"], client_id, user.organization_id, db)
     for field, value in updates.items():
         setattr(todo, field, value)
     db.commit()
     db.refresh(todo)
-    return todo
+    names = _assignee_name_map(client_id, user.organization_id, db)
+    return _with_assignee_name(todo, names)
 
 
 @router.delete("/{client_id}/todos/{todo_id}", status_code=204)

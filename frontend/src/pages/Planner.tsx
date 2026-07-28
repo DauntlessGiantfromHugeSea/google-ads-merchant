@@ -47,8 +47,8 @@ export default function Planner() {
     }));
     const t: WorkItem[] = todos.map((x) => ({
       id: x.id, kind: "todo", title: x.title, clientId: x.client_id, clientName: x.client_name || "",
-      status: x.status, dueDate: x.due_date || "", assignee: x.assignee || "", priority: x.priority || "normal",
-      type: "", projectTitle: x.project_title || "",
+      status: x.status, dueDate: x.due_date || "", assignee: x.assignee_name || x.assignee || "",
+      priority: x.priority || "normal", type: "", projectTitle: x.project_title || "",
     }));
     return [...p, ...t];
   }, [projects, todos]);
@@ -77,6 +77,12 @@ export default function Planner() {
   // Board: nur Projekte (Kanban-Spalten sind Projekt-Status)
   const boardProjects = useMemo(() => filtered.filter((i) => i.kind === "project")
     .map((i) => projects.find((p) => p.id === i.id)!).filter(Boolean), [filtered, projects]);
+
+  const todoCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const t of todos) if (t.project_id && t.status !== "done") m[t.project_id] = (m[t.project_id] || 0) + 1;
+    return m;
+  }, [todos]);
 
   const move = async (p: Project, status: string) => {
     await api.updateProject(p.client_id, p.id, { status });
@@ -181,7 +187,7 @@ export default function Planner() {
       {view === "board" && (
         boardProjects.length === 0
           ? <div className="empty">Keine Projekte. Lege sie im Kundenprofil unter „Projekte & Aufgaben“ an.</div>
-          : <Kanban projects={boardProjects} canEdit onMove={move} onDelete={del} onOpenClient={(cid) => navigate(`/clients/${cid}`)} />
+          : <Kanban projects={boardProjects} canEdit onMove={move} onDelete={del} todoCounts={todoCounts} onOpenClient={(cid) => navigate(`/clients/${cid}`)} />
       )}
     </>
   );

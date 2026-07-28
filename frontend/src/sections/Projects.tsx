@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Project, api } from "../api";
+import { useEffect, useMemo, useState } from "react";
+import { Project, Todo, api } from "../api";
 import { useToast } from "../toast";
 import Kanban from "../components/Kanban";
 
@@ -9,6 +9,7 @@ export default function Projects({ clientId, isAgency, onCount }:
   { clientId: string; isAgency: boolean; onCount?: (open: number) => void }) {
   const toast = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [show, setShow] = useState(false);
   const [title, setTitle] = useState("");
   const [type, setType] = useState("design");
@@ -19,7 +20,16 @@ export default function Projects({ clientId, isAgency, onCount }:
     setProjects(p);
     onCount?.(p.filter((x) => x.status !== "done").length);
   }).catch(() => {});
-  useEffect(() => { load(); }, [clientId]);
+  useEffect(() => {
+    load();
+    api.todos(clientId).then(setTodos).catch(() => {});
+  }, [clientId]);
+
+  const todoCounts = useMemo(() => {
+    const m: Record<string, number> = {};
+    for (const t of todos) if (t.project_id && t.status !== "done") m[t.project_id] = (m[t.project_id] || 0) + 1;
+    return m;
+  }, [todos]);
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +71,7 @@ export default function Projects({ clientId, isAgency, onCount }:
       )}
       {projects.length === 0
         ? <div className="empty">Noch keine Projekte.</div>
-        : <Kanban projects={projects} canEdit={isAgency} onMove={move} onDelete={del} />}
+        : <Kanban projects={projects} canEdit={isAgency} onMove={move} onDelete={del} todoCounts={todoCounts} />}
     </div>
   );
 }

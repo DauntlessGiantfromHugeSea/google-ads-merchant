@@ -238,6 +238,8 @@ class Todo(Base):
 
     # Optionale Zuordnung zu einem Projekt des Kunden.
     project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
+    # Optionale Zuordnung zu einem Nutzer (Agentur-Mitarbeiter/Admin oder Kunde).
+    assignee_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
 
 
 class Project(Base):

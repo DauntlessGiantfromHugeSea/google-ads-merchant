@@ -11,12 +11,13 @@ const TYPES: Record<string, string> = {
   design: "Design", marketing: "Marketing", web: "Web", seo: "SEO", social: "Social", sonstiges: "Sonstiges",
 };
 
-export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEdit }: {
+export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEdit, todoCounts }: {
   projects: Project[];
   onMove?: (p: Project, status: string) => void;
   onDelete?: (p: Project) => void;
   onOpenClient?: (clientId: string) => void;
   canEdit: boolean;
+  todoCounts?: Record<string, number>;
 }) {
   const dragged = useRef<Project | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -48,6 +49,9 @@ export default function Kanban({ projects, onMove, onDelete, onOpenClient, canEd
                 <div className="m">{p.assignee || "—"}{p.due_date ? ` · bis ${p.due_date}` : ""}</div>
                 <div className="row">
                   <span className={`ptype pt-${TYPES[p.type] ? p.type : "sonstiges"}`}>{TYPES[p.type] || p.type}</span>
+                  {todoCounts && todoCounts[p.id] > 0 && (
+                    <span className="ktodo" title="offene Aufgaben">✓ {todoCounts[p.id]}</span>
+                  )}
                   {canEdit && onMove && (
                     <>
                       <button className="kmove" title="Zurück" disabled={ci === 0}
