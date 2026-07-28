@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Account, AgencyContact, Client, ClientUpdate, Report, Todo, api } from "../api";
+import { Account, AgencyContact, Client, ClientUpdate, Monitor, Report, Todo, api } from "../api";
 import { useToast } from "../toast";
 
 const initials = (n: string) => n.split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
@@ -12,6 +12,7 @@ export default function Overview({ client, isAgency, onGo, onSaved }:
   const [updates, setUpdates] = useState<ClientUpdate[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [agency, setAgency] = useState<AgencyContact | null>(null);
+  const [monitors, setMonitors] = useState<Monitor[]>([]);
 
   useEffect(() => {
     api.reports(client.id).then(setReports).catch(() => {});
@@ -19,6 +20,7 @@ export default function Overview({ client, isAgency, onGo, onSaved }:
     api.updates(client.id).then(setUpdates).catch(() => {});
     api.accounts(client.id).then(setAccounts).catch(() => {});
     api.getAgencyContact().then(setAgency).catch(() => {});
+    if (isAgency) api.monitors().then((all) => setMonitors(all.filter((m) => m.client_id === client.id))).catch(() => {});
   }, [client.id]);
 
   const hasAgency = agency && (agency.agency_contact_name || agency.agency_contact_email || agency.agency_contact_phone);
@@ -92,6 +94,23 @@ export default function Overview({ client, isAgency, onGo, onSaved }:
           <div className="meta">{lastUpdate ? new Date(lastUpdate.created_at).toLocaleDateString("de-DE") : "noch keins"}</div>
         </div>
       </div>
+
+      {isAgency && monitors.length > 0 && (
+        <div className="section" style={{ marginTop: 18 }}>
+          <h2>Website-Status</h2>
+          {monitors.map((m) => (
+            <div key={m.id} className="list-row">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className={`due-dot ${m.status === "down" ? "due-red" : m.status === "up" ? "due-green" : "due-none"}`} />
+                <div><strong>{m.name}</strong><div className="muted" style={{ fontSize: 12 }}>{m.url}{m.message ? ` · ${m.message}` : ""}</div></div>
+              </div>
+              <span className={`status-badge ${m.status === "down" ? "st-pausiert" : "st-aktiv"}`}>
+                {m.status === "down" ? "offline" : m.status === "up" ? "online" : "—"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {hasAgency && (
         <div className="section" style={{ marginTop: 18 }}>
