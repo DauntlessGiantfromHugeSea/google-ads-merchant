@@ -320,6 +320,8 @@ export const api = {
   reports: (clientId: string) => request<Report[]>(`/clients/${clientId}/reports`),
   createReport: (clientId: string, d: { type: string; period_start: string; period_end: string }) =>
     request<Report>(`/clients/${clientId}/reports`, { method: "POST", body: JSON.stringify(d) }),
+  deleteReport: (clientId: string, reportId: string) =>
+    request<void>(`/clients/${clientId}/reports/${reportId}`, { method: "DELETE" }),
 
   async downloadPdf(clientId: string, reportId: string, filename: string) {
     const res = await fetch(`/api/clients/${clientId}/reports/${reportId}/pdf`, {

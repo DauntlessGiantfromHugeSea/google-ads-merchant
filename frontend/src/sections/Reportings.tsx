@@ -132,6 +132,12 @@ export default function Reportings({ clientId, clientName, isAgency }:
                 <button className="btn btn-ghost btn-sm"
                   onClick={() => api.downloadPdf(clientId, r.id, `report-${clientName}-${r.period_end}.pdf`)}>PDF</button>
               )}
+              {isAgency && (
+                <button className="del" onClick={async () => {
+                  if (!confirm("Diesen Report löschen?")) return;
+                  await api.deleteReport(clientId, r.id); loadReports(); toast("Report gelöscht.");
+                }}>löschen</button>
+              )}
             </div>
           </div>
         ))}

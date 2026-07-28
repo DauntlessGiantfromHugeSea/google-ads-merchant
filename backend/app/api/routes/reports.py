@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_scoped_client
+from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
 from app.models import ReportRun, User
 from app.schemas import ReportCreate, ReportDetailOut, ReportOut
@@ -62,6 +62,16 @@ def get_report(
     user: User = Depends(get_current_user), db: Session = Depends(get_db),
 ):
     return _load_report(client_id, report_id, user, db)
+
+
+@router.delete("/{report_id}", status_code=204)
+def delete_report(
+    client_id: str, report_id: str,
+    user: User = Depends(require_agency), db: Session = Depends(get_db),
+):
+    report = _load_report(client_id, report_id, user, db)
+    db.delete(report)
+    db.commit()
 
 
 @router.get("/{report_id}/pdf")
