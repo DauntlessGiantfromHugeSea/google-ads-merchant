@@ -1,17 +1,30 @@
-"""Registrierung (Agentur + Admin) und Login."""
+"""Registrierung (Agentur + Admin), Login und Zwei-Faktor-Authentifizierung."""
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import pyotp
+import segno
+from fastapi import APIRouter, Depends, Form, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.crypto import decrypt, encrypt
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.models import Organization, User, UserRole
-from app.schemas import RegisterRequest, SetPasswordRequest, Token, UserOut
+from app.schemas import (
+    RegisterRequest, SetPasswordRequest, Token, TwoFACode, TwoFASetupOut, UserOut,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+_ISSUER = "North Flow"
+
+
+def _verify_totp(user: User, code: str) -> bool:
+    secret = decrypt(user.totp_secret)
+    if not secret or not code:
+        return False
+    return pyotp.TOTP(secret).verify(code.strip().replace(" ", ""), valid_window=1)
 
 
 def _invite_user(token: str, db: Session) -> User:
@@ -81,14 +94,64 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)) -> User:
 
 
 @router.post("/login", response_model=Token)
-def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)) -> Token:
+def login(
+    form: OAuth2PasswordRequestForm = Depends(),
+    otp: str | None = Form(None),
+    db: Session = Depends(get_db),
+) -> Token:
     user = db.query(User).filter(User.email == form.username).first()
     if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Falsche Zugangsdaten")
+    if user.totp_enabled:
+        if not otp:
+            # Frontend erkennt diesen Code und blendet das 2FA-Feld ein.
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "2FA_REQUIRED")
+        if not _verify_totp(user, otp):
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "2FA_INVALID")
     token = create_access_token(user.id, {"role": user.role.value, "org": user.organization_id})
     return Token(access_token=token)
 
 
 @router.get("/me", response_model=UserOut)
 def me(user: User = Depends(get_current_user)) -> User:
+    return user
+
+
+# --- Zwei-Faktor-Authentifizierung (TOTP, Authenticator-App) ---
+@router.post("/2fa/setup", response_model=TwoFASetupOut)
+def twofa_setup(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> TwoFASetupOut:
+    """Erzeugt ein neues TOTP-Secret (noch nicht aktiv) inkl. QR-Code."""
+    secret = pyotp.random_base32()
+    uri = pyotp.TOTP(secret).provisioning_uri(name=user.email, issuer_name=_ISSUER)
+    user.totp_secret = encrypt(secret)
+    user.totp_enabled = False
+    db.commit()
+    qr = segno.make(uri, error="m").svg_data_uri(scale=5, dark="#0c0c10", light="#ffffff")
+    return TwoFASetupOut(secret=secret, otpauth_uri=uri, qr_svg=qr)
+
+
+@router.post("/2fa/enable", response_model=UserOut)
+def twofa_enable(data: TwoFACode, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> User:
+    """Aktiviert 2FA nach Prüfung des ersten Codes aus der App."""
+    if user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "2FA ist bereits aktiv")
+    if not _verify_totp(user, data.code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code ungültig – bitte erneut versuchen")
+    user.totp_enabled = True
+    db.commit()
+    db.refresh(user)
+    return user
+
+
+@router.post("/2fa/disable", response_model=UserOut)
+def twofa_disable(data: TwoFACode, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> User:
+    """Schaltet 2FA ab (Bestätigung mit gültigem Code)."""
+    if not user.totp_enabled:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "2FA ist nicht aktiv")
+    if not _verify_totp(user, data.code):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code ungültig")
+    user.totp_enabled = False
+    user.totp_secret = ""
+    db.commit()
+    db.refresh(user)
     return user

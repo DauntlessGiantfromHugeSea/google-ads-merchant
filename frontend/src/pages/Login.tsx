@@ -10,6 +10,8 @@ export default function Login() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  const [needOtp, setNeedOtp] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -28,10 +30,17 @@ export default function Login() {
       if (mode === "register") {
         await api.register({ organization_name: org, email, password, full_name: name });
       }
-      await api.login(email, password);
+      await api.login(email, password, needOtp ? otp : undefined);
       setUser(await api.me());
     } catch (err) {
-      setError((err as Error).message);
+      const msg = (err as Error).message;
+      if (msg === "2FA_REQUIRED") {
+        setNeedOtp(true); setError("");
+      } else if (msg === "2FA_INVALID") {
+        setNeedOtp(true); setError("Code ungültig – bitte erneut eingeben.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setBusy(false);
     }
@@ -68,8 +77,16 @@ export default function Login() {
           <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
         </div>
 
+        {needOtp && (
+          <div className="field">
+            <label>2FA-Code (Authenticator-App)</label>
+            <input className="input" inputMode="numeric" autoComplete="one-time-code" autoFocus
+              placeholder="6-stelliger Code" value={otp} onChange={(e) => setOtp(e.target.value)} required />
+          </div>
+        )}
+
         <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 8 }} disabled={busy}>
-          {busy ? "..." : mode === "login" ? "Anmelden" : "Agentur erstellen"}
+          {busy ? "..." : needOtp ? "Bestätigen" : mode === "login" ? "Anmelden" : "Agentur erstellen"}
         </button>
         {error && <div className="error">{error}</div>}
 

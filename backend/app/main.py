@@ -36,7 +36,10 @@ _TODO_COLUMNS = {
     "priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''",
     "project_id": "VARCHAR(36)", "assignee_id": "VARCHAR(36)",
 }
-_USER_COLUMNS = {"invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP"}
+_USER_COLUMNS = {
+    "invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP",
+    "totp_secret": "TEXT DEFAULT ''", "totp_enabled": "BOOLEAN DEFAULT FALSE",
+}
 _PACKAGE_COLUMNS = {"unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0"}
 
 

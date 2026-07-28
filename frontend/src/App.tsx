@@ -16,6 +16,7 @@ const Intake = lazy(() => import("./pages/Intake"));
 const SetPassword = lazy(() => import("./pages/SetPassword"));
 const Angebot = lazy(() => import("./pages/Angebot"));
 const Help = lazy(() => import("./pages/Help"));
+const Account = lazy(() => import("./pages/Account"));
 
 function Splash() {
   return <div className="boot-splash"><div className="boot-spinner" /></div>;
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/tasks" element={<Navigate to="/planner" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
         <Route path="/hilfe" element={user ? <Shell><Help /></Shell> : <Navigate to="/login" />} />
+        <Route path="/konto" element={user ? <Shell><Account /></Shell> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       </Suspense>
@@ -122,6 +124,7 @@ function Shell({ children }: { children: React.ReactNode }) {
                 <div className="user-backdrop" onClick={() => setUserMenu(false)} />
                 <div className="user-dropdown">
                   <div className="user-dropdown-email">{user?.email}</div>
+                  <button onClick={() => go("/konto")}>👤 Mein Konto &amp; 2FA</button>
                   <button onClick={() => go("/vault")}>🔑 Passwort-Safe</button>
                   <button onClick={() => go("/hilfe")}>❓ Hilfe</button>
                   {user?.role === "agency_admin" && (

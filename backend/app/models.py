@@ -108,6 +108,10 @@ class User(Base):
     invite_token: Mapped[str] = mapped_column(String(64), default="")
     invite_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Zwei-Faktor-Authentifizierung (TOTP). Secret verschlüsselt gespeichert.
+    totp_secret: Mapped[str] = mapped_column(Text, default="")
+    totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+
 
 class Client(Base):
     __tablename__ = "clients"

@@ -33,9 +33,20 @@ class UserOut(BaseModel):
     role: UserRole
     organization_id: str
     client_id: str | None = None
+    totp_enabled: bool = False
 
     class Config:
         from_attributes = True
+
+
+class TwoFASetupOut(BaseModel):
+    secret: str
+    otpauth_uri: str
+    qr_svg: str  # data:image/svg+xml;... zum direkten Einbetten
+
+
+class TwoFACode(BaseModel):
+    code: str
 
 
 # --- Clients ---

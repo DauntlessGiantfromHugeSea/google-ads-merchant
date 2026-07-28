@@ -44,8 +44,9 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export interface User {
   id: string; email: string; full_name: string;
   role: "agency_admin" | "agency_member" | "client_user";
-  organization_id: string; client_id: string | null;
+  organization_id: string; client_id: string | null; totp_enabled: boolean;
 }
+export interface TwoFASetup { secret: string; otpauth_uri: string; qr_svg: string; }
 export interface Client {
   id: string; name: string; notes: string;
   onboarding_completed: boolean; created_at: string;
@@ -153,15 +154,19 @@ export interface Report {
 export const api = {
   register: (d: { organization_name: string; email: string; password: string; full_name?: string }) =>
     request<User>("/auth/register", { method: "POST", body: JSON.stringify(d) }),
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, otp?: string) => {
     const form = new FormData();
     form.set("username", email);
     form.set("password", password);
+    if (otp) form.set("otp", otp);
     const r = await request<{ access_token: string }>("/auth/login", { method: "POST", body: form });
     auth.set(r.access_token);
     return r;
   },
   me: () => request<User>("/auth/me"),
+  twoFASetup: () => request<TwoFASetup>("/auth/2fa/setup", { method: "POST" }),
+  twoFAEnable: (code: string) => request<User>("/auth/2fa/enable", { method: "POST", body: JSON.stringify({ code }) }),
+  twoFADisable: (code: string) => request<User>("/auth/2fa/disable", { method: "POST", body: JSON.stringify({ code }) }),
   registrationOpen: () => request<{ open: boolean }>("/auth/registration-open"),
   inviteInfo: (token: string) => request<{ email: string; full_name: string }>(`/auth/invite/${token}`),
   setInvitePassword: async (token: string, password: string) => {
