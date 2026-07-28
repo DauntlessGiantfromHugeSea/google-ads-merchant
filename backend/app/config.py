@@ -50,6 +50,17 @@ class Settings(BaseSettings):
     data_source_mode: str = "demo"
 
     @property
+    def cors_origins(self) -> list[str]:
+        """Erlaubte Cross-Origin-Quellen: eigene Domain + lokale Dev-Ports.
+
+        Same-Origin (Frontend & /api hinter derselben Domain via Caddy) braucht
+        gar kein CORS; dies ist reine Absicherung gegen fremde Origins."""
+        origins = {"http://localhost:5173", "http://localhost:8080", "http://127.0.0.1:5173"}
+        if self.public_base_url:
+            origins.add(self.public_base_url.rstrip("/"))
+        return sorted(origins)
+
+    @property
     def use_live_data(self) -> bool:
         if self.data_source_mode == "live":
             return True

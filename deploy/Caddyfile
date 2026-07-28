@@ -3,6 +3,17 @@
 {$DOMAIN} {
 	encode zstd gzip
 
+	# Sicherheits-Header + Server-Banner entfernen (keine Versions-/IP-Preisgabe).
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=(), interest-cohort=()"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; font-src 'self' data:; manifest-src 'self'; base-uri 'self'; frame-ancestors 'self'; object-src 'none'; form-action 'self'"
+		-Server
+	}
+
 	# API ans Backend
 	@api path /api/*
 	reverse_proxy @api backend:8000

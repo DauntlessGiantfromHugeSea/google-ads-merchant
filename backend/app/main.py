@@ -9,7 +9,10 @@ from app.api.routes import (
     ads_activity, auth, branding, clients, dashboard, documents, intake, launch, mail,
     monitoring, offers, org, packages, projects, reports, requests, secrets, tasks, team,
 )
+from app.config import get_settings
 from app.database import Base, engine
+
+_settings = get_settings()
 
 # Spalten, die bei bestehenden Installationen ggf. fehlen (create_all legt nur
 # neue Tabellen an, keine neuen Spalten). Idempotent beim Start nachgezogen.
@@ -69,15 +72,35 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Agentur-Reporting-Plattform", version="0.1.0", lifespan=lifespan)
+# Docs/OpenAPI in Produktion abschalten (keine Schema-Preisgabe).
+_is_prod = _settings.app_env == "production"
+app = FastAPI(
+    title="Agentur-Reporting-Plattform", version="0.1.0", lifespan=lifespan,
+    docs_url=None if _is_prod else "/docs",
+    redoc_url=None if _is_prod else "/redoc",
+    openapi_url=None if _is_prod else "/openapi.json",
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Dev. Produktion: konkrete Frontend-Domain eintragen.
-    allow_credentials=True,
+    allow_origins=_settings.cors_origins,  # nur eigene Domain + lokale Dev-Ports
+    allow_credentials=False,  # Auth per Bearer-Header, keine Cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def _security_headers(request, call_next):
+    """Server-Banner entfernen + defensive Header (greift auch beim direkten
+    Tailscale-Zugriff, der nicht über Caddy läuft)."""
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if "server" in response.headers:
+        del response.headers["server"]
+    return response
 
 app.include_router(auth.router)
 app.include_router(clients.router)

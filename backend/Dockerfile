@@ -13,4 +13,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app ./app
 
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --no-server-header: kein "Server: uvicorn"-Banner.
+# --proxy-headers/--forwarded-allow-ips: X-Forwarded-* von Caddy vertrauen
+#   (nötig u. a. für die Tailscale-IP-Prüfung).
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", \
+     "--no-server-header", "--proxy-headers", "--forwarded-allow-ips", "*"]
