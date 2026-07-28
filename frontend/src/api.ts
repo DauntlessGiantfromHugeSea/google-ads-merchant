@@ -109,6 +109,7 @@ export interface Todo {
   recurrence: string; checklist_total: number; checklist_done: number;
 }
 export interface ChecklistItem { id: string; text: string; done: boolean; position: number; }
+export interface ProjectEvent { id: string; kind: string; text: string; actor: string; created_at: string; }
 export interface Assignee {
   id: string; full_name: string; email: string;
   role: "agency_admin" | "agency_member" | "client_user"; kind: "agency" | "client";
@@ -224,6 +225,9 @@ export const api = {
   deleteProject: (cid: string, pid: string) =>
     request<void>(`/clients/${cid}/projects/${pid}`, { method: "DELETE" }),
   allProjects: () => request<Project[]>("/projects"),
+  projectEvents: (cid: string, pid: string) => request<ProjectEvent[]>(`/clients/${cid}/projects/${pid}/events`),
+  addProjectEvent: (cid: string, pid: string, d: { text: string; kind?: string }) =>
+    request<ProjectEvent>(`/clients/${cid}/projects/${pid}/events`, { method: "POST", body: JSON.stringify(d) }),
 
   allTodos: () => request<TodoGlobal[]>("/todos"),
 

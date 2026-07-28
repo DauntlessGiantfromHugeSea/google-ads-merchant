@@ -290,6 +290,21 @@ class Project(Base):
     client: Mapped[Client] = relationship()
 
 
+class ProjectEvent(Base):
+    """Projektchronik: automatisch protokollierte Änderungen + Entscheidungen."""
+
+    __tablename__ = "project_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"), index=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    kind: Mapped[str] = mapped_column(String(24), default="note")  # created/status/edit/note/decision
+    text: Mapped[str] = mapped_column(Text, default="")
+    actor: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class ClientUpdate(Base):
     """Eintrag im Verlauf/Activity-Feed eines Kunden (Updates, Notizen)."""
 

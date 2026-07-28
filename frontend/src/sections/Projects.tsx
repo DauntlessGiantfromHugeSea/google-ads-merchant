@@ -1,10 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
-import { Project, Todo, api } from "../api";
+import { Project, ProjectEvent, Todo, api } from "../api";
 import { useToast } from "../toast";
 import Kanban from "../components/Kanban";
 
 const TYPES = ["design", "marketing", "web", "seo", "social", "sonstiges"];
 const num = (v: string) => parseFloat(v.replace(",", ".")) || 0;
+const EV_ICON: Record<string, string> = { created: "✨", status: "🔄", edit: "✏️", note: "🗒️", decision: "✅" };
+
+function ProjectChronik({ clientId, projectId, isAgency }: { clientId: string; projectId: string; isAgency: boolean }) {
+  const [events, setEvents] = useState<ProjectEvent[]>([]);
+  const [text, setText] = useState("");
+  const [kind, setKind] = useState("decision");
+  const load = () => api.projectEvents(clientId, projectId).then(setEvents).catch(() => {});
+  useEffect(() => { load(); }, [projectId]);
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!text.trim()) return;
+    await api.addProjectEvent(clientId, projectId, { text: text.trim(), kind });
+    setText(""); load();
+  };
+  return (
+    <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+      <h3 style={{ fontSize: 14, margin: "0 0 8px" }}>Projektchronik</h3>
+      {isAgency && (
+        <form className="row-inline" style={{ marginBottom: 10 }} onSubmit={add}>
+          <select className="select form-light" style={{ maxWidth: 140 }} value={kind} onChange={(e) => setKind(e.target.value)}>
+            <option value="decision">Entscheidung</option><option value="note">Notiz</option>
+          </select>
+          <input className="input form-light" style={{ flex: 1 }} value={text} onChange={(e) => setText(e.target.value)} placeholder="Entscheidung oder Notiz festhalten…" />
+          <button className="btn btn-primary btn-sm">Eintragen</button>
+        </form>
+      )}
+      {events.length === 0 ? <div className="muted" style={{ fontSize: 13 }}>Noch keine Einträge.</div> : (
+        <div className="timeline">
+          {events.map((ev) => (
+            <div key={ev.id} className={`tl-item ${ev.kind === "decision" ? "message" : ""}`}>
+              <div style={{ fontSize: 13 }}>{EV_ICON[ev.kind] || "•"} {ev.text}</div>
+              <div className="tl-meta">{ev.actor} · {new Date(ev.created_at).toLocaleString("de-DE")}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Projects({ clientId, isAgency, onCount }:
   { clientId: string; isAgency: boolean; onCount?: (open: number) => void }) {
@@ -121,6 +159,7 @@ export default function Projects({ clientId, isAgency, onCount }:
           <div className="field"><label>Briefing / Projektziel</label>
             <textarea className="input" value={edit.brief} onChange={(e) => editField({ brief: e.target.value })} rows={3} /></div>
           <button className="btn btn-primary">Speichern</button>
+          <ProjectChronik clientId={clientId} projectId={edit.id} isAgency={isAgency} />
         </form>
       )}
 

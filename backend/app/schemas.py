@@ -246,6 +246,22 @@ class ProjectGlobalOut(ProjectOut):
     client_name: str = ""
 
 
+class ProjectEventOut(BaseModel):
+    id: str
+    kind: str
+    text: str
+    actor: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProjectEventCreate(BaseModel):
+    text: str
+    kind: str = "decision"
+
+
 class TodoGlobalOut(TodoOut):
     client_name: str = ""
     project_title: str = ""

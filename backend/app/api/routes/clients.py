@@ -29,6 +29,7 @@ from app.models import (
     OfferItem,
     Organization,
     Project,
+    ProjectEvent,
     ReportRun,
     Todo,
     User,
@@ -101,7 +102,7 @@ def delete_client(client_id: str, user: User = Depends(require_admin), db: Sessi
     # To-Do-Verweise auf Projekte lösen, bevor Projekte gelöscht werden (FK).
     db.query(Todo).filter(Todo.client_id == client_id).update(
         {Todo.project_id: None}, synchronize_session=False)
-    for model in (Offer, Project, Milestone, Approval, AdsActivity, Document, MonitorEvent):
+    for model in (ProjectEvent, Offer, Project, Milestone, Approval, AdsActivity, Document, MonitorEvent):
         db.query(model).filter(model.client_id == client_id).delete(synchronize_session=False)
     # Nullbare Verweise lösen
     db.query(MonitorStatus).filter(MonitorStatus.client_id == client_id).update(
