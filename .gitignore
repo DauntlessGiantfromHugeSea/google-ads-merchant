@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+*.db
+*.sqlite3
+
+# Env / secrets
+.env
+*.env
+.env.prod
+!.env.example
+!.env.prod.example
+secrets/
+google-ads.yaml
+
+# Node / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Reports (flüchtig – dürfen nie eingecheckt werden)
+/tmp/reports/
+*.pdf
+# ... aber das eigene Briefpapier darf rein:
+!backend/app/templates/letterhead.pdf
+!backend/app/templates/letterhead.png
+!backend/app/templates/letterhead.svg
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/

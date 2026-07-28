@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  /* Ränder laut Screenshot: oben 4cm (Header/Logo), rechts 5cm, unten 2cm
+     (über Footer), links 2,8cm (frei von grüner Welle). Briefpapier als
+     vollflächiger Seitenhintergrund (deckt auch die Randbereiche ab). */
+  @page {
+    size: A4;
+    margin: 4cm 5cm 3.2cm 2.8cm;
+    @bottom-right { content: "Seite " counter(page) " / " counter(pages); font-size: 8px; color: #aaa; margin-bottom: 0.4cm; }
+  }
+  /* Transparenter Seitenhintergrund, damit das Briefpapier (PDF-Overlay oder
+     Bild) durchscheint. */
+  html, body { background: transparent; }
+  /* Bild-Briefpapier (PNG/JPG/SVG): deckt das ganze Blatt ab, jede Seite. */
+  .letterhead {
+    position: fixed; top: -4cm; left: -2.8cm;
+    width: 210mm; height: 297mm; z-index: -1;
+  }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.45; }
+  h1 { font-size: 24px; margin: 0 0 4px; color: #1a56db; }
+  h2 { font-size: 16px; margin: 22px 0 8px; border-bottom: 2px solid #1a56db; padding-bottom: 4px; color: #1a56db; }
+  h3 { font-size: 13px; margin: 14px 0 6px; }
+  .sub { color: #687481; font-size: 11px; }
+  .cover { padding: 30px 0 10px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; }
+  .badge.demo { background: #fff3cd; color: #946200; }
+  .badge.live { background: #def7ec; color: #03543f; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 12px; }
+  th, td { text-align: left; padding: 5px 7px; border-bottom: 1px solid #e4e7eb; }
+  th { background: #f5f7fa; font-size: 10px; text-transform: uppercase; letter-spacing: .3px; color: #52606d; }
+  td.num, th.num { text-align: right; }
+  .kpis { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+  .kpi { flex: 1 1 28%; background: #f5f7fa; border-radius: 6px; padding: 10px 12px; }
+  .kpi .v { font-size: 18px; font-weight: 700; color: #1a56db; }
+  .kpi .l { font-size: 9px; text-transform: uppercase; color: #687481; }
+  .recs { background: #eef2ff; border-left: 3px solid #1a56db; padding: 8px 12px; border-radius: 4px; }
+  .recs li { margin: 3px 0; }
+  .score-circle { font-size: 30px; font-weight: 800; }
+  .grade-A,.grade-B { color: #057a55; } .grade-C { color: #c27803; } .grade-D,.grade-F { color: #e02424; }
+  .pill { display:inline-block; padding:1px 6px; border-radius: 3px; font-size: 9px; }
+  .ok { background:#def7ec; color:#03543f; } .bad { background:#fde8e8; color:#9b1c1c; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
+  <div class="cover">
+    <h1>Reporting · {{ report.client_name }}</h1>
+    <div class="sub">
+      Zeitraum: {{ report.period_start }} – {{ report.period_end }} ·
+      Erstellt: {{ generated_at }} ·
+      {% if report.data_source == 'live' %}<span class="badge live">Live-Daten</span>
+      {% else %}<span class="badge demo">Demo-Daten</span>{% endif %}
+    </div>
+  </div>
+
+  {% if report.ads_data %}
+  {% set a = report.ads_data %}
+  <h2>1. Google Ads</h2>
+  <div class="kpis">
+    <div class="kpi"><div class="v">{{ "%.2f"|format(a.summary.cost) }} €</div><div class="l">Kosten</div></div>
+    <div class="kpi"><div class="v">{{ a.summary.clicks }}</div><div class="l">Klicks</div></div>
+    <div class="kpi"><div class="v">{{ a.summary.ctr }} %</div><div class="l">CTR</div></div>
+    <div class="kpi"><div class="v">{{ a.summary.conversions }}</div><div class="l">Conversions</div></div>
+    <div class="kpi"><div class="v">{{ "%.2f"|format(a.summary.cost_per_conversion) }} €</div><div class="l">Kosten/Conv.</div></div>
+    <div class="kpi"><div class="v">{{ a.summary.roas }}x</div><div class="l">ROAS</div></div>
+  </div>
+  <h3>Kampagnen</h3>
+  <table>
+    <tr><th>Kampagne</th><th class="num">Kosten</th><th class="num">Klicks</th><th class="num">CTR</th><th class="num">Conv.</th><th class="num">ROAS</th></tr>
+    {% for c in a.campaigns %}
+    <tr><td>{{ c.name }}</td><td class="num">{{ "%.2f"|format(c.cost) }} €</td><td class="num">{{ c.clicks }}</td><td class="num">{{ c.ctr }} %</td><td class="num">{{ c.conversions }}</td><td class="num">{{ c.roas }}x</td></tr>
+    {% endfor %}
+  </table>
+  <h3>Suchbegriffe & Qualitätsfaktor</h3>
+  <table>
+    <tr><th>Suchbegriff</th><th class="num">Klicks</th><th class="num">Conv.</th><th class="num">QF</th></tr>
+    {% for t in a.search_terms %}
+    <tr><td>{{ t.term }}</td><td class="num">{{ t.clicks }}</td><td class="num">{{ t.conversions }}</td><td class="num">{{ t.quality_score }}/10</td></tr>
+    {% endfor %}
+  </table>
+  <div class="recs"><strong>Empfehlungen</strong><ul>{% for r in a.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
+  {% if a.activities %}
+  <h3>Durchgeführte Maßnahmen im Zeitraum</h3>
+  <table>
+    <tr><th>Datum</th><th>Art</th><th>Maßnahme</th></tr>
+    {% for act in a.activities %}
+    <tr><td>{{ act.date or "—" }}</td><td>{{ act.category }}</td><td>{{ act.title }}{% if act.body %} – {{ act.body }}{% endif %}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  {% endif %}
+
+  {% if report.merchant_data %}
+  {% set m = report.merchant_data %}
+  <h2>2. Merchant Center</h2>
+  <div class="kpis">
+    <div class="kpi"><div class="v">{{ m.summary.total_products }}</div><div class="l">Produkte</div></div>
+    <div class="kpi"><div class="v">{{ m.summary.approved }}</div><div class="l">Freigegeben</div></div>
+    <div class="kpi"><div class="v">{{ m.summary.disapproved }}</div><div class="l">Abgelehnt</div></div>
+    <div class="kpi"><div class="v">{{ m.summary.out_of_stock }}</div><div class="l">Nicht verfügbar</div></div>
+  </div>
+  <h3>Ablehnungsgründe</h3>
+  <table>
+    <tr><th>Grund</th><th class="num">Anzahl</th></tr>
+    {% for d in m.disapproval_reasons %}<tr><td>{{ d.reason }}</td><td class="num">{{ d.count }}</td></tr>{% endfor %}
+  </table>
+  <h3>Feed-Qualität</h3>
+  <table>
+    <tr><th>Problem</th><th class="num">Betroffene Produkte</th></tr>
+    <tr><td>Fehlende GTIN</td><td class="num">{{ m.feed_quality.missing_gtin }}</td></tr>
+    <tr><td>Fehlende Beschreibung</td><td class="num">{{ m.feed_quality.missing_description }}</td></tr>
+    <tr><td>Fehlendes Bild</td><td class="num">{{ m.feed_quality.missing_image }}</td></tr>
+    <tr><td>Zu kurzer Titel</td><td class="num">{{ m.feed_quality.short_title }}</td></tr>
+  </table>
+  <div class="recs"><strong>Empfehlungen</strong><ul>{% for r in m.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
+  {% endif %}
+
+  {% if report.seo_data and report.seo_data.sites %}
+  <h2>3. SEO-Analyse</h2>
+  {% for s in report.seo_data.sites %}
+  <h3 style="margin-top:18px;">{{ s.site }}</h3>
+  <p class="sub">
+    robots.txt: {% if s.robots_found %}gefunden{% else %}nicht gefunden{% endif %} ·
+    Sitemap: {% if s.sitemap_found %}gefunden{% else %}nicht gefunden (interne Links genutzt){% endif %} ·
+    {{ s.pages_analyzed }} von {{ s.pages_total }} Seiten live geprüft
+  </p>
+  <div class="kpis">
+    <div class="kpi"><div class="score-circle grade-{{ s.grade }}">{{ s.score }}</div><div class="l">Gesamt-Score (Note {{ s.grade }})</div></div>
+    {% for cat, val in s.category_scores.items() %}
+    <div class="kpi"><div class="v">{{ val }}</div><div class="l">{{ cat }}</div></div>
+    {% endfor %}
+  </div>
+
+  <h4 style="margin:12px 0 4px;">Wo etwas fehlt</h4>
+  {% if s.issue_groups %}
+    {% for g in s.issue_groups %}
+    <p style="margin:10px 0 2px;font-size:11px;"><strong>{{ g.label }} — {{ g.count }} Seite(n)</strong></p>
+    <table>
+      <tr><th>Seite</th><th>Befund</th></tr>
+      {% for it in g.examples %}
+      <tr><td>{{ it.url }}</td><td>{{ it.detail }}</td></tr>
+      {% endfor %}
+      {% if g.count > g.examples|length %}<tr><td colspan="2" class="muted">… und {{ g.count - g.examples|length }} weitere Seite(n)</td></tr>{% endif %}
+    </table>
+    {% endfor %}
+  {% else %}
+    <p class="sub">Keine kritischen Mängel auf den geprüften Seiten gefunden.</p>
+  {% endif %}
+
+  <h4 style="margin:12px 0 4px;">Seitenübersicht</h4>
+  <table>
+    <tr><th>Seite</th><th class="num">Score</th><th>Note</th><th>Wichtigste Mängel</th></tr>
+    {% for p in s.pages %}
+    <tr>
+      <td>{{ p.url }}</td>
+      <td class="num">{% if p.score is not none %}{{ p.score }}{% else %}–{% endif %}</td>
+      <td>{{ p.grade }}</td>
+      <td>{{ p.issues | join('; ') }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h4 style="margin:12px 0 4px;">Sitemap ({{ s.sitemap_urls|length }} von {{ s.pages_total }} URLs)</h4>
+  <table>
+    <tr><th>URL</th></tr>
+    {% for u in s.sitemap_urls[:30] %}<tr><td>{{ u }}</td></tr>{% endfor %}
+    {% if s.pages_total > 30 %}<tr><td class="muted">… und weitere</td></tr>{% endif %}
+  </table>
+
+  {% if s.robots_found %}
+  <h4 style="margin:12px 0 4px;">robots.txt</h4>
+  <pre style="font-size:9px;background:#f5f7fa;padding:8px;border-radius:4px;white-space:pre-wrap;">{{ s.robots_txt }}</pre>
+  {% endif %}
+
+  <div class="recs"><strong>Priorisierte Empfehlungen</strong><ul>{% for r in s.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
+  {% endfor %}
+  {% endif %}
+</body>
+</html>
