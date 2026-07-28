@@ -46,12 +46,17 @@ def _match_client(db: Session, org_id: str, url: str) -> str | None:
 
 
 @router.get("/webhook-url")
-def webhook_url(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+def webhook_url(request: Request, user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
     org = db.get(Organization, user.organization_id)
     if not org.monitor_token:
         org.monitor_token = pysecrets.token_urlsafe(24)
         db.commit()
-    base = settings.public_base_url.rstrip("/")
+    # URL aus der tatsächlich aufgerufenen Domain bauen (hinter Caddy korrekt),
+    # sonst Fallback auf PUBLIC_BASE_URL.
+    host = request.headers.get("host", "")
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    base = f"{proto}://{host}" if host and "localhost" not in host and "127.0.0.1" not in host \
+        else settings.public_base_url.rstrip("/")
     return {"url": f"{base}/api/monitoring/webhook/{org.monitor_token}"}
 
 
