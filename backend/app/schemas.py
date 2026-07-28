@@ -135,6 +135,7 @@ class TodoCreate(BaseModel):
     assignee: str = ""
     project_id: str | None = None
     assignee_id: str | None = None
+    recurrence: str = ""
 
 
 class TodoPatch(BaseModel):
@@ -146,6 +147,7 @@ class TodoPatch(BaseModel):
     assignee: str | None = None
     project_id: str | None = None
     assignee_id: str | None = None
+    recurrence: str | None = None
 
 
 class TodoOut(BaseModel):
@@ -161,9 +163,31 @@ class TodoOut(BaseModel):
     project_id: str | None = None
     assignee_id: str | None = None
     assignee_name: str = ""
+    recurrence: str = ""
+    checklist_total: int = 0
+    checklist_done: int = 0
 
     class Config:
         from_attributes = True
+
+
+class ChecklistItemOut(BaseModel):
+    id: str
+    text: str
+    done: bool
+    position: int
+
+    class Config:
+        from_attributes = True
+
+
+class ChecklistCreate(BaseModel):
+    text: str
+
+
+class ChecklistPatch(BaseModel):
+    text: str | None = None
+    done: bool | None = None
 
 
 class AssigneeOut(BaseModel):

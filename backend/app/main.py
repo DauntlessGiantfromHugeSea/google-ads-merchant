@@ -39,7 +39,7 @@ _ORG_COLUMNS = {
 _TODO_COLUMNS = {
     "priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''",
     "project_id": "VARCHAR(36)", "assignee_id": "VARCHAR(36)",
-    "overdue_notified": "BOOLEAN DEFAULT FALSE",
+    "overdue_notified": "BOOLEAN DEFAULT FALSE", "recurrence": "VARCHAR(16) DEFAULT ''",
 }
 _PROJECT_COLUMNS = {
     "brief": "TEXT DEFAULT ''", "budget": "DOUBLE PRECISION DEFAULT 0",

@@ -106,7 +106,9 @@ export interface Todo {
   id: string; title: string; description: string; status: string; priority: string;
   assignee: string; due_date: string; created_at: string; client_id: string;
   project_id: string | null; assignee_id: string | null; assignee_name: string;
+  recurrence: string; checklist_total: number; checklist_done: number;
 }
+export interface ChecklistItem { id: string; text: string; done: boolean; position: number; }
 export interface Assignee {
   id: string; full_name: string; email: string;
   role: "agency_admin" | "agency_member" | "client_user"; kind: "agency" | "client";
@@ -372,8 +374,15 @@ export const api = {
   todos: (id: string) => request<Todo[]>(`/clients/${id}/todos`),
   assignees: (id: string) => request<Assignee[]>(`/clients/${id}/assignees`),
   myTodos: () => request<MyTodo[]>("/todos/mine"),
-  createTodo: (id: string, d: { title: string; description?: string; due_date?: string; priority?: string; assignee?: string; project_id?: string | null; assignee_id?: string | null }) =>
+  createTodo: (id: string, d: { title: string; description?: string; due_date?: string; priority?: string; assignee?: string; project_id?: string | null; assignee_id?: string | null; recurrence?: string }) =>
     request<Todo>(`/clients/${id}/todos`, { method: "POST", body: JSON.stringify(d) }),
+  checklist: (cid: string, tid: string) => request<ChecklistItem[]>(`/clients/${cid}/todos/${tid}/checklist`),
+  addChecklist: (cid: string, tid: string, text: string) =>
+    request<ChecklistItem>(`/clients/${cid}/todos/${tid}/checklist`, { method: "POST", body: JSON.stringify({ text }) }),
+  updateChecklist: (cid: string, tid: string, iid: string, d: { text?: string; done?: boolean }) =>
+    request<ChecklistItem>(`/clients/${cid}/todos/${tid}/checklist/${iid}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteChecklist: (cid: string, tid: string, iid: string) =>
+    request<void>(`/clients/${cid}/todos/${tid}/checklist/${iid}`, { method: "DELETE" }),
   updateTodo: (id: string, todoId: string, d: Partial<Todo>) =>
     request<Todo>(`/clients/${id}/todos/${todoId}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteTodo: (id: string, todoId: string) =>

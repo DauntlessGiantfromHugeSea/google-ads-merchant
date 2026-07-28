@@ -246,6 +246,26 @@ class Todo(Base):
     assignee_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
     # Wurde für diese Aufgabe schon eine Überfällig-Erinnerung erzeugt?
     overdue_notified: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Wiederkehrend: "" | daily | weekly | monthly
+    recurrence: Mapped[str] = mapped_column(String(16), default="")
+
+    checklist: Mapped[list[ChecklistItem]] = relationship(
+        back_populates="todo", cascade="all, delete-orphan", order_by="ChecklistItem.position")
+
+
+class ChecklistItem(Base):
+    """Unteraufgabe / Checklisten-Punkt einer Aufgabe."""
+
+    __tablename__ = "checklist_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    todo_id: Mapped[str] = mapped_column(ForeignKey("todos.id"))
+    text: Mapped[str] = mapped_column(String(512), default="")
+    done: Mapped[bool] = mapped_column(Boolean, default=False)
+    position: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    todo: Mapped[Todo] = relationship(back_populates="checklist")
 
 
 class Project(Base):

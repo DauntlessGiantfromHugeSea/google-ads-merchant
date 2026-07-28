@@ -318,6 +318,10 @@ code { color: #e9eaf2; }
 .todo-controls { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-left: auto; }
 .todo-project { max-width: 150px; padding: 5px 8px; font-size: 12px; }
 .ktodo { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; background: rgba(45,212,191,0.16); color: #7fe9db; margin-left: auto; }
+.chk-toggle { margin-left: 8px; background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--muted); font-size: 11px; padding: 1px 8px; border-radius: 999px; cursor: pointer; font-family: var(--body); }
+.chk-toggle:hover { color: var(--ink); }
+.checklist { margin-top: 8px; padding: 8px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 10px; }
+.checklist-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
 
 @media (max-width: 560px) {
   .todo-controls { width: 100%; margin-left: 0; margin-top: 6px; }

@@ -17,6 +17,7 @@ from app.models import (
     AdsActivity,
     Approval,
     Client,
+    ChecklistItem,
     ClientUpdate,
     Document,
     GoogleCredential,
@@ -39,6 +40,9 @@ from app.schemas import (
     AccountCreate,
     AccountOut,
     AssigneeOut,
+    ChecklistCreate,
+    ChecklistItemOut,
+    ChecklistPatch,
     ClientCreate,
     ClientOut,
     ClientPatch,
@@ -177,7 +181,32 @@ def _notify_assignee(db: Session, todo: Todo, actor: User, client: Client) -> No
 def _with_assignee_name(todo: Todo, names: dict[str, str]) -> TodoOut:
     out = TodoOut.model_validate(todo)
     out.assignee_name = names.get(todo.assignee_id or "", "")
+    items = todo.checklist or []
+    out.checklist_total = len(items)
+    out.checklist_done = sum(1 for i in items if i.done)
     return out
+
+
+def _advance_date(due: str, recurrence: str) -> str:
+    """Nächstes Fälligkeitsdatum für wiederkehrende Aufgaben."""
+    from datetime import date, timedelta
+    if not due:
+        base = date.today()
+    else:
+        try:
+            base = date.fromisoformat(due)
+        except ValueError:
+            base = date.today()
+    if recurrence == "daily":
+        return (base + timedelta(days=1)).isoformat()
+    if recurrence == "weekly":
+        return (base + timedelta(days=7)).isoformat()
+    if recurrence == "monthly":
+        y, m = base.year + (base.month // 12), (base.month % 12) + 1
+        import calendar
+        d = min(base.day, calendar.monthrange(y, m)[1])
+        return date(y, m, d).isoformat()
+    return due
 
 
 @router.get("/{client_id}/assignees", response_model=list[AssigneeOut])
@@ -243,14 +272,73 @@ def update_todo(
     if "assignee_id" in updates:
         updates["assignee_id"] = _resolve_assignee_id(updates["assignee_id"], client_id, user.organization_id, db)
     prev_assignee = todo.assignee_id
+    was_done = todo.status == "done"
     for field, value in updates.items():
         setattr(todo, field, value)
     if "assignee_id" in updates and todo.assignee_id and todo.assignee_id != prev_assignee:
         _notify_assignee(db, todo, user, get_scoped_client(client_id, user, db))
+    # Wiederkehrend: beim Abschließen die nächste Aufgabe erzeugen.
+    if todo.recurrence and not was_done and todo.status == "done":
+        nxt = Todo(
+            client_id=todo.client_id, title=todo.title, description=todo.description,
+            priority=todo.priority, assignee=todo.assignee, assignee_id=todo.assignee_id,
+            project_id=todo.project_id, recurrence=todo.recurrence, status="open",
+            due_date=_advance_date(todo.due_date, todo.recurrence))
+        db.add(nxt)
     db.commit()
     db.refresh(todo)
     names = _assignee_name_map(client_id, user.organization_id, db)
     return _with_assignee_name(todo, names)
+
+
+# --- Checkliste / Unteraufgaben ---
+def _scoped_todo(client_id: str, todo_id: str, user: User, db: Session) -> Todo:
+    get_scoped_client(client_id, user, db)
+    todo = db.get(Todo, todo_id)
+    if not todo or todo.client_id != client_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "To-Do nicht gefunden")
+    return todo
+
+
+@router.get("/{client_id}/todos/{todo_id}/checklist", response_model=list[ChecklistItemOut])
+def list_checklist(client_id: str, todo_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return _scoped_todo(client_id, todo_id, user, db).checklist
+
+
+@router.post("/{client_id}/todos/{todo_id}/checklist", response_model=ChecklistItemOut, status_code=201)
+def add_checklist(client_id: str, todo_id: str, data: ChecklistCreate,
+                  user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    todo = _scoped_todo(client_id, todo_id, user, db)
+    pos = (max((i.position for i in todo.checklist), default=-1)) + 1
+    item = ChecklistItem(todo_id=todo_id, text=data.text[:512], position=pos)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.patch("/{client_id}/todos/{todo_id}/checklist/{item_id}", response_model=ChecklistItemOut)
+def update_checklist(client_id: str, todo_id: str, item_id: str, data: ChecklistPatch,
+                     user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _scoped_todo(client_id, todo_id, user, db)
+    item = db.get(ChecklistItem, item_id)
+    if not item or item.todo_id != todo_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Punkt nicht gefunden")
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(item, field, value)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/{client_id}/todos/{todo_id}/checklist/{item_id}", status_code=204)
+def delete_checklist(client_id: str, todo_id: str, item_id: str,
+                     user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    _scoped_todo(client_id, todo_id, user, db)
+    item = db.get(ChecklistItem, item_id)
+    if item and item.todo_id == todo_id:
+        db.delete(item)
+        db.commit()
 
 
 @router.delete("/{client_id}/todos/{todo_id}", status_code=204)
