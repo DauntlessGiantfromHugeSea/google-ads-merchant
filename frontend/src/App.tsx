@@ -18,6 +18,7 @@ const SetPassword = lazy(() => import("./pages/SetPassword"));
 const Angebot = lazy(() => import("./pages/Angebot"));
 const Help = lazy(() => import("./pages/Help"));
 const Account = lazy(() => import("./pages/Account"));
+const Briefing = lazy(() => import("./pages/Briefing"));
 
 function Splash() {
   return <div className="boot-splash"><div className="boot-spinner" /></div>;
@@ -70,6 +71,7 @@ export default function App() {
         <Route path="/s/:id" element={<Reveal />} />
         <Route path="/req/:id" element={<RequestSubmit />} />
         <Route path="/intake/:id" element={<Intake />} />
+        <Route path="/briefing/:id" element={<Briefing />} />
         <Route path="/einladung/:token" element={<SetPassword />} />
         <Route path="/angebot/:token" element={<Angebot />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />

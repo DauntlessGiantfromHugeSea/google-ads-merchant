@@ -368,6 +368,62 @@ class IntakeSubmissionOut(BaseModel):
     created_at: datetime
 
 
+# --- Briefing-/Anfrageformulare ---
+class BriefingCreate(BaseModel):
+    briefing_type: str = "general"
+    label: str = ""
+    intro: str = ""
+    client_id: str | None = None
+    ttl_hours: int = 720
+
+
+class BriefingFormOut(BaseModel):
+    id: str
+    briefing_type: str
+    label: str
+    intro: str = ""
+    client_id: str | None = None
+    created_by: str
+    created_at: datetime
+    expires_at: datetime | None = None
+    submission_count: int = 0
+
+
+class BriefingPublicOut(BaseModel):
+    id: str
+    briefing_type: str
+    type_label: str
+    label: str
+    intro: str = ""
+    format_hint: str = ""
+    channel_hint: str = ""
+
+
+class BriefingSubmit(BaseModel):
+    contact_name: str = ""
+    contact_email: str = ""
+    company: str = ""
+    audience: str = ""      # Zielgruppe
+    goal: str = ""          # Ziel
+    format: str = ""        # Format
+    channel: str = ""       # Kanal
+    deadline: str = ""      # Deadline (YYYY-MM-DD)
+    details: str = ""
+
+
+class BriefingSubmissionOut(BaseModel):
+    id: str
+    briefing_type: str
+    data: dict
+    converted: bool
+    project_id: str | None = None
+    created_at: datetime
+
+
+class BriefingConvert(BaseModel):
+    client_id: str | None = None  # Zielkunde; leer -> Formular-Kunde oder neuer Lead
+
+
 # --- Google-Ads-Aktivitätsprotokoll ---
 class AdsActivityCreate(BaseModel):
     date: str = ""

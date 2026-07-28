@@ -514,6 +514,36 @@ class IntakeSubmission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class BriefingForm(Base):
+    """Öffentliches Briefing-/Anfrageformular je Briefing-Art."""
+
+    __tablename__ = "briefing_forms"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)  # Token = Link-ID
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    briefing_type: Mapped[str] = mapped_column(String(40), default="general")
+    label: Mapped[str] = mapped_column(String(255), default="")
+    intro: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class BriefingSubmission(Base):
+    """Eine über ein Briefing-Formular eingereichte Anfrage."""
+
+    __tablename__ = "briefing_submissions"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    form_id: Mapped[str] = mapped_column(ForeignKey("briefing_forms.id"))
+    briefing_type: Mapped[str] = mapped_column(String(40), default="general")
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    converted: Mapped[bool] = mapped_column(Boolean, default=False)
+    project_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class Notification(Base):
     """In-App-Benachrichtigung für einen Nutzer (Glocke im Header)."""
 

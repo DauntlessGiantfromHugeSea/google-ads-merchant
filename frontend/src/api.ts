@@ -67,6 +67,18 @@ export interface IntakeForm {
 export interface IntakeSubmission {
   id: string; data: Record<string, string>; applied: boolean; created_at: string;
 }
+export interface BriefingForm {
+  id: string; briefing_type: string; label: string; intro: string; client_id: string | null;
+  created_by: string; created_at: string; expires_at: string | null; submission_count: number;
+}
+export interface BriefingSubmission {
+  id: string; briefing_type: string; data: Record<string, string>;
+  converted: boolean; project_id: string | null; created_at: string;
+}
+export interface BriefingPublic {
+  id: string; briefing_type: string; type_label: string; label: string;
+  intro: string; format_hint: string; channel_hint: string;
+}
 export interface AdsActivity {
   id: string; client_id: string; date: string; category: string;
   title: string; body: string; author: string; created_at: string;
@@ -225,6 +237,20 @@ export const api = {
   intakePublic: (id: string) => request<{ id: string; label: string }>(`/intake/${id}/public`),
   submitIntake: (id: string, d: Record<string, string>) =>
     request<{ ok: boolean }>(`/intake/${id}/submit`, { method: "POST", body: JSON.stringify(d) }),
+
+  briefingTypes: () => request<{ key: string; label: string }[]>("/briefings/types"),
+  briefingForms: () => request<BriefingForm[]>("/briefings"),
+  createBriefing: (d: { briefing_type: string; label?: string; intro?: string; client_id?: string | null }) =>
+    request<BriefingForm>("/briefings", { method: "POST", body: JSON.stringify(d) }),
+  deleteBriefing: (id: string) => request<void>(`/briefings/${id}`, { method: "DELETE" }),
+  briefingSubmissions: (id: string) => request<BriefingSubmission[]>(`/briefings/${id}/submissions`),
+  convertBriefing: (id: string, sid: string, client_id?: string | null) =>
+    request<{ project_id: string; client_id: string | null }>(`/briefings/${id}/submissions/${sid}/convert`, { method: "POST", body: JSON.stringify({ client_id: client_id || null }) }),
+  deleteBriefingSubmission: (id: string, sid: string) =>
+    request<void>(`/briefings/${id}/submissions/${sid}`, { method: "DELETE" }),
+  briefingPublic: (id: string) => request<BriefingPublic>(`/briefings/${id}/public`),
+  submitBriefing: (id: string, d: Record<string, string>) =>
+    request<{ ok: boolean }>(`/briefings/${id}/submit`, { method: "POST", body: JSON.stringify(d) }),
 
   adsActivities: (cid: string) => request<AdsActivity[]>(`/clients/${cid}/ads-activities`),
   createAdsActivity: (cid: string, d: { date?: string; category?: string; title: string; body?: string }) =>
