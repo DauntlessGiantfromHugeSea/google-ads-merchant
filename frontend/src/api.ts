@@ -201,8 +201,10 @@ export const api = {
   deleteSubmission: (id: string, sid: string) => request<void>(`/requests/${id}/submissions/${sid}`, { method: "DELETE" }),
 
   team: () => request<User[]>("/team"),
-  inviteMember: (d: { email: string; password: string; full_name?: string }) =>
+  inviteMember: (d: { email: string; password: string; full_name?: string; role?: string }) =>
     request<User>("/team/invite", { method: "POST", body: JSON.stringify(d) }),
+  setMemberRole: (uid: string, role: string) =>
+    request<User>(`/team/${uid}`, { method: "PATCH", body: JSON.stringify({ role }) }),
   removeMember: (uid: string) => request<void>(`/team/${uid}`, { method: "DELETE" }),
 
   documents: (clientId: string) => request<Doc[]>(`/clients/${clientId}/documents`),

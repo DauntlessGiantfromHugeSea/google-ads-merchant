@@ -299,6 +299,11 @@ class TeamInvite(BaseModel):
     email: EmailStr
     password: str
     full_name: str = ""
+    role: str = "agency_member"  # agency_member | agency_admin
+
+
+class TeamRoleUpdate(BaseModel):
+    role: str  # agency_member | agency_admin
 
 
 # --- Passwort-Safe (zero-knowledge) ---

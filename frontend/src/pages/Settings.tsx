@@ -92,6 +92,7 @@ function Team() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [name, setName] = useState("");
+  const [role, setRole] = useState("agency_member");
   const [error, setError] = useState("");
 
   const load = () => api.team().then(setTeam).catch(() => {});
@@ -99,12 +100,16 @@ function Team() {
 
   const invite = async (e: React.FormEvent) => {
     e.preventDefault(); setError("");
-    try { await api.inviteMember({ email, password: pw, full_name: name }); setEmail(""); setPw(""); setName(""); load(); toast("Mitarbeiter eingeladen."); }
+    try { await api.inviteMember({ email, password: pw, full_name: name, role }); setEmail(""); setPw(""); setName(""); setRole("agency_member"); load(); toast("Team-Mitglied angelegt."); }
     catch (err) { setError((err as Error).message); }
   };
   const remove = async (id: string) => {
-    if (!confirm("Diesen Mitarbeiter entfernen?")) return;
-    await api.removeMember(id); load(); toast("Mitarbeiter entfernt.");
+    if (!confirm("Diesen Nutzer entfernen?")) return;
+    await api.removeMember(id); load(); toast("Entfernt.");
+  };
+  const changeRole = async (id: string, r: string) => {
+    try { await api.setMemberRole(id, r); load(); toast(r === "agency_admin" ? "Zum Admin gemacht." : "Zu Mitarbeiter gemacht."); }
+    catch (err) { toast((err as Error).message, "err"); }
   };
 
   return (
@@ -112,15 +117,33 @@ function Team() {
       <h2>Team</h2>
       {team.map((m) => (
         <div key={m.id} className="list-row">
-          <div><strong>{m.full_name || m.email}</strong> <span className="muted">· {m.email} · {m.role === "agency_admin" ? "Admin" : "Mitarbeiter"}</span></div>
-          {m.id !== user?.id && m.role !== "agency_admin" && <button className="del" onClick={() => remove(m.id)}>entfernen</button>}
+          <div>
+            <strong>{m.full_name || m.email}</strong>
+            <span className="muted"> · {m.email}</span>
+            <span className={`status-badge ${m.role === "agency_admin" ? "st-lead" : "st-beendet"}`} style={{ marginLeft: 8 }}>
+              {m.role === "agency_admin" ? "Admin" : "Mitarbeiter"}
+            </span>
+          </div>
+          <div className="row-inline" style={{ alignItems: "center" }}>
+            {m.id !== user?.id && (
+              m.role === "agency_admin"
+                ? <button className="btn btn-ghost btn-sm" onClick={() => changeRole(m.id, "agency_member")}>zu Mitarbeiter</button>
+                : <button className="btn btn-ghost btn-sm" onClick={() => changeRole(m.id, "agency_admin")}>zum Admin</button>
+            )}
+            {m.id !== user?.id && <button className="del" onClick={() => remove(m.id)}>entfernen</button>}
+          </div>
         </div>
       ))}
       <form className="row-inline form-light" style={{ marginTop: 14 }} onSubmit={invite}>
         <div className="field"><label>Name</label><input className="input" value={name} onChange={(e) => setName(e.target.value)} /></div>
         <div className="field" style={{ flex: 1 }}><label>E-Mail</label><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
         <div className="field"><label>Start-Passwort</label><input className="input" value={pw} onChange={(e) => setPw(e.target.value)} required /></div>
-        <button className="btn btn-primary">Mitarbeiter einladen</button>
+        <div className="field"><label>Rolle</label>
+          <select className="select" value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="agency_member">Mitarbeiter</option>
+            <option value="agency_admin">Admin</option>
+          </select></div>
+        <button className="btn btn-primary">Anlegen</button>
       </form>
       {error && <div className="error">{error}</div>}
     </div>
