@@ -59,10 +59,16 @@ export default function Offers({ clientId, isAgency }: { clientId: string; isAge
             <div key={i} style={{ border: "1px solid var(--glass-border)", borderRadius: 10, padding: 10, marginBottom: 8 }}>
               <div className="row-inline">
                 {pkgs.length > 0 && (
-                  <div className="field"><label>Aus Paket</label>
+                  <div className="field" style={{ minWidth: 200 }}><label>Aus Leistung</label>
                     <select className="select" onChange={(e) => { fromPkg(i, e.target.value); e.target.value = ""; }}>
                       <option value="">– wählen –</option>
-                      {pkgs.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                      {Object.entries(pkgs.reduce((acc, p) => {
+                        (acc[p.category || "Sonstiges"] ||= []).push(p); return acc;
+                      }, {} as Record<string, Package[]>)).map(([cat, list]) => (
+                        <optgroup key={cat} label={cat}>
+                          {list.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.price || `${p.unit_price} €`}</option>)}
+                        </optgroup>
+                      ))}
                     </select></div>
                 )}
                 <div className="field" style={{ width: 90 }}><label>Menge</label><input className="input" type="number" step="0.5" value={r.quantity} onChange={(e) => setRow(i, { quantity: parseFloat(e.target.value) || 0 })} /></div>

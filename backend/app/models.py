@@ -383,6 +383,7 @@ class ServicePackage(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str] = mapped_column(String(80), default="")
     price: Mapped[str] = mapped_column(String(64), default="")
     interval: Mapped[str] = mapped_column(String(32), default="monatlich")  # monatlich/jährlich/einmalig
     description: Mapped[str] = mapped_column(Text, default="")

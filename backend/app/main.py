@@ -44,7 +44,10 @@ _USER_COLUMNS = {
     "invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP",
     "totp_secret": "TEXT DEFAULT ''", "totp_enabled": "BOOLEAN DEFAULT FALSE",
 }
-_PACKAGE_COLUMNS = {"unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0"}
+_PACKAGE_COLUMNS = {
+    "unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0",
+    "category": "VARCHAR(80) DEFAULT ''",
+}
 
 
 def _ensure_columns(insp, table: str, columns: dict) -> None:

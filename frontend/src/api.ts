@@ -104,7 +104,7 @@ export interface Project {
   status: string; assignee: string; due_date: string; created_at: string; client_name?: string;
 }
 export interface Package {
-  id: string; name: string; price: string; interval: string; description: string;
+  id: string; name: string; category: string; price: string; interval: string; description: string;
   unit: string; unit_price: number; active: boolean;
 }
 export interface OfferItem {
@@ -259,7 +259,7 @@ export const api = {
     request<{ ok: boolean }>(`/clients/${cid}/documents/${docId}/send`, { method: "POST", body: JSON.stringify(d) }),
 
   packages: () => request<Package[]>("/packages"),
-  createPackage: (d: { name: string; price?: string; interval?: string; description?: string; unit?: string; unit_price?: number }) =>
+  createPackage: (d: { name: string; category?: string; price?: string; interval?: string; description?: string; unit?: string; unit_price?: number }) =>
     request<Package>("/packages", { method: "POST", body: JSON.stringify(d) }),
 
   offers: (cid: string) => request<Offer[]>(`/clients/${cid}/offers`),
@@ -280,6 +280,7 @@ export const api = {
   updatePackage: (id: string, d: Partial<Package>) =>
     request<Package>(`/packages/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deletePackage: (id: string) => request<void>(`/packages/${id}`, { method: "DELETE" }),
+  importNorthlab: () => request<{ added: number; skipped: number }>("/packages/import-northlab", { method: "POST" }),
 
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),

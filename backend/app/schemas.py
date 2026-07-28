@@ -221,6 +221,7 @@ class TodoGlobalOut(TodoOut):
 # --- Leistungs-/Paketkatalog ---
 class PackageCreate(BaseModel):
     name: str
+    category: str = ""
     price: str = ""
     interval: str = "monatlich"
     description: str = ""
@@ -231,6 +232,7 @@ class PackageCreate(BaseModel):
 
 class PackagePatch(BaseModel):
     name: str | None = None
+    category: str | None = None
     price: str | None = None
     interval: str | None = None
     description: str | None = None
@@ -242,6 +244,7 @@ class PackagePatch(BaseModel):
 class PackageOut(BaseModel):
     id: str
     name: str
+    category: str = ""
     price: str
     interval: str
     description: str

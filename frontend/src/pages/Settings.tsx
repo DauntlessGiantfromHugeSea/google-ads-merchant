@@ -84,6 +84,7 @@ function Packages() {
   const toast = useToast();
   const [pkgs, setPkgs] = useState<Package[]>([]);
   const [name, setName] = useState("");
+  const [category, setCategory] = useState("");
   const [price, setPrice] = useState("");
   const [interval, setInterval] = useState("monatlich");
   const [unit, setUnit] = useState("Stunden");
@@ -94,23 +95,45 @@ function Packages() {
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    await api.createPackage({ name, price, interval, unit, unit_price: parseFloat(rate.replace(",", ".")) || 0 });
-    setName(""); setPrice(""); setRate(""); load(); toast("Paket angelegt.");
+    await api.createPackage({ name, category, price, interval, unit, unit_price: parseFloat(rate.replace(",", ".")) || 0 });
+    setName(""); setCategory(""); setPrice(""); setRate(""); load(); toast("Paket angelegt.");
   };
   const del = async (id: string) => { if (!confirm("Paket löschen?")) return; await api.deletePackage(id); load(); toast("Paket gelöscht."); };
+  const importList = async () => {
+    try { const r = await api.importNorthlab(); load(); toast(`${r.added} Leistungen importiert${r.skipped ? `, ${r.skipped} bereits vorhanden` : ""}.`); }
+    catch (err) { toast((err as Error).message, "err"); }
+  };
+
+  // Nach Kategorie gruppieren (Reihenfolge nach erstem Auftreten).
+  const groups: { cat: string; items: Package[] }[] = [];
+  for (const p of pkgs) {
+    const key = p.category || "Sonstiges";
+    let g = groups.find((x) => x.cat === key);
+    if (!g) { g = { cat: key, items: [] }; groups.push(g); }
+    g.items.push(p);
+  }
 
   return (
     <div className="section">
-      <h2>Leistungen & Pakete</h2>
-      <p className="muted" style={{ marginTop: 0 }}>Dein Katalog – steht in den Vertragsdaten zur Auswahl.</p>
-      {pkgs.map((p) => (
-        <div key={p.id} className="list-row">
-          <div><strong>{p.name}</strong> <span className="muted">· {p.price || "—"} · {p.interval}{p.unit_price ? ` · ${p.unit_price} €/${p.unit}` : ""}</span></div>
-          <button className="del" onClick={() => del(p.id)}>löschen</button>
+      <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <h2>Leistungen & Pakete</h2>
+        <button className="btn btn-ghost btn-sm" onClick={importList}>Preisliste importieren (North Lab)</button>
+      </div>
+      <p className="muted" style={{ marginTop: 0 }}>Dein Katalog – steht in Angeboten & Vertragsdaten zur Auswahl. Beim Import bereits vorhandene Namen bleiben unverändert.</p>
+      {groups.map((g) => (
+        <div key={g.cat} style={{ marginBottom: 8 }}>
+          <div className="todo-group-head">{g.cat}</div>
+          {g.items.map((p) => (
+            <div key={p.id} className="list-row">
+              <div><strong>{p.name}</strong> <span className="muted">· {p.price || "—"} · {p.interval}{p.unit_price ? ` · ${p.unit_price} €/${p.unit}` : ""}</span></div>
+              <button className="del" onClick={() => del(p.id)}>löschen</button>
+            </div>
+          ))}
         </div>
       ))}
       <form className="row-inline form-light" style={{ marginTop: 14 }} onSubmit={create}>
         <div className="field" style={{ flex: 2 }}><label>Paketname</label><input className="input" value={name} onChange={(e) => setName(e.target.value)} required placeholder="z.B. SEO Premium" /></div>
+        <div className="field"><label>Kategorie</label><input className="input" value={category} onChange={(e) => setCategory(e.target.value)} placeholder="z.B. SEO & Online-Marketing" /></div>
         <div className="field"><label>Preis (Anzeige)</label><input className="input" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="990 €" /></div>
         <div className="field"><label>Intervall</label>
           <select className="select" value={interval} onChange={(e) => setInterval(e.target.value)}>
