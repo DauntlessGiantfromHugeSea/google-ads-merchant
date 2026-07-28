@@ -22,6 +22,10 @@ services:
     restart: unless-stopped
     expose:
       - "80"
+    # Nur lokal gebunden – für Tailscale-Zugriff (tailscale serve -> 127.0.0.1:8080).
+    # Öffentlich bleibt alles über Caddy/north-flow.de erreichbar.
+    ports:
+      - "127.0.0.1:8080:80"
     depends_on:
       - backend
 

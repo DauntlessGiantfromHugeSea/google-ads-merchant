@@ -4,10 +4,11 @@ import base64
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_scoped_client, require_agency
+from app.api.deps import get_current_user, get_scoped_client, require_agency, require_tailnet
+from app.api.routes.mail import send_via_graph
 from app.database import get_db
-from app.models import Document, User
-from app.schemas import DocumentOut
+from app.models import Document, Organization, User
+from app.schemas import DocumentOut, MailSend
 
 router = APIRouter(prefix="/api/clients/{client_id}/documents", tags=["documents"])
 _MAX_BYTES = 15 * 1024 * 1024  # 15 MB
@@ -53,6 +54,24 @@ def download_document(client_id: str, doc_id: str,
         media_type=doc.content_type,
         headers={"Content-Disposition": f'attachment; filename="{doc.filename}"'},
     )
+
+
+@router.post("/{doc_id}/send")
+def send_document(client_id: str, doc_id: str, data: MailSend,
+                  _tn: None = Depends(require_tailnet),
+                  user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    """Dokument (z.B. Rechnung) per Microsoft-Mail an den Kunden senden.
+    Bei aktivem TAILSCALE_GUARD nur aus dem Tailscale-Netz erlaubt."""
+    get_scoped_client(client_id, user, db)
+    doc = db.get(Document, doc_id)
+    if not doc or doc.client_id != client_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Dokument nicht gefunden")
+    org = db.get(Organization, user.organization_id)
+    send_via_graph(
+        org, data.to, data.subject or doc.filename, data.body, html=data.html,
+        attachments=[{"name": doc.filename, "contentType": doc.content_type, "contentBytes": doc.data_base64}],
+    )
+    return {"ok": True}
 
 
 @router.delete("/{doc_id}", status_code=204)

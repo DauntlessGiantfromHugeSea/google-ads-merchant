@@ -11,9 +11,11 @@ import Updates from "../sections/Updates";
 import Documents from "../sections/Documents";
 import Projects from "../sections/Projects";
 import MailCompose from "../sections/MailCompose";
+import Launch from "../sections/Launch";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
+  { key: "launch", label: "Launch" },
   { key: "projects", label: "Projekte" },
   { key: "reportings", label: "Reportings" },
   { key: "contract", label: "Vertragsdaten" },
@@ -94,6 +96,9 @@ export default function ClientDetail() {
           {section === "overview" && (
             <Overview client={client} isAgency={isAgency} onGo={setSection} onSaved={setClient} />
           )}
+          {section === "launch" && (
+            <Launch clientId={id} isAgency={isAgency} />
+          )}
           {section === "projects" && (
             <Projects clientId={id} isAgency={isAgency} />
           )}
@@ -104,7 +109,7 @@ export default function ClientDetail() {
             <Contract client={client} isAgency={isAgency} onSaved={setClient} />
           )}
           {section === "documents" && (
-            <Documents clientId={id} isAgency={isAgency} />
+            <Documents clientId={id} isAgency={isAgency} client={client} />
           )}
           {section === "todos" && (
             <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />

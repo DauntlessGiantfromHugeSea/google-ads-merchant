@@ -67,6 +67,14 @@ export interface AdsActivity {
   title: string; body: string; author: string; created_at: string;
 }
 export interface MailStatus { connected: boolean; email: string; configured: boolean; }
+export interface Milestone {
+  id: string; client_id: string; title: string; description: string;
+  status: string; date: string; position: number; created_at: string;
+}
+export interface Approval {
+  id: string; client_id: string; title: string; description: string; link: string;
+  status: string; response_comment: string; responded_by: string; responded_at: string | null; created_at: string;
+}
 export interface Todo {
   id: string; title: string; description: string; status: string; priority: string;
   assignee: string; due_date: string; created_at: string; client_id: string;
@@ -174,6 +182,25 @@ export const api = {
   mailDisconnect: () => request<void>("/mail/disconnect", { method: "POST" }),
   mailSend: (d: { to: string; subject: string; body: string; html?: boolean }) =>
     request<{ ok: boolean }>("/mail/send", { method: "POST", body: JSON.stringify(d) }),
+
+  milestones: (cid: string) => request<Milestone[]>(`/clients/${cid}/milestones`),
+  createMilestone: (cid: string, d: { title: string; description?: string; status?: string; date?: string }) =>
+    request<Milestone>(`/clients/${cid}/milestones`, { method: "POST", body: JSON.stringify(d) }),
+  updateMilestone: (cid: string, id: string, d: Partial<Milestone>) =>
+    request<Milestone>(`/clients/${cid}/milestones/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteMilestone: (cid: string, id: string) =>
+    request<void>(`/clients/${cid}/milestones/${id}`, { method: "DELETE" }),
+
+  approvals: (cid: string) => request<Approval[]>(`/clients/${cid}/approvals`),
+  createApproval: (cid: string, d: { title: string; description?: string; link?: string }) =>
+    request<Approval>(`/clients/${cid}/approvals`, { method: "POST", body: JSON.stringify(d) }),
+  respondApproval: (cid: string, id: string, d: { decision: string; comment?: string }) =>
+    request<Approval>(`/clients/${cid}/approvals/${id}/respond`, { method: "POST", body: JSON.stringify(d) }),
+  deleteApproval: (cid: string, id: string) =>
+    request<void>(`/clients/${cid}/approvals/${id}`, { method: "DELETE" }),
+
+  sendDocumentEmail: (cid: string, docId: string, d: { to: string; subject: string; body: string }) =>
+    request<{ ok: boolean }>(`/clients/${cid}/documents/${docId}/send`, { method: "POST", body: JSON.stringify(d) }),
 
   packages: () => request<Package[]>("/packages"),
   createPackage: (d: { name: string; price?: string; interval?: string; description?: string }) =>

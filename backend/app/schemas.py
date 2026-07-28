@@ -266,6 +266,63 @@ class AdsActivityOut(BaseModel):
         from_attributes = True
 
 
+# --- Launch: Meilensteine ---
+class MilestoneCreate(BaseModel):
+    title: str
+    description: str = ""
+    status: str = "planned"
+    date: str = ""
+
+
+class MilestonePatch(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    status: str | None = None
+    date: str | None = None
+
+
+class MilestoneOut(BaseModel):
+    id: str
+    client_id: str
+    title: str
+    description: str
+    status: str
+    date: str
+    position: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- Launch: Freigaben ---
+class ApprovalCreate(BaseModel):
+    title: str
+    description: str = ""
+    link: str = ""
+
+
+class ApprovalRespond(BaseModel):
+    decision: str  # approved | changes_requested
+    comment: str = ""
+
+
+class ApprovalOut(BaseModel):
+    id: str
+    client_id: str
+    title: str
+    description: str
+    link: str
+    status: str
+    response_comment: str
+    responded_by: str
+    responded_at: datetime | None = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # --- Microsoft-Mail ---
 class MailStatus(BaseModel):
     connected: bool

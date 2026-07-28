@@ -280,6 +280,39 @@ class Document(Base):
     client: Mapped[Client] = relationship()
 
 
+class Milestone(Base):
+    """Launch-/Projekt-Meilenstein je Kunde (Roadmap, für Kunde sichtbar)."""
+
+    __tablename__ = "milestones"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default="planned")  # planned/in_progress/done
+    date: Mapped[str] = mapped_column(String(10), default="")
+    position: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Approval(Base):
+    """Freigabe-Anfrage je Kunde (z.B. Staging-Link). Kunde gibt frei oder
+    fordert Änderungen an."""
+
+    __tablename__ = "approvals"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    title: Mapped[str] = mapped_column(String(512), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    link: Mapped[str] = mapped_column(String(512), default="")
+    status: Mapped[str] = mapped_column(String(24), default="pending")  # pending/approved/changes_requested
+    response_comment: Mapped[str] = mapped_column(Text, default="")
+    responded_by: Mapped[str] = mapped_column(String(255), default="")
+    responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class AdsActivity(Base):
     """Google-Ads-Aktivitätsprotokoll je Kunde (Aktivitäten/Änderungen/Updates)."""
 

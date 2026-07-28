@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     microsoft_client_secret: str = ""
     microsoft_tenant: str = "common"
 
+    # Wenn true: Rechnungs-/RE-Funktionen nur aus dem Tailscale-Netz (100.64.0.0/10)
+    tailscale_guard: bool = False
+
     # Briefpapier: Pfad zur eigenen Vorlage (PDF empfohlen, auch PNG/JPG/SVG).
     # Leer = automatische Suche nach templates/letterhead.{pdf,png,jpg,svg}.
     letterhead_path: str = ""

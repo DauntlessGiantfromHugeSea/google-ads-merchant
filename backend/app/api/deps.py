@@ -1,13 +1,33 @@
 """Dependencies: aktueller Nutzer aus JWT + Mandanten-/Rollenprüfung."""
 from __future__ import annotations
 
-from fastapi import Depends, HTTPException, status
+import ipaddress
+
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.core.security import decode_access_token
 from app.database import get_db
 from app.models import Client, User, UserRole
+
+_TAILNET = ipaddress.ip_network("100.64.0.0/10")
+
+
+def require_tailnet(request: Request) -> None:
+    """Wenn TAILSCALE_GUARD aktiv: nur Zugriffe aus dem Tailscale-Netz erlauben."""
+    if not get_settings().tailscale_guard:
+        return
+    fwd = request.headers.get("x-forwarded-for", "")
+    ip = (fwd.split(",")[0].strip() if fwd else "") or (request.client.host if request.client else "")
+    try:
+        addr = ipaddress.ip_address(ip)
+    except ValueError:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Nur über Tailscale erreichbar")
+    if addr not in _TAILNET:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Diese Funktion ist nur über Tailscale (dein privates Netz) erreichbar.")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 

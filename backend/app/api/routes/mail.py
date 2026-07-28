@@ -45,6 +45,33 @@ def _access_token(refresh_token: str) -> str:
     return r.json()["access_token"]
 
 
+def send_via_graph(org, to: str, subject: str, body: str, html: bool = False,
+                   attachments: list[dict] | None = None) -> None:
+    """Sendet eine Mail über das verbundene Microsoft-Konto der Organisation.
+    attachments: Liste von {name, contentType, contentBytes(base64)}."""
+    if not org or not org.ms_refresh_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
+    access = _access_token(decrypt(org.ms_refresh_token))
+    message: dict = {
+        "message": {
+            "subject": subject,
+            "body": {"contentType": "HTML" if html else "Text", "content": body},
+            "toRecipients": [{"emailAddress": {"address": to}}],
+        },
+        "saveToSentItems": True,
+    }
+    if attachments:
+        message["message"]["attachments"] = [{
+            "@odata.type": "#microsoft.graph.fileAttachment",
+            "name": a["name"], "contentType": a.get("contentType", "application/octet-stream"),
+            "contentBytes": a["contentBytes"],
+        } for a in attachments]
+    resp = httpx.post("https://graph.microsoft.com/v1.0/me/sendMail",
+                      headers={"Authorization": f"Bearer {access}"}, json=message, timeout=30)
+    if resp.status_code >= 300:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Versand fehlgeschlagen: {resp.text[:200]}")
+
+
 @router.get("/status", response_model=MailStatus)
 def status_(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     org = db.get(Organization, user.organization_id)
@@ -106,24 +133,5 @@ def disconnect(user: User = Depends(require_admin), db: Session = Depends(get_db
 @router.post("/send")
 def send(data: MailSend, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
     org = db.get(Organization, user.organization_id)
-    if not org.ms_refresh_token:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
-    try:
-        access = _access_token(decrypt(org.ms_refresh_token))
-        message = {
-            "message": {
-                "subject": data.subject,
-                "body": {"contentType": "HTML" if data.html else "Text", "content": data.body},
-                "toRecipients": [{"emailAddress": {"address": data.to}}],
-            },
-            "saveToSentItems": True,
-        }
-        resp = httpx.post("https://graph.microsoft.com/v1.0/me/sendMail",
-                          headers={"Authorization": f"Bearer {access}"}, json=message, timeout=25)
-        if resp.status_code >= 300:
-            raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Versand fehlgeschlagen: {resp.text[:200]}")
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Versand fehlgeschlagen: {exc}") from exc
+    send_via_graph(org, data.to, data.subject, data.body, html=data.html)
     return {"ok": True}
