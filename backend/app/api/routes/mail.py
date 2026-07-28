@@ -162,6 +162,15 @@ def send(data: MailSend, user: User = Depends(get_current_user), db: Session = D
     return {"ok": True}
 
 
+@router.get("/preview")
+def preview(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Gerenderte Design-Mail als HTML (für die Vorschau im Tool)."""
+    org = db.get(Organization, user.organization_id)
+    body = ("Hallo,\n\ndies ist eine Beispiel-Nachricht. So sehen deine E-Mails "
+            "aus dem Tool aus – mit Logo, Farben und Footer.\n\nBeste Grüße")
+    return {"html": render_email_html(org, body)}
+
+
 @router.post("/test")
 def test_mail(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
     """Sendet eine gebrandete Testmail an die verbundene Adresse."""

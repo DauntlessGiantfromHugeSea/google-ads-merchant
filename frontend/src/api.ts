@@ -205,6 +205,7 @@ export const api = {
   mailConnect: () => request<{ url: string }>("/mail/connect"),
   mailDisconnect: () => request<void>("/mail/disconnect", { method: "POST" }),
   mailTest: () => request<{ ok: boolean; to: string }>("/mail/test", { method: "POST" }),
+  mailPreview: () => request<{ html: string }>("/mail/preview"),
   mailSend: (d: { to: string; subject: string; body: string; html?: boolean }) =>
     request<{ ok: boolean }>("/mail/send", { method: "POST", body: JSON.stringify(d) }),
 

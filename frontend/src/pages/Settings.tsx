@@ -26,10 +26,12 @@ function MonitoringSettings() {
 function MailSettings() {
   const toast = useToast();
   const [st, setSt] = useState<{ connected: boolean; email: string; configured: boolean } | null>(null);
+  const [preview, setPreview] = useState("");
 
   const load = () => api.mailStatus().then(setSt).catch(() => {});
   useEffect(() => {
     load();
+    api.mailPreview().then((r) => setPreview(r.html)).catch(() => {});
     const p = new URLSearchParams(window.location.search).get("mail");
     if (p === "connected") toast("Microsoft-Konto verbunden.");
     if (p === "error") toast("Verbindung fehlgeschlagen.", "err");
@@ -64,6 +66,14 @@ function MailSettings() {
         <>
           <p className="muted" style={{ marginTop: 0 }}>Verbinde dein Microsoft-Postfach, um E-Mails direkt aus dem Tool zu senden.</p>
           <button className="btn btn-primary" onClick={connect}>Mit Microsoft anmelden</button>
+        </>
+      )}
+
+      {preview && (
+        <>
+          <h3 style={{ margin: "18px 0 8px", fontSize: 15 }}>Vorschau (E-Mail-Design)</h3>
+          <iframe title="Mail-Vorschau" srcDoc={preview}
+            style={{ width: "100%", height: 380, border: "1px solid var(--glass-border)", borderRadius: 12, background: "#fff" }} />
         </>
       )}
     </div>
