@@ -21,6 +21,7 @@ _CLIENT_COLUMNS = {
     "contract_fee": "VARCHAR(64) DEFAULT ''", "contract_billing": "VARCHAR(64) DEFAULT ''",
     "contract_notes": "TEXT DEFAULT ''",
     "status": "VARCHAR(32) DEFAULT 'aktiv'", "tags": "TEXT DEFAULT ''",
+    "archived": "BOOLEAN DEFAULT FALSE",
     "company": "VARCHAR(255) DEFAULT ''", "billing_address": "TEXT DEFAULT ''",
     "vat_id": "VARCHAR(64) DEFAULT ''", "billing_email": "VARCHAR(255) DEFAULT ''",
 }

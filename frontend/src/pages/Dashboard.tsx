@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [contact, setContact] = useState("");
@@ -40,7 +41,8 @@ export default function Dashboard() {
   const filtered = useMemo(() => clients.filter((c) =>
     (!q || c.name.toLowerCase().includes(q.toLowerCase()) || c.tags.toLowerCase().includes(q.toLowerCase()))
     && (!filter || c.status === filter)
-  ), [clients, q, filter]);
+    && (showArchived ? c.archived : !c.archived)
+  ), [clients, q, filter, showArchived]);
 
   return (
     <>
@@ -129,6 +131,9 @@ export default function Dashboard() {
             <option value="">Alle Status</option>
             {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
+          <label className="muted" style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 14 }}>
+            <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> Archiv
+          </label>
         </div>
       )}
 

@@ -121,6 +121,7 @@ class Client(Base):
     # Status & Tags
     status: Mapped[str] = mapped_column(String(32), default="aktiv")  # lead/aktiv/pausiert/beendet
     tags: Mapped[str] = mapped_column(Text, default="")              # kommagetrennt
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Kontaktdaten
     contact_email: Mapped[str] = mapped_column(String(255), default="")

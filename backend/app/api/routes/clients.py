@@ -5,17 +5,28 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_scoped_client, require_agency
+from app.api.deps import get_current_user, get_scoped_client, require_admin, require_agency
 from app.config import get_settings
 from app.core.crypto import encrypt_json
 from app.core.security import create_access_token, hash_password
 from app.database import get_db
 from app.models import (
     Account,
+    AdsActivity,
+    Approval,
     Client,
     ClientUpdate,
+    Document,
     GoogleCredential,
+    IntakeForm,
+    Milestone,
+    MonitorEvent,
+    MonitorStatus,
+    Offer,
+    OfferItem,
     Organization,
+    Project,
+    ReportRun,
     Todo,
     User,
     UserRole,
@@ -70,6 +81,29 @@ def create_client(
 @router.get("/{client_id}", response_model=ClientOut)
 def get_client(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return get_scoped_client(client_id, user, db)
+
+
+@router.delete("/{client_id}", status_code=204)
+def delete_client(client_id: str, user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Löscht einen Kunden endgültig samt aller verknüpften Daten (nur Admin)."""
+    client = get_scoped_client(client_id, user, db)
+    # Angebotspositionen zu Angeboten dieses Kunden
+    offer_ids = [o.id for o in db.query(Offer).filter(Offer.client_id == client_id).all()]
+    if offer_ids:
+        db.query(OfferItem).filter(OfferItem.offer_id.in_(offer_ids)).delete(synchronize_session=False)
+    for model in (Offer, Project, Milestone, Approval, AdsActivity, Document, MonitorEvent):
+        db.query(model).filter(model.client_id == client_id).delete(synchronize_session=False)
+    # Nullbare Verweise lösen
+    db.query(MonitorStatus).filter(MonitorStatus.client_id == client_id).update(
+        {MonitorStatus.client_id: None}, synchronize_session=False)
+    db.query(IntakeForm).filter(IntakeForm.client_id == client_id).update(
+        {IntakeForm.client_id: None}, synchronize_session=False)
+    # Kunden-Logins entfernen
+    db.query(User).filter(User.client_id == client_id).delete(synchronize_session=False)
+    db.flush()
+    # Rest (Konten, Reports, To-Dos, Verlauf) via Relationship-Cascade
+    db.delete(client)
+    db.commit()
 
 
 @router.post("/{client_id}/impersonate", response_model=Token)

@@ -42,6 +42,11 @@ export default function ClientDetail() {
     setSection("overview");
   };
   const changeStatus = async (status: string) => setClient(await api.updateClient(id, { status }));
+  const toggleArchive = async () => setClient(await api.updateClient(id, { archived: !client?.archived }));
+  const removeClient = async () => {
+    if (!confirm(`Kunde „${client?.name}" endgültig löschen? Alle Daten (Angebote, Reports, Projekte …) gehen verloren.`)) return;
+    await api.deleteClient(id); navigate("/");
+  };
 
   const [client, setClient] = useState<Client | null>(null);
   const [section, setSection] = useState("overview");
@@ -84,7 +89,11 @@ export default function ClientDetail() {
               {STATUS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <button className="btn btn-ghost" onClick={viewAsClient}>👁️ Als Kunde ansehen</button>
+          <div className="row-inline" style={{ alignItems: "center" }}>
+            <button className="btn btn-ghost" onClick={viewAsClient}>👁️ Als Kunde ansehen</button>
+            <button className="btn btn-ghost" onClick={toggleArchive}>{client.archived ? "Reaktivieren" : "Archivieren"}</button>
+            {user?.role === "agency_admin" && <button className="del" onClick={removeClient}>Löschen</button>}
+          </div>
         </div>
       )}
       <div className="client-layout">

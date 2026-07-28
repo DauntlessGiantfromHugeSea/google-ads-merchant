@@ -53,6 +53,7 @@ class ClientOut(BaseModel):
     created_at: datetime
     status: str
     tags: str
+    archived: bool = False
     contact_email: str
     contact_person: str
     phone: str
@@ -80,6 +81,7 @@ class ClientPatch(BaseModel):
     notes: str | None = None
     status: str | None = None
     tags: str | None = None
+    archived: bool | None = None
     contact_email: str | None = None
     company: str | None = None
     billing_address: str | None = None

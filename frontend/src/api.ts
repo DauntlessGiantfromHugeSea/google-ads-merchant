@@ -49,7 +49,7 @@ export interface User {
 export interface Client {
   id: string; name: string; notes: string;
   onboarding_completed: boolean; created_at: string;
-  status: string; tags: string;
+  status: string; tags: string; archived: boolean;
   contact_email: string; contact_person: string; phone: string; website: string; address: string;
   contract_package: string; contract_status: string; contract_start: string; contract_end: string;
   contract_fee: string; contract_billing: string; contract_notes: string;
@@ -311,6 +311,7 @@ export const api = {
   client: (id: string) => request<Client>(`/clients/${id}`),
   updateClient: (id: string, d: Partial<Client>) =>
     request<Client>(`/clients/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteClient: (id: string) => request<void>(`/clients/${id}`, { method: "DELETE" }),
   completeOnboarding: (id: string) =>
     request<Client>(`/clients/${id}/complete-onboarding`, { method: "POST" }),
   impersonate: (id: string) =>
