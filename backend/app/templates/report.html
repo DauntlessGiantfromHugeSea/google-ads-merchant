@@ -6,11 +6,7 @@
   /* Ränder laut Screenshot: oben 4cm (Header/Logo), rechts 5cm, unten 2cm
      (über Footer), links 2,8cm (frei von grüner Welle). Briefpapier als
      vollflächiger Seitenhintergrund (deckt auch die Randbereiche ab). */
-  @page {
-    size: A4;
-    margin: 4cm 5cm 3.2cm 2.8cm;
-    @bottom-right { content: "Seite " counter(page) " / " counter(pages); font-size: 8px; color: #aaa; margin-bottom: 0.4cm; }
-  }
+  @page { size: A4; margin: 4cm 5cm 3.2cm 2.8cm; }
   /* Transparenter Seitenhintergrund, damit das Briefpapier (PDF-Overlay oder
      Bild) durchscheint. */
   html, body { background: transparent; }
