@@ -90,7 +90,28 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
     existing.url = url or existing.url
     existing.status = st
     existing.message = str(msg)[:2000]
-    existing.client_id = _match_client(db, org.id, url) or existing.client_id
+    # Auto-Zuordnung nur, solange noch kein Kunde zugeordnet ist (manuelle bleibt bestehen).
+    if not existing.client_id:
+        existing.client_id = _match_client(db, org.id, url)
     existing.changed_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True}
+
+
+@router.patch("/{monitor_id}", response_model=MonitorOut)
+def assign_monitor(monitor_id: str, data: dict, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Monitor manuell einem Kunden zuordnen (client_id = null zum Lösen)."""
+    mon = db.get(MonitorStatus, monitor_id)
+    if not mon or mon.organization_id != user.organization_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Monitor nicht gefunden")
+    cid = data.get("client_id") or None
+    if cid:
+        client = db.get(Client, cid)
+        if not client or client.organization_id != user.organization_id:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Kunde nicht gefunden")
+    mon.client_id = cid
+    db.commit()
+    db.refresh(mon)
+    names = {c.id: c.name for c in db.query(Client).filter(Client.organization_id == user.organization_id).all()}
+    return MonitorOut(id=mon.id, name=mon.name, url=mon.url, status=mon.status, message=mon.message,
+                      client_id=mon.client_id, client_name=names.get(mon.client_id or "", ""), changed_at=mon.changed_at)

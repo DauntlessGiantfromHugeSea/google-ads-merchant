@@ -153,6 +153,8 @@ export const api = {
 
   monitors: () => request<Monitor[]>("/monitoring"),
   monitoringWebhookUrl: () => request<{ url: string }>("/monitoring/webhook-url"),
+  assignMonitor: (id: string, clientId: string | null) =>
+    request<Monitor>(`/monitoring/${id}`, { method: "PATCH", body: JSON.stringify({ client_id: clientId }) }),
 
   projects: (cid: string) => request<Project[]>(`/clients/${cid}/projects`),
   createProject: (cid: string, d: Partial<Project>) =>

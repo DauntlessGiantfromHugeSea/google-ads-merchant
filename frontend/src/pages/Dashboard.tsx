@@ -73,9 +73,20 @@ export default function Dashboard() {
                   <div className="muted" style={{ fontSize: 12 }}>{m.url}{m.message ? ` · ${m.message}` : ""}</div>
                 </div>
               </div>
-              <span className={`status-badge ${m.status === "down" ? "st-pausiert" : "st-aktiv"}`}>
-                {m.status === "down" ? "offline" : m.status === "up" ? "online" : "—"}
-              </span>
+              <div className="row-inline" style={{ alignItems: "center" }}>
+                <select className="select form-light" style={{ maxWidth: 170, padding: "6px 8px" }}
+                  value={m.client_id || ""}
+                  onChange={async (e) => {
+                    const upd = await api.assignMonitor(m.id, e.target.value || null);
+                    setMonitors((ms) => ms.map((x) => (x.id === m.id ? upd : x)));
+                  }}>
+                  <option value="">— Kunde zuordnen —</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <span className={`status-badge ${m.status === "down" ? "st-pausiert" : "st-aktiv"}`}>
+                  {m.status === "down" ? "offline" : m.status === "up" ? "online" : "—"}
+                </span>
+              </div>
             </div>
           ))}
         </div>
