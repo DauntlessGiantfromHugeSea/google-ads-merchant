@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Client, DashboardData, api } from "../api";
+import { Client, DashboardData, Monitor, api } from "../api";
 import { useAuth } from "../App";
 
 const STATUS = ["lead", "aktiv", "pausiert", "beendet"];
@@ -15,6 +15,7 @@ export default function Dashboard() {
 
   const [clients, setClients] = useState<Client[]>([]);
   const [dash, setDash] = useState<DashboardData | null>(null);
+  const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -24,7 +25,7 @@ export default function Dashboard() {
 
   const load = () => {
     api.clients().then(setClients).catch((e) => setError((e as Error).message));
-    if (isAgency) api.dashboard().then(setDash).catch(() => {});
+    if (isAgency) { api.dashboard().then(setDash).catch(() => {}); api.monitors().then(setMonitors).catch(() => {}); }
   };
   useEffect(() => { load(); }, []);
 
@@ -53,6 +54,30 @@ export default function Dashboard() {
             <div className="hero-stat"><div className="v">{dash.reports_total}</div><div className="l">Reports</div></div>
             <div className="hero-stat"><div className="v">{dash.status_counts["aktiv"] || 0}</div><div className="l">Aktiv</div></div>
           </div>
+        </div>
+      )}
+
+      {isAgency && monitors.length > 0 && (
+        <div className="section">
+          <div className="row-inline" style={{ justifyContent: "space-between" }}>
+            <h2>Website-Status</h2>
+            <span className="muted" style={{ fontSize: 13 }}>{monitors.filter((m) => m.status === "down").length} offline</span>
+          </div>
+          {monitors.map((m) => (
+            <div key={m.id} className="list-row">
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span className={`due-dot ${m.status === "down" ? "due-red" : m.status === "up" ? "due-green" : "due-none"}`} />
+                <div>
+                  <strong>{m.name}</strong>
+                  {m.client_name && <span className="muted" style={{ cursor: "pointer" }} onClick={() => m.client_id && navigate(`/clients/${m.client_id}`)}> · {m.client_name}</span>}
+                  <div className="muted" style={{ fontSize: 12 }}>{m.url}{m.message ? ` · ${m.message}` : ""}</div>
+                </div>
+              </div>
+              <span className={`status-badge ${m.status === "down" ? "st-pausiert" : "st-aktiv"}`}>
+                {m.status === "down" ? "offline" : m.status === "up" ? "online" : "—"}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 

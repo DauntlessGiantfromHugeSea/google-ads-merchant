@@ -3,6 +3,26 @@ import { Package, User, api } from "../api";
 import { useAuth } from "../App";
 import { useToast } from "../toast";
 
+function MonitoringSettings() {
+  const toast = useToast();
+  const [url, setUrl] = useState("");
+  useEffect(() => { api.monitoringWebhookUrl().then((r) => setUrl(r.url)).catch(() => {}); }, []);
+  return (
+    <div className="section">
+      <h2>Website-Monitoring (Uptime Kuma)</h2>
+      <p className="muted" style={{ marginTop: 0 }}>
+        In Uptime Kuma unter <strong>Einstellungen → Benachrichtigungen → Neu</strong> den Typ
+        <strong> „Webhook"</strong> wählen, folgende URL eintragen (Content-Type: application/json) und die
+        Benachrichtigung bei deinen Monitoren aktivieren. Fällt eine Seite aus, erscheint sie hier & im Dashboard,
+        dem Kunden per Domain zugeordnet.
+      </p>
+      <div className="field"><label>Webhook-URL</label>
+        <input className="input form-light" readOnly value={url} onFocus={(e) => e.currentTarget.select()} /></div>
+      <button className="btn btn-primary btn-sm" onClick={() => { navigator.clipboard.writeText(url); toast("URL kopiert."); }}>Kopieren</button>
+    </div>
+  );
+}
+
 function MailSettings() {
   const toast = useToast();
   const [st, setSt] = useState<{ connected: boolean; email: string; configured: boolean } | null>(null);
@@ -238,6 +258,7 @@ export default function Settings() {
       </div>
 
       <MailSettings />
+      <MonitoringSettings />
       <Packages />
       <AgencyContactForm />
       <Team />

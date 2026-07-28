@@ -323,6 +323,21 @@ class ApprovalOut(BaseModel):
         from_attributes = True
 
 
+# --- Monitoring (Uptime Kuma) ---
+class MonitorOut(BaseModel):
+    id: str
+    name: str
+    url: str
+    status: str
+    message: str
+    client_id: str | None = None
+    client_name: str = ""
+    changed_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # --- Microsoft-Mail ---
 class MailStatus(BaseModel):
     connected: bool

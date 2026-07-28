@@ -80,6 +80,9 @@ class Organization(Base):
     ms_refresh_token: Mapped[str] = mapped_column(Text, default="")
     ms_email: Mapped[str] = mapped_column(String(255), default="")
 
+    # Uptime-Kuma-Webhook-Token (für Monitoring-Meldungen)
+    monitor_token: Mapped[str] = mapped_column(String(64), default="")
+
     users: Mapped[list[User]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     clients: Mapped[list[Client]] = relationship(back_populates="organization", cascade="all, delete-orphan")
 
@@ -311,6 +314,21 @@ class Approval(Base):
     responded_by: Mapped[str] = mapped_column(String(255), default="")
     responded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class MonitorStatus(Base):
+    """Status einer überwachten Website (aus Uptime Kuma per Webhook)."""
+
+    __tablename__ = "monitor_status"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    name: Mapped[str] = mapped_column(String(255), default="")
+    url: Mapped[str] = mapped_column(String(512), default="")
+    status: Mapped[str] = mapped_column(String(16), default="pending")  # up/down/pending
+    message: Mapped[str] = mapped_column(Text, default="")
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
 class AdsActivity(Base):

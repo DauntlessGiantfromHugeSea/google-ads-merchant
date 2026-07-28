@@ -7,7 +7,7 @@ from sqlalchemy import inspect, text
 
 from app.api.routes import (
     ads_activity, auth, branding, clients, dashboard, documents, intake, launch, mail,
-    org, packages, projects, reports, requests, secrets, tasks, team,
+    monitoring, org, packages, projects, reports, requests, secrets, tasks, team,
 )
 from app.database import Base, engine
 
@@ -29,6 +29,7 @@ _ORG_COLUMNS = {
     "agency_contact_name": "VARCHAR(255) DEFAULT ''", "agency_contact_email": "VARCHAR(255) DEFAULT ''",
     "agency_contact_phone": "VARCHAR(64) DEFAULT ''", "agency_contact_note": "TEXT DEFAULT ''",
     "ms_refresh_token": "TEXT DEFAULT ''", "ms_email": "VARCHAR(255) DEFAULT ''",
+    "monitor_token": "VARCHAR(64) DEFAULT ''",
 }
 _TODO_COLUMNS = {"priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''"}
 
@@ -85,6 +86,7 @@ app.include_router(intake.router)
 app.include_router(ads_activity.router)
 app.include_router(mail.router)
 app.include_router(launch.router)
+app.include_router(monitoring.router)
 
 
 @app.get("/api/health")

@@ -67,6 +67,10 @@ export interface AdsActivity {
   title: string; body: string; author: string; created_at: string;
 }
 export interface MailStatus { connected: boolean; email: string; configured: boolean; }
+export interface Monitor {
+  id: string; name: string; url: string; status: string; message: string;
+  client_id: string | null; client_name: string; changed_at: string;
+}
 export interface Milestone {
   id: string; client_id: string; title: string; description: string;
   status: string; date: string; position: number; created_at: string;
@@ -146,6 +150,9 @@ export const api = {
   deleteLogo: () => request<void>("/branding/logo", { method: "DELETE" }),
 
   dashboard: () => request<DashboardData>("/dashboard"),
+
+  monitors: () => request<Monitor[]>("/monitoring"),
+  monitoringWebhookUrl: () => request<{ url: string }>("/monitoring/webhook-url"),
 
   projects: (cid: string) => request<Project[]>(`/clients/${cid}/projects`),
   createProject: (cid: string, d: Partial<Project>) =>
