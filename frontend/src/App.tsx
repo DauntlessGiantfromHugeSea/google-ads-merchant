@@ -1,19 +1,25 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, lazy, Suspense, useContext, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { api, auth, User } from "./api";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import ClientDetail from "./pages/ClientDetail";
-import Settings from "./pages/Settings";
-import Vault from "./pages/Vault";
-import Reveal from "./pages/Reveal";
-import RequestSubmit from "./pages/RequestSubmit";
-import Planner from "./pages/Planner";
-import Forms from "./pages/Forms";
-import Intake from "./pages/Intake";
-import SetPassword from "./pages/SetPassword";
-import Angebot from "./pages/Angebot";
-import Help from "./pages/Help";
+
+// Route-basiertes Code-Splitting: nur die tatsächlich geöffnete Seite wird geladen.
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ClientDetail = lazy(() => import("./pages/ClientDetail"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Vault = lazy(() => import("./pages/Vault"));
+const Reveal = lazy(() => import("./pages/Reveal"));
+const RequestSubmit = lazy(() => import("./pages/RequestSubmit"));
+const Planner = lazy(() => import("./pages/Planner"));
+const Forms = lazy(() => import("./pages/Forms"));
+const Intake = lazy(() => import("./pages/Intake"));
+const SetPassword = lazy(() => import("./pages/SetPassword"));
+const Angebot = lazy(() => import("./pages/Angebot"));
+const Help = lazy(() => import("./pages/Help"));
+
+function Splash() {
+  return <div className="boot-splash"><div className="boot-spinner" /></div>;
+}
 
 interface AuthCtx {
   user: User | null;
@@ -52,10 +58,11 @@ export default function App() {
     setUser(await api.me());
   };
 
-  if (loading) return null;
+  if (loading) return <Splash />;
 
   return (
     <Ctx.Provider value={{ user, setUser, logout, impersonating, startImpersonate, stopImpersonate }}>
+      <Suspense fallback={<Splash />}>
       <Routes>
         {/* Öffentlich (ohne Login): Geheimnis abrufen bzw. einreichen */}
         <Route path="/s/:id" element={<Reveal />} />
@@ -75,6 +82,7 @@ export default function App() {
         <Route path="/hilfe" element={user ? <Shell><Help /></Shell> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+      </Suspense>
     </Ctx.Provider>
   );
 }

@@ -1,7 +1,7 @@
 # Automatisches HTTPS (Let's Encrypt) für die Domain.
 # DOMAIN wird aus der Umgebung gezogen (siehe docker-compose.prod.yml).
 {$DOMAIN} {
-	encode gzip
+	encode zstd gzip
 
 	# API ans Backend
 	@api path /api/*

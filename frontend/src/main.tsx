@@ -23,6 +23,7 @@ if ("serviceWorker" in navigator) {
 }
 
 // Favicon auf das hochgeladene Logo setzen (Fallback bleibt /icon.svg).
+// Ein einziger Request; wird vom Browser gecacht (Cache-Control am Endpunkt).
 (() => {
   const test = new Image();
   test.onload = () => {
@@ -37,5 +38,5 @@ if ("serviceWorker" in navigator) {
     const apple = document.querySelector<HTMLLinkElement>("link[rel='apple-touch-icon']");
     if (apple) apple.href = "/api/branding/logo";
   };
-  test.src = "/api/branding/logo?fav=1";
+  test.src = "/api/branding/logo";
 })();

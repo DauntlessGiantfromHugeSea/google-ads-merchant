@@ -23,7 +23,9 @@ def get_logo(db: Session = Depends(get_db)):
     return Response(
         content=base64.b64decode(org.logo_base64),
         media_type=org.logo_content_type or "image/png",
-        headers={"Cache-Control": "no-cache"},
+        # Logo ändert sich selten -> vom Browser 1 h cachen lassen (weniger
+        # Backend-/DB-Treffer beim Laden, Login-Logo & Favicon erscheinen sofort).
+        headers={"Cache-Control": "public, max-age=3600"},
     )
 
 
