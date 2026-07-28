@@ -54,6 +54,10 @@ function MailSettings() {
         <div className="row-inline" style={{ alignItems: "center" }}>
           <span className="tag done">verbunden</span>
           <span className="muted">{st.email}</span>
+          <button className="btn btn-primary btn-sm" onClick={async () => {
+            try { const r = await api.mailTest(); toast(`Testmail an ${r.to} gesendet.`); }
+            catch (err) { toast((err as Error).message, "err"); }
+          }}>Testmail senden</button>
           <button className="btn btn-ghost btn-sm" onClick={disconnect}>Trennen</button>
         </div>
       ) : (

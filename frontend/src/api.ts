@@ -189,6 +189,7 @@ export const api = {
   mailStatus: () => request<MailStatus>("/mail/status"),
   mailConnect: () => request<{ url: string }>("/mail/connect"),
   mailDisconnect: () => request<void>("/mail/disconnect", { method: "POST" }),
+  mailTest: () => request<{ ok: boolean; to: string }>("/mail/test", { method: "POST" }),
   mailSend: (d: { to: string; subject: string; body: string; html?: boolean }) =>
     request<{ ok: boolean }>("/mail/send", { method: "POST", body: JSON.stringify(d) }),
 

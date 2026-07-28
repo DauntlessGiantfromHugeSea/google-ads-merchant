@@ -2,6 +2,8 @@
 über Microsoft Graph. Refresh-Token wird pro Organisation verschlüsselt
 gespeichert; der Zugriffstoken wird bei jedem Versand frisch geholt.
 """
+import html as htmllib
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
@@ -43,6 +45,29 @@ def _access_token(refresh_token: str) -> str:
     }, timeout=20)
     r.raise_for_status()
     return r.json()["access_token"]
+
+
+def render_email_html(org, body_text: str) -> str:
+    """Verpackt Text in eine gebrandete HTML-Mail (Logo, Farben, Footer)."""
+    logo = f"{settings.public_base_url.rstrip('/')}/api/branding/logo"
+    body_html = htmllib.escape(body_text).replace("\n", "<br>")
+    name = getattr(org, "agency_contact_name", "") or getattr(org, "name", "") or ""
+    email = getattr(org, "agency_contact_email", "") or getattr(org, "ms_email", "") or ""
+    phone = getattr(org, "agency_contact_phone", "") or ""
+    footer_parts = [p for p in [name, email, phone] if p]
+    footer = " · ".join(footer_parts)
+    return f"""\
+<div style="background:#f1f2f6;padding:24px;font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e8e8ee;">
+    <div style="background:linear-gradient(120deg,#14b8a6,#7c3aed);padding:22px 24px;text-align:center;">
+      <img src="{logo}" alt="" style="max-height:42px;max-width:220px;"/>
+    </div>
+    <div style="padding:26px 24px;color:#15161a;font-size:15px;line-height:1.65;">{body_html}</div>
+    <div style="padding:16px 24px;background:#fafafb;color:#6b6b72;font-size:12px;border-top:1px solid #eee;">
+      {htmllib.escape(footer)}
+    </div>
+  </div>
+</div>"""
 
 
 def send_via_graph(org, to: str, subject: str, body: str, html: bool = False,
@@ -133,5 +158,19 @@ def disconnect(user: User = Depends(require_admin), db: Session = Depends(get_db
 @router.post("/send")
 def send(data: MailSend, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
     org = db.get(Organization, user.organization_id)
-    send_via_graph(org, data.to, data.subject, data.body, html=data.html)
+    send_via_graph(org, data.to, data.subject, render_email_html(org, data.body), html=True)
     return {"ok": True}
+
+
+@router.post("/test")
+def test_mail(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Sendet eine gebrandete Testmail an die verbundene Adresse."""
+    org = db.get(Organization, user.organization_id)
+    to = org.ms_email
+    if not to:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Keine verbundene Adresse gefunden.")
+    body = ("Hallo,\n\ndies ist eine Testmail aus deiner Plattform. "
+            "Wenn du sie im Posteingang siehst, ist der Mailversand über dein "
+            "Microsoft-Konto korrekt eingerichtet. ✅\n\nBeste Grüße")
+    send_via_graph(org, to, "Testmail · North Flow", render_email_html(org, body), html=True)
+    return {"ok": True, "to": to}

@@ -79,9 +79,11 @@ export default function Documents({ clientId, isAgency, client }:
           )}
         </div>
       ))}
-      <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-        Max. 15 MB pro Datei. „per E-Mail" sendet die Datei als Anhang über dein Microsoft-Konto (in den Einstellungen verbinden).
-      </div>
+      {isAgency && (
+        <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+          Max. 15 MB pro Datei. „per E-Mail" sendet die Datei als Anhang über dein Microsoft-Konto (in den Einstellungen verbinden).
+        </div>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFil
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency, require_tailnet
-from app.api.routes.mail import send_via_graph
+from app.api.routes.mail import render_email_html, send_via_graph
 from app.database import get_db
 from app.models import Document, Organization, User
 from app.schemas import DocumentOut, MailSend
@@ -68,7 +68,7 @@ def send_document(client_id: str, doc_id: str, data: MailSend,
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Dokument nicht gefunden")
     org = db.get(Organization, user.organization_id)
     send_via_graph(
-        org, data.to, data.subject or doc.filename, data.body, html=data.html,
+        org, data.to, data.subject or doc.filename, render_email_html(org, data.body), html=True,
         attachments=[{"name": doc.filename, "contentType": doc.content_type, "contentBytes": doc.data_base64}],
     )
     return {"ok": True}
