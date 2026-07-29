@@ -4,11 +4,13 @@ In Uptime Kuma eine Benachrichtigung vom Typ „Webhook" anlegen und die im
 Tool angezeigte URL eintragen (Content-Type: application/json). Bei
 Status-Wechsel meldet Kuma hierher; wir ordnen den Monitor per URL dem Kunden zu.
 """
+import io
 import secrets as pysecrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
@@ -18,6 +20,58 @@ from app.models import (
     Account, AccountType, Client, MonitorEvent, MonitorStatus, Organization, User,
 )
 from app.schemas import MonitorEventOut, MonitorOut
+from app.services import pdf
+
+
+def _fmt_duration(seconds: float) -> str:
+    s = int(seconds)
+    if s <= 0:
+        return "0 min"
+    d, s = divmod(s, 86400)
+    h, s = divmod(s, 3600)
+    m = s // 60
+    parts = []
+    if d:
+        parts.append(f"{d} T")
+    if h:
+        parts.append(f"{h} Std")
+    if m and not d:
+        parts.append(f"{m} min")
+    return " ".join(parts) or "unter 1 min"
+
+
+def _aware(dt: datetime) -> datetime:
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _uptime_for(events: list[MonitorEvent], start: datetime, end: datetime) -> tuple[float, int, float]:
+    """(uptime%, Ausfälle, Ausfallzeit-Sekunden) im Zeitraum aus Statuswechseln."""
+    evs = sorted(events, key=lambda e: _aware(e.created_at))
+    prior = [e for e in evs if _aware(e.created_at) <= start]
+    in_window = [e for e in evs if start < _aware(e.created_at) <= end]
+    state = prior[-1].status if prior else (in_window[0].status if in_window else "up")
+    cursor = start
+    up_s = down_s = 0.0
+    incidents = 0
+    for e in in_window:
+        t = _aware(e.created_at)
+        dur = (t - cursor).total_seconds()
+        if state == "up":
+            up_s += dur
+        elif state == "down":
+            down_s += dur
+        if e.status == "down" and state != "down":
+            incidents += 1
+        state = e.status
+        cursor = t
+    dur = (end - cursor).total_seconds()
+    if state == "up":
+        up_s += dur
+    elif state == "down":
+        down_s += dur
+    total = up_s + down_s
+    uptime = round(up_s / total * 100, 2) if total > 0 else 100.0
+    return uptime, incidents, down_s
 
 settings = get_settings()
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
@@ -136,6 +190,58 @@ def client_events(client_id: str, user: User = Depends(get_current_user), db: Se
     return (db.query(MonitorEvent)
             .filter(MonitorEvent.organization_id == user.organization_id, MonitorEvent.client_id == client_id)
             .order_by(MonitorEvent.created_at.desc()).limit(50).all())
+
+
+@router.get("/client/{client_id}/report")
+def client_report(client_id: str, days: int = 30, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Monitoring-Report (PDF) über einen Zeitraum – für Agentur und Kunde."""
+    client = get_scoped_client(client_id, user, db)
+    days = max(1, min(730, days))
+    end = datetime.now(timezone.utc)
+    start = end - timedelta(days=days)
+
+    monitors = (db.query(MonitorStatus)
+                .filter(MonitorStatus.organization_id == user.organization_id,
+                        MonitorStatus.client_id == client_id)
+                .order_by(MonitorStatus.name).all())
+    events = (db.query(MonitorEvent)
+              .filter(MonitorEvent.organization_id == user.organization_id,
+                      MonitorEvent.client_id == client_id).all())
+    by_name: dict[str, list[MonitorEvent]] = {}
+    for e in events:
+        by_name.setdefault(e.name, []).append(e)
+
+    label = {"up": "online", "down": "offline", "pending": "wartet"}
+    mon_rows = []
+    up_sum = 0.0
+    total_incidents = 0
+    for m in monitors:
+        uptime, incidents, downtime = _uptime_for(by_name.get(m.name, []), start, end)
+        up_sum += uptime
+        total_incidents += incidents
+        win_events = sorted((e for e in by_name.get(m.name, []) if start <= _aware(e.created_at) <= end),
+                            key=lambda e: _aware(e.created_at), reverse=True)[:20]
+        mon_rows.append({
+            "name": m.name, "url": m.url, "current": m.status,
+            "current_label": label.get(m.status, m.status),
+            "uptime": uptime, "incidents": incidents, "downtime": _fmt_duration(downtime),
+            "events": [{"time": _aware(e.created_at).strftime("%d.%m.%Y %H:%M"),
+                        "status": e.status, "label": label.get(e.status, e.status),
+                        "message": e.message or ""} for e in win_events],
+        })
+    overall = round(up_sum / len(mon_rows), 2) if mon_rows else 100.0
+
+    report = {
+        "client_name": client.name,
+        "period_start": start.strftime("%d.%m.%Y"), "period_end": end.strftime("%d.%m.%Y"),
+        "generated_at": end.strftime("%d.%m.%Y %H:%M UTC"),
+        "monitor_count": len(mon_rows), "overall_uptime": overall,
+        "total_incidents": total_incidents, "monitors": mon_rows,
+    }
+    data = pdf.render_monitoring_pdf(report)
+    fn = f"Monitoring-{client.name}-{days}T.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
 
 @router.patch("/{monitor_id}", response_model=MonitorOut)

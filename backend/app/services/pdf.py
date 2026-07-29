@@ -96,3 +96,11 @@ def render_offer_pdf(offer: dict) -> bytes:
     image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
     html = render_offer_html(offer, letterhead_image=image_url)
     return _pdf_from_html(html, letterhead)
+
+
+def render_monitoring_pdf(report: dict) -> bytes:
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    template = _env.get_template("monitoring_report.html")
+    html = template.render(report=report, letterhead_image=image_url)
+    return _pdf_from_html(html, letterhead)

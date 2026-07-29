@@ -216,6 +216,13 @@ export const api = {
   deleteMonitor: (id: string) => request<void>(`/monitoring/${id}`, { method: "DELETE" }),
   clientMonitors: (cid: string) => request<Monitor[]>(`/monitoring/client/${cid}`),
   clientMonitorEvents: (cid: string) => request<MonitorEvent[]>(`/monitoring/client/${cid}/events`),
+  async downloadMonitoringReport(cid: string, days: number, clientName: string) {
+    const res = await fetch(`/api/monitoring/client/${cid}/report?days=${days}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Report fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url;
+    a.download = `Monitoring-${clientName}-${days}T.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
+  },
 
   projects: (cid: string) => request<Project[]>(`/clients/${cid}/projects`),
   createProject: (cid: string, d: Partial<Project>) =>

@@ -20,6 +20,7 @@ const NAV = [
   { key: "overview", label: "Übersicht" },
   { key: "work", label: "Projekte & Aufgaben" },
   { key: "reporting", label: "Reporting" },
+  { key: "monitoring", label: "Monitoring" },
   { key: "business", label: "Angebote & Vertrag" },
   { key: "contact", label: "Kontakt & Verlauf" },
 ];
@@ -116,10 +117,10 @@ export default function ClientDetail() {
             </>
           )}
           {section === "reporting" && (
-            <>
-              <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
-              <Monitoring clientId={id} isAgency={isAgency} />
-            </>
+            <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
+          )}
+          {section === "monitoring" && (
+            <Monitoring clientId={id} clientName={client.name} isAgency={isAgency} />
           )}
           {section === "business" && (
             <>

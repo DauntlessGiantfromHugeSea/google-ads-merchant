@@ -12,6 +12,7 @@ const Vault = lazy(() => import("./pages/Vault"));
 const Reveal = lazy(() => import("./pages/Reveal"));
 const RequestSubmit = lazy(() => import("./pages/RequestSubmit"));
 const Planner = lazy(() => import("./pages/Planner"));
+const MonitoringPage = lazy(() => import("./pages/MonitoringPage"));
 const Forms = lazy(() => import("./pages/Forms"));
 const Intake = lazy(() => import("./pages/Intake"));
 const SetPassword = lazy(() => import("./pages/SetPassword"));
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="/settings" element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />} />
         <Route path="/vault" element={user ? <Shell><Vault /></Shell> : <Navigate to="/login" />} />
         <Route path="/planner" element={user && user.role !== "client_user" ? <Shell><Planner /></Shell> : <Navigate to="/" />} />
+        <Route path="/monitoring" element={user && user.role !== "client_user" ? <Shell><MonitoringPage /></Shell> : <Navigate to="/" />} />
         <Route path="/projects" element={<Navigate to="/planner" />} />
         <Route path="/tasks" element={<Navigate to="/planner" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
@@ -113,6 +115,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           {isAgency && (
             <>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/planner")}>Planner</button>
+              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/monitoring")}>Monitoring</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>
             </>
           )}

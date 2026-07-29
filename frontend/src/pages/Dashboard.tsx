@@ -99,38 +99,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {isAgency && monitors.length > 0 && (
-        <div className="section">
-          <div className="row-inline" style={{ justifyContent: "space-between" }}>
-            <h2>Website-Status</h2>
-            <span className="muted" style={{ fontSize: 13 }}>{monitors.filter((m) => m.status === "down").length} offline</span>
+      {isAgency && monitors.filter((m) => m.status === "down").length > 0 && (
+        <div className="section" style={{ borderLeft: "3px solid #f87171" }}>
+          <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+            <h2 style={{ margin: 0 }}>⚠️ {monitors.filter((m) => m.status === "down").length} Website(s) offline</h2>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate("/monitoring")}>Monitoring öffnen</button>
           </div>
-          {monitors.map((m) => (
-            <div key={m.id} className="list-row">
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span className={`due-dot ${m.status === "down" ? "due-red" : m.status === "up" ? "due-green" : "due-none"}`} />
-                <div>
-                  <strong>{m.name}</strong>
-                  {m.client_name && <span className="muted" style={{ cursor: "pointer" }} onClick={() => m.client_id && navigate(`/clients/${m.client_id}`)}> · {m.client_name}</span>}
-                  <div className="muted" style={{ fontSize: 12 }}>{m.url}{m.message ? ` · ${m.message}` : ""}</div>
-                </div>
-              </div>
-              <div className="row-inline" style={{ alignItems: "center" }}>
-                <select className="select form-light" style={{ maxWidth: 170, padding: "6px 8px" }}
-                  value={m.client_id || ""}
-                  onChange={async (e) => {
-                    const upd = await api.assignMonitor(m.id, e.target.value || null);
-                    setMonitors((ms) => ms.map((x) => (x.id === m.id ? upd : x)));
-                  }}>
-                  <option value="">— Kunde zuordnen —</option>
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <span className={`status-badge ${m.status === "down" ? "st-pausiert" : "st-aktiv"}`}>
-                  {m.status === "down" ? "offline" : m.status === "up" ? "online" : "—"}
-                </span>
-              </div>
-            </div>
-          ))}
+          <div className="muted" style={{ fontSize: 13, marginTop: 6 }}>
+            {monitors.filter((m) => m.status === "down").map((m) => m.name).join(", ")}
+          </div>
         </div>
       )}
 
