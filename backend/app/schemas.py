@@ -368,6 +368,47 @@ class OfferAccept(BaseModel):
     code: str = ""
 
 
+# --- Verträge (digital unterschreibbar) ---
+class ContractCreate(BaseModel):
+    title: str = ""
+    body: str = ""
+    number: str = ""
+    date: str = ""
+
+
+class ContractPatch(BaseModel):
+    title: str | None = None
+    body: str | None = None
+    number: str | None = None
+    date: str | None = None
+
+
+class ContractOut(BaseModel):
+    id: str
+    client_id: str
+    number: str
+    date: str
+    title: str
+    body: str
+    status: str
+    public_token: str
+    signer_name: str
+    signer_email: str
+    signed_at: datetime | None = None
+    created_at: datetime
+    sent_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class ContractSign(BaseModel):
+    name: str = ""
+    email: str = ""
+    code: str = ""
+    signature_image: str = ""
+
+
 # --- Kundendaten-Formular (Intake) ---
 class IntakeCreate(BaseModel):
     label: str = ""

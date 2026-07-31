@@ -138,6 +138,11 @@ export interface Offer {
   created_at: string; sent_at: string | null; accepted_at: string | null;
   items: OfferItem[]; net: number; vat: number; gross: number;
 }
+export interface Contract {
+  id: string; client_id: string; number: string; date: string; title: string; body: string;
+  status: string; public_token: string; signer_name: string; signer_email: string;
+  signed_at: string | null; created_at: string; sent_at: string | null;
+}
 export type TodoGlobal = Todo & { client_name: string; project_title: string };
 export type MyTodo = TodoGlobal;
 export interface Doc {
@@ -338,6 +343,26 @@ export const api = {
     request<{ ok: boolean }>(`/offers/${token}/accept`, { method: "POST", body: JSON.stringify(d) }),
   acceptOfferInApp: (cid: string, offerId: string) =>
     request<Offer>(`/clients/${cid}/offers/${offerId}/accept`, { method: "POST" }),
+
+  contracts: (cid: string) => request<Contract[]>(`/clients/${cid}/contracts`),
+  createContract: (cid: string, d: { title: string; body: string; number?: string; date?: string }) =>
+    request<Contract>(`/clients/${cid}/contracts`, { method: "POST", body: JSON.stringify(d) }),
+  updateContract: (cid: string, id: string, d: Partial<Contract>) =>
+    request<Contract>(`/clients/${cid}/contracts/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteContract: (cid: string, id: string) => request<void>(`/clients/${cid}/contracts/${id}`, { method: "DELETE" }),
+  sendContract: (cid: string, id: string) => request<{ to: string; link: string }>(`/clients/${cid}/contracts/${id}/send`, { method: "POST" }),
+  signContractInApp: (cid: string, id: string, d: { name: string; signature_image: string }) =>
+    request<Contract>(`/clients/${cid}/contracts/${id}/sign`, { method: "POST", body: JSON.stringify(d) }),
+  async downloadContractPdf(cid: string, id: string, number: string) {
+    const res = await fetch(`/api/clients/${cid}/contracts/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `Vertrag-${number}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
+  },
+  publicContract: (token: string) => request<any>(`/contracts/${token}`),
+  requestContractCode: (token: string) => request<{ sent?: boolean; already?: boolean; email_hint?: string }>(`/contracts/${token}/request-code`, { method: "POST" }),
+  signContract: (token: string, d: { name?: string; email?: string; code?: string; signature_image?: string }) =>
+    request<{ ok: boolean }>(`/contracts/${token}/sign`, { method: "POST", body: JSON.stringify(d) }),
   async downloadOfferPdf(cid: string, id: string, number: string) {
     const res = await fetch(`/api/clients/${cid}/offers/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("PDF fehlgeschlagen");

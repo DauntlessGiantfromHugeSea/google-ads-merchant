@@ -6,9 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.api.routes import (
-    ads_activity, auth, branding, briefings, clients, dashboard, documents, intake, launch,
-    mail, monitoring, notifications, offers, org, packages, participants, projects, reports,
-    requests, secrets, tasks, team,
+    ads_activity, auth, branding, briefings, clients, contracts, dashboard, documents, intake,
+    launch, mail, monitoring, notifications, offers, org, packages, participants, projects,
+    reports, requests, secrets, tasks, team,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -143,6 +143,8 @@ app.include_router(notifications.router)
 app.include_router(briefings.router)
 app.include_router(participants.router)
 app.include_router(participants.public_router)
+app.include_router(contracts.client_router)
+app.include_router(contracts.public_router)
 
 
 @app.get("/api/health")

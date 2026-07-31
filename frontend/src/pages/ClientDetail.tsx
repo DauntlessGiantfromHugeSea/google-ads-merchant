@@ -14,6 +14,7 @@ import MailCompose from "../sections/MailCompose";
 import Launch from "../sections/Launch";
 import Monitoring from "../sections/Monitoring";
 import Offers from "../sections/Offers";
+import Contracts from "../sections/Contracts";
 import WorkCalendar from "../sections/WorkCalendar";
 import Participants from "../sections/Participants";
 
@@ -132,6 +133,7 @@ export default function ClientDetail() {
           {section === "business" && (
             <>
               <Offers clientId={id} isAgency={isAgency} />
+              <Contracts clientId={id} isAgency={isAgency} />
               <Contract client={client} isAgency={isAgency} onSaved={setClient} />
               <Documents clientId={id} isAgency={isAgency} client={client} />
             </>

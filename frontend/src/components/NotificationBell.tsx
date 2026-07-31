@@ -5,7 +5,7 @@ import { Notification, api } from "../api";
 const ICON: Record<string, string> = {
   message: "💬", task_assigned: "✅", approval_requested: "📝", approval_responded: "👍",
   todo_overdue: "⏰", project_status: "📊", offer_accepted: "🤝",
-  briefing_new: "📥", participant_new: "🙋", info: "🔔",
+  briefing_new: "📥", participant_new: "🙋", contract_signed: "✍️", info: "🔔",
 };
 
 function ago(iso: string): string {

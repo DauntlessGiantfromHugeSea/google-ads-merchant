@@ -482,6 +482,33 @@ class OfferItem(Base):
     offer: Mapped[Offer] = relationship(back_populates="items")
 
 
+class Contract(Base):
+    """Vertrag je Kunde, online digital unterschreibbar."""
+
+    __tablename__ = "contracts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    number: Mapped[str] = mapped_column(String(64), default="")
+    date: Mapped[str] = mapped_column(String(10), default="")
+    title: Mapped[str] = mapped_column(String(512), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default="draft")  # draft/sent/signed/declined
+    public_token: Mapped[str] = mapped_column(String(64), default="")
+    # Digitale Unterschrift
+    signer_name: Mapped[str] = mapped_column(String(255), default="")
+    signer_email: Mapped[str] = mapped_column(String(255), default="")
+    signature_image: Mapped[str] = mapped_column(Text, default="")  # PNG data-URL
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    signed_ip: Mapped[str] = mapped_column(String(64), default="")
+    # E-Mail-Verifizierung der Unterschrift
+    sign_code: Mapped[str] = mapped_column(String(16), default="")
+    sign_code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class Secret(Base):
     """Ende-zu-Ende verschlüsseltes Einmal-Geheimnis (Passwort-Safe).
     Der Server speichert nur den Chiffretext – der Schlüssel liegt im Link
