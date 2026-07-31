@@ -98,6 +98,7 @@ export default function Reportings({ clientId, clientName, isAgency }:
 
   return (
     <>
+      {isAgency && (
       <div className="section form-light">
         <h2>Report erzeugen</h2>
         <form className="row-inline" onSubmit={generate}>
@@ -119,6 +120,7 @@ export default function Reportings({ clientId, clientName, isAgency }:
         </div>
         {error && <div className="error">{error}</div>}
       </div>
+      )}
 
       <div className="section">
         <h2>Reports</h2>
@@ -143,6 +145,7 @@ export default function Reportings({ clientId, clientName, isAgency }:
         ))}
       </div>
 
+      {isAgency && (
       <div className="section form-light">
         <h2>Verknüpfte Konten & Integrationen</h2>
         {accounts.map((a) => (
@@ -168,8 +171,9 @@ export default function Reportings({ clientId, clientName, isAgency }:
           Tipp: Mehrere Websites möglich – jede wird im SEO-Report einzeln analysiert.
         </div>
       </div>
+      )}
 
-      <AdsActivities clientId={clientId} isAgency={isAgency} />
+      {isAgency && <AdsActivities clientId={clientId} isAgency={isAgency} />}
     </>
   );
 }

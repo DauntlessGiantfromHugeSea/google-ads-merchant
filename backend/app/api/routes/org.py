@@ -19,6 +19,8 @@ def get_contact(user: User = Depends(get_current_user), db: Session = Depends(ge
         agency_contact_phone=org.agency_contact_phone,
         agency_contact_note=org.agency_contact_note,
         agency_address=org.agency_address,
+        email_notifications=org.email_notifications,
+        meeting_link=org.meeting_link,
     )
 
 
@@ -30,5 +32,7 @@ def set_contact(data: AgencyContact, user: User = Depends(require_admin), db: Se
     org.agency_contact_phone = data.agency_contact_phone
     org.agency_contact_note = data.agency_contact_note
     org.agency_address = data.agency_address
+    org.email_notifications = data.email_notifications
+    org.meeting_link = data.meeting_link
     db.commit()
     return data

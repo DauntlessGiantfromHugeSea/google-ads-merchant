@@ -36,6 +36,7 @@ _ORG_COLUMNS = {
     "agency_contact_phone": "VARCHAR(64) DEFAULT ''", "agency_contact_note": "TEXT DEFAULT ''",
     "ms_refresh_token": "TEXT DEFAULT ''", "ms_email": "VARCHAR(255) DEFAULT ''",
     "monitor_token": "VARCHAR(64) DEFAULT ''", "agency_address": "TEXT DEFAULT ''",
+    "email_notifications": "BOOLEAN DEFAULT TRUE", "meeting_link": "VARCHAR(512) DEFAULT ''",
 }
 _CONTRACT_COLUMNS = {
     "provider_block": "TEXT DEFAULT ''", "client_block": "TEXT DEFAULT ''",

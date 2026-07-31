@@ -217,7 +217,7 @@ function Team() {
 
 function AgencyContactForm() {
   const toast = useToast();
-  const [f, setF] = useState({ agency_contact_name: "", agency_contact_email: "", agency_contact_phone: "", agency_contact_note: "", agency_address: "" });
+  const [f, setF] = useState({ agency_contact_name: "", agency_contact_email: "", agency_contact_phone: "", agency_contact_note: "", agency_address: "", email_notifications: true, meeting_link: "" });
   const [saving, setSaving] = useState(false);
   useEffect(() => { api.getAgencyContact().then(setF).catch(() => {}); }, []);
   const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -242,6 +242,12 @@ function AgencyContactForm() {
         </div>
         <div className="field"><label>Postanschrift der Agentur (für Verträge)</label><textarea className="input" value={f.agency_address} onChange={upd("agency_address")} placeholder="Straße Nr.&#10;PLZ Ort" /></div>
         <div className="field"><label>Hinweis (z.B. Erreichbarkeit)</label><textarea className="input" value={f.agency_contact_note} onChange={upd("agency_contact_note")} /></div>
+        <div className="field"><label>Standard-Terminlink (z.B. Zoom/Meet/Calendly)</label>
+          <input className="input" value={f.meeting_link} onChange={upd("meeting_link")} placeholder="https://…" /></div>
+        <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, margin: "6px 0 12px" }}>
+          <input type="checkbox" checked={f.email_notifications} onChange={(e) => setF((p) => ({ ...p, email_notifications: e.target.checked }))} />
+          E-Mail-Benachrichtigung bei wichtigen Ereignissen (Vertrag unterschrieben, Angebot angenommen, neue Aufgabe/Anfrage/Termin) – über dein Microsoft-Konto.
+        </label>
         <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Speichere…" : "Speichern"}</button>
       </div>
     </div>

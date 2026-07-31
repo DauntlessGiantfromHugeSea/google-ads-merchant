@@ -77,6 +77,8 @@ class Organization(Base):
     agency_contact_note: Mapped[str] = mapped_column(Text, default="")
     # Postanschrift der Agentur (für Verträge, Parteien-Block)
     agency_address: Mapped[str] = mapped_column(Text, default="")
+    # E-Mail-Benachrichtigungen bei wichtigen Ereignissen (über Microsoft-Mail)
+    email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
 
     # Microsoft-Mail (OAuth): verschlüsselter Refresh-Token + verbundene Adresse
     ms_refresh_token: Mapped[str] = mapped_column(Text, default="")

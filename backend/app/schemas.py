@@ -732,6 +732,8 @@ class AgencyContact(BaseModel):
     agency_contact_phone: str = ""
     agency_contact_note: str = ""
     agency_address: str = ""
+    email_notifications: bool = True
+    meeting_link: str = ""
 
 
 # --- Passwort-Anforderung (öffentlicher Einreich-Link) ---

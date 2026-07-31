@@ -407,7 +407,7 @@ def delete_update(
 
 
 @router.get("/{client_id}/accounts", response_model=list[AccountOut])
-def list_accounts(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def list_accounts(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
     client = get_scoped_client(client_id, user, db)
     return client.accounts
 

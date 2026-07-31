@@ -30,7 +30,7 @@ def list_reports(client_id: str, user: User = Depends(get_current_user), db: Ses
 def create_report(
     client_id: str,
     data: ReportCreate,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_agency),
     db: Session = Depends(get_db),
 ):
     """Erzeugt einen Report-Lauf. Wertet synchron aus und speichert die Daten
