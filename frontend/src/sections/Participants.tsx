@@ -4,6 +4,11 @@ import { useToast } from "../toast";
 
 const ST: Record<string, string> = { new: "neu", confirmed: "bestätigt", cancelled: "storniert" };
 const stCls = (s: string) => s === "confirmed" ? "st-aktiv" : s === "cancelled" ? "st-pausiert" : "st-lead";
+const prettyKey = (k: string) => k.replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim().replace(/\b\w/g, (c) => c.toUpperCase());
+const showVal = (v: unknown) => Array.isArray(v) ? v.join(", ") : v === "1" ? "ja" : v === "0" || v === "" ? "–" : String(v);
+// Alle vom Formular gesendeten Felder (ohne interne _-Felder), in Reihenfolge.
+const allFields = (p: { data: Record<string, unknown> }): [string, unknown][] =>
+  Object.entries(p.data || {}).filter(([k]) => !k.startsWith("_") && k !== "form_name");
 
 export default function Participants({ clientId, clientName, isAgency }:
   { clientId: string; clientName: string; isAgency: boolean }) {
@@ -13,6 +18,7 @@ export default function Participants({ clientId, clientName, isAgency }:
   const [q, setQ] = useState("");
   const [form, setForm] = useState("");
   const [showGuide, setShowGuide] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const load = () => {
     api.participantsStatus(clientId).then(setStatus).catch(() => {});
@@ -30,10 +36,6 @@ export default function Participants({ clientId, clientName, isAgency }:
   const filtered = useMemo(() => list
     .filter((p) => (form ? p.form_name === form : true))
     .filter((p) => !q || `${p.name} ${p.email}`.toLowerCase().includes(q.toLowerCase())), [list, q, form]);
-  const extraFields = (p: Participant) => Object.entries(p.data || {})
-    .filter(([k]) => !k.startsWith("_") && !["your-name", "your-email", "form_name"].includes(k))
-    .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`);
-
   if (!status) return <div className="section"><div className="empty">Lädt…</div></div>;
 
   // Kunde ohne Freischaltung: nichts zeigen
@@ -93,27 +95,47 @@ export default function Participants({ clientId, clientName, isAgency }:
             </div>
           </div>
 
-          {filtered.length === 0 ? <div className="empty">Noch keine Anmeldungen.</div> : filtered.map((p) => (
-            <div key={p.id} className="list-row" style={{ alignItems: "flex-start" }}>
-              <div style={{ minWidth: 0 }}>
-                <strong>{p.name || "—"}</strong>
-                {p.email && <span className="muted"> · {p.email}</span>}
-                {p.form_name && <span className="tag" style={{ marginLeft: 8, fontSize: 10 }}>{p.form_name}</span>}
-                <div className="muted" style={{ fontSize: 12 }}>
-                  {new Date(p.created_at).toLocaleString("de-DE")}
-                  {extraFields(p).length > 0 && ` · ${extraFields(p).join(" · ")}`}
+          {filtered.length === 0 ? <div className="empty">Noch keine Anmeldungen.</div> : filtered.map((p) => {
+            const fields = allFields(p);
+            const open = openId === p.id;
+            return (
+              <div key={p.id} style={{ borderBottom: "1px solid var(--line)" }}>
+                <div className="list-row" style={{ alignItems: "flex-start", border: "none" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <strong>{p.name || "—"}</strong>
+                    {p.email && <span className="muted"> · {p.email}</span>}
+                    {p.form_name && <span className="tag" style={{ marginLeft: 8, fontSize: 10 }}>{p.form_name}</span>}
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      {new Date(p.created_at).toLocaleString("de-DE")}
+                      {fields.length > 0 && (
+                        <button className="chk-toggle" style={{ marginLeft: 8 }} onClick={() => setOpenId(open ? null : p.id)}>
+                          {open ? "Details ausblenden" : `Alle Felder (${fields.length})`}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="row-inline" style={{ alignItems: "center" }}>
+                    {isAgency ? (
+                      <select className="select form-light" style={{ maxWidth: 140, padding: "6px 8px" }} value={p.status} onChange={(e) => setStat(p, e.target.value)}>
+                        <option value="new">neu</option><option value="confirmed">bestätigt</option><option value="cancelled">storniert</option>
+                      </select>
+                    ) : <span className={`status-badge ${stCls(p.status)}`}>{ST[p.status] || p.status}</span>}
+                    {isAgency && <button className="del" onClick={() => del(p)}>löschen</button>}
+                  </div>
                 </div>
+                {open && (
+                  <dl className="kv" style={{ gridTemplateColumns: "200px 1fr", margin: "0 0 12px", fontSize: 13 }}>
+                    {fields.map(([k, v]) => (
+                      <div key={k} style={{ display: "contents" }}>
+                        <dt>{prettyKey(k)}</dt>
+                        <dd style={{ whiteSpace: "pre-line" }}>{showVal(v)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
               </div>
-              <div className="row-inline" style={{ alignItems: "center" }}>
-                {isAgency ? (
-                  <select className="select form-light" style={{ maxWidth: 140, padding: "6px 8px" }} value={p.status} onChange={(e) => setStat(p, e.target.value)}>
-                    <option value="new">neu</option><option value="confirmed">bestätigt</option><option value="cancelled">storniert</option>
-                  </select>
-                ) : <span className={`status-badge ${stCls(p.status)}`}>{ST[p.status] || p.status}</span>}
-                {isAgency && <button className="del" onClick={() => del(p)}>löschen</button>}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </>
