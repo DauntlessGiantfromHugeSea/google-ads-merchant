@@ -54,15 +54,22 @@ def _body_lines(body: str) -> list[dict]:
 
 
 def _pdf_payload(contract: Contract) -> dict:
+    fdt = lambda dt, f: _aware(dt).strftime(f) if dt else ""
     return {
         "id": contract.id, "number": contract.number, "date": contract.date,
         "title": contract.title, "body_lines": _body_lines(contract.body),
-        "signed": contract.status == "signed",
+        "provider_block": contract.provider_block, "client_block": contract.client_block,
+        "fully_signed": bool(contract.signed_at and contract.agency_signed_at),
+        # Kunde
         "signer_name": contract.signer_name, "signer_email": contract.signer_email,
         "signature_image": contract.signature_image,
-        "signed_at": _aware(contract.signed_at).strftime("%d.%m.%Y %H:%M UTC") if contract.signed_at else "",
-        "signed_date": _aware(contract.signed_at).strftime("%d.%m.%Y") if contract.signed_at else "",
-        "signed_ip": contract.signed_ip,
+        "signed_at": fdt(contract.signed_at, "%d.%m.%Y %H:%M UTC"),
+        "signed_date": fdt(contract.signed_at, "%d.%m.%Y"), "signed_ip": contract.signed_ip,
+        # Agentur
+        "agency_signer_name": contract.agency_signer_name,
+        "agency_signature_image": contract.agency_signature_image,
+        "agency_signed_at": fdt(contract.agency_signed_at, "%d.%m.%Y %H:%M UTC"),
+        "agency_signed_date": fdt(contract.agency_signed_at, "%d.%m.%Y"),
     }
 
 
@@ -94,8 +101,35 @@ def _valid_signature(sig: str) -> str:
         return ""
 
 
+def _provider_block(org) -> str:
+    parts = [org.name if org else ""]
+    if org and org.agency_contact_name:
+        parts.append(org.agency_contact_name)
+    if org and org.agency_address:
+        parts.append(org.agency_address)
+    return "\n".join(p for p in parts if p).strip()
+
+
+def _client_block(client) -> str:
+    if not client:
+        return ""
+    parts = [client.company or client.name]
+    addr = client.billing_address or client.address
+    if addr:
+        parts.append(addr)
+    return "\n".join(p for p in parts if p).strip()
+
+
+def _complete_if_done(c: Contract) -> None:
+    """Vollständig unterschrieben, wenn beide Parteien signiert haben."""
+    if c.agency_signed_at and c.signed_at:
+        c.status = "signed"
+    elif c.status == "draft":
+        c.status = "sent"
+
+
 def _finalize_sign(contract: Contract, name: str, email: str, signature: str, ip: str, db: Session) -> None:
-    contract.status = "signed"
+    """Unterschrift des Kunden."""
     contract.signer_name = name[:255]
     contract.signer_email = email[:255]
     contract.signature_image = _valid_signature(signature)
@@ -103,20 +137,35 @@ def _finalize_sign(contract: Contract, name: str, email: str, signature: str, ip
     contract.signed_at = datetime.now(timezone.utc)
     contract.sign_code = ""
     contract.sign_code_expires = None
+    _complete_if_done(contract)
+    both = bool(contract.agency_signed_at)
     notify_users(db, _agency_user_ids(db, contract.organization_id),
                  org_id=contract.organization_id, client_id=contract.client_id,
-                 type_="contract_signed", title=f"Vertrag {contract.number} unterschrieben",
+                 type_="contract_signed",
+                 title=f"Vertrag {contract.number}: Kunde hat unterschrieben"
+                       + (" (vollständig)" if both else ""),
                  body=f"{name}", link=f"/clients/{contract.client_id}")
+
+
+def _finalize_agency_sign(contract: Contract, name: str, signature: str) -> None:
+    """Unterschrift der Agentur (Dienstleister)."""
+    contract.agency_signer_name = name[:255]
+    contract.agency_signature_image = _valid_signature(signature)
+    contract.agency_signed_at = datetime.now(timezone.utc)
+    _complete_if_done(contract)
 
 
 # --- Agentur (eingeloggt) ---
 @client_router.post("", response_model=ContractOut, status_code=201)
 def create_contract(client_id: str, data: ContractCreate, user: User = Depends(require_agency), db: Session = Depends(get_db)):
-    get_scoped_client(client_id, user, db)
+    client = get_scoped_client(client_id, user, db)
+    org = db.get(Organization, user.organization_id)
     number = data.number or f"V-{datetime.now(timezone.utc):%y%m%d}-{db.query(Contract).filter(Contract.organization_id == user.organization_id).count() + 1}"
     date = data.date or datetime.now(timezone.utc).strftime("%d.%m.%Y")
     c = Contract(organization_id=user.organization_id, client_id=client_id, number=number, date=date,
-                 title=data.title, body=data.body, public_token=pysecrets.token_urlsafe(20))
+                 title=data.title, body=data.body, public_token=pysecrets.token_urlsafe(20),
+                 provider_block=data.provider_block or _provider_block(org),
+                 client_block=data.client_block or _client_block(client))
     db.add(c)
     db.commit()
     db.refresh(c)
@@ -133,8 +182,8 @@ def list_contracts(client_id: str, user: User = Depends(get_current_user), db: S
 @client_router.patch("/{cid}", response_model=ContractOut)
 def update_contract(client_id: str, cid: str, data: ContractPatch, user: User = Depends(require_agency), db: Session = Depends(get_db)):
     c = _load(client_id, cid, user, db)
-    if c.status == "signed":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Unterschriebener Vertrag kann nicht geändert werden.")
+    if c.signed_at or c.agency_signed_at:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bereits unterschriebener Vertrag kann nicht geändert werden.")
     for f, v in data.model_dump(exclude_unset=True).items():
         setattr(c, f, v)
     db.commit()
@@ -181,14 +230,22 @@ def send_contract(client_id: str, cid: str, user: User = Depends(require_agency)
 @client_router.post("/{cid}/sign", response_model=ContractOut)
 def sign_inapp(client_id: str, cid: str, data: ContractSign, request: Request,
                user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Unterschrift durch einen eingeloggten Nutzer (Kunde/Agentur) – per Login
-    verifiziert, daher ohne Code."""
+    """Unterschrift durch einen eingeloggten Nutzer – per Login verifiziert,
+    daher ohne Code. Agentur-Nutzer signieren die Dienstleister-Seite, der
+    Kunden-Login die Kunden-Seite."""
+    from app.models import UserRole  # noqa: PLC0415
     c = _load(client_id, cid, user, db)
-    if c.status == "signed":
-        return _out(c)
-    ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
-          or (request.client.host if request.client else ""))
-    _finalize_sign(c, data.name or user.full_name or user.email, user.email, data.signature_image, ip, db)
+    name = data.name or user.full_name or user.email
+    if user.role == UserRole.client_user:
+        if c.signed_at:
+            return _out(c)
+        ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+              or (request.client.host if request.client else ""))
+        _finalize_sign(c, name, user.email, data.signature_image, ip, db)
+    else:
+        if c.agency_signed_at:
+            return _out(c)
+        _finalize_agency_sign(c, name, data.signature_image)
     db.commit()
     db.refresh(c)
     return _out(c)
@@ -209,8 +266,13 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
     client = db.get(Client, c.client_id)
     return {
         "number": c.number, "date": c.date, "title": c.title, "body": c.body, "status": c.status,
+        "provider_block": c.provider_block, "client_block": c.client_block,
         "signer_name": c.signer_name,
         "signed_at": _aware(c.signed_at).strftime("%d.%m.%Y %H:%M") if c.signed_at else "",
+        "client_signed": bool(c.signed_at),
+        "agency_signer_name": c.agency_signer_name,
+        "agency_signed": bool(c.agency_signed_at),
+        "agency_signature_image": c.agency_signature_image,
         "agency": {"name": getattr(org, "agency_contact_name", "") or (org.name if org else ""),
                    "email": getattr(org, "agency_contact_email", "") or ""},
         "verify": {"mail": _mail_ready(c, client, db), "email_hint": _mask_email(_client_email(client)),
@@ -218,10 +280,20 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
     }
 
 
+@public_router.get("/{token}/pdf")
+def public_contract_pdf(token: str, db: Session = Depends(get_db)):
+    """PDF über den Link – so kann auch der Kunde den (signierten) Vertrag laden."""
+    c = _by_token(token, db)
+    data = pdf.render_contract_pdf(_pdf_payload(c))
+    fn = f"Vertrag-{c.number}.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
 @public_router.post("/{token}/request-code")
 def request_code(token: str, db: Session = Depends(get_db)) -> dict:
     c = _by_token(token, db)
-    if c.status == "signed":
+    if c.signed_at:
         return {"already": True}
     client = db.get(Client, c.client_id)
     to = _client_email(client)
@@ -242,7 +314,7 @@ def request_code(token: str, db: Session = Depends(get_db)) -> dict:
 @public_router.post("/{token}/sign")
 def sign_contract(token: str, data: ContractSign, request: Request, db: Session = Depends(get_db)) -> dict:
     c = _by_token(token, db)
-    if c.status == "signed":
+    if c.signed_at:
         return {"ok": True, "already": True}
     if not data.name.strip():
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte deinen Namen eingeben.")

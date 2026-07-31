@@ -9,17 +9,22 @@
   * { box-sizing: border-box; }
   body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
   h1 { font-size: 18px; text-align: center; margin: 0 0 2px; }
-  .meta { text-align: center; color: #687481; font-size: 10px; margin-bottom: 18px; }
+  .meta { text-align: center; color: #687481; font-size: 10px; margin-bottom: 16px; }
+  .parties { text-align: center; margin: 0 0 16px; }
+  .parties .p { white-space: pre-line; }
+  .parties .role { font-style: italic; color: #52606d; }
+  .parties .lbl { margin: 8px 0 2px; }
   .para { margin: 0 0 6px; white-space: pre-line; }
   .para.h { font-weight: 700; margin-top: 14px; }
-  .sign { margin-top: 34px; border-top: 1px solid #cdd3da; padding-top: 14px; }
-  .sign-grid { display: flex; justify-content: space-between; gap: 30px; align-items: flex-end; }
+  .sign { margin-top: 32px; }
+  .sign-grid { display: flex; justify-content: space-between; gap: 30px; }
   .sign-col { flex: 1; }
   .sig-line { border-bottom: 1px solid #1f2933; height: 46px; position: relative; }
   .sig-line img { max-height: 44px; position: absolute; bottom: 1px; left: 0; }
   .sig-cap { font-size: 10px; color: #687481; margin-top: 3px; }
+  .sig-role { font-size: 10px; font-weight: 700; margin-bottom: 4px; }
   .audit { margin-top: 16px; font-size: 9px; color: #687481; background: #f5f7fa; border-radius: 5px; padding: 7px 10px; }
-  .pending { color: #b45309; font-size: 10px; }
+  .pending { color: #b45309; font-size: 10px; margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -28,6 +33,18 @@
   <h1>{{ contract.title or "Vertrag" }}</h1>
   <div class="meta">Vertrag {{ contract.number }}{% if contract.date %} · {{ contract.date }}{% endif %}</div>
 
+  {% if contract.provider_block or contract.client_block %}
+  <div class="parties">
+    <div class="lbl">zwischen</div>
+    <div class="p">{{ contract.provider_block }}</div>
+    <div class="role">– nachfolgend Dienstleister genannt –</div>
+    <div class="lbl">und</div>
+    <div class="p">{{ contract.client_block }}</div>
+    <div class="role">– nachfolgend Kunde genannt –</div>
+    <div class="lbl">wird folgender Vertrag geschlossen:</div>
+  </div>
+  {% endif %}
+
   {% for p in contract.body_lines %}
     <div class="para {{ 'h' if p.heading else '' }}">{{ p.text }}</div>
   {% endfor %}
@@ -35,24 +52,28 @@
   <div class="sign">
     <div class="sign-grid">
       <div class="sign-col">
-        <div class="sig-line"></div>
-        <div class="sig-cap">Ort, Datum{% if contract.signed_date %}: {{ contract.signed_date }}{% endif %}</div>
+        <div class="sig-role">Dienstleister</div>
+        <div class="sig-line">{% if contract.agency_signature_image %}<img src="{{ contract.agency_signature_image }}">{% endif %}</div>
+        <div class="sig-cap">{{ contract.agency_signer_name or "Unterschrift Dienstleister" }}{% if contract.agency_signed_date %} · {{ contract.agency_signed_date }}{% endif %}</div>
       </div>
       <div class="sign-col">
+        <div class="sig-role">Kunde</div>
         <div class="sig-line">{% if contract.signature_image %}<img src="{{ contract.signature_image }}">{% endif %}</div>
-        <div class="sig-cap">
-          {% if contract.signer_name %}{{ contract.signer_name }} (Kunde){% else %}Unterschrift Kunde{% endif %}
-        </div>
+        <div class="sig-cap">{{ contract.signer_name or "Unterschrift Kunde" }}{% if contract.signed_date %} · {{ contract.signed_date }}{% endif %}</div>
       </div>
     </div>
-    {% if contract.signed %}
+
+    {% if contract.fully_signed %}
       <div class="audit">
-        Rechtsverbindlich elektronisch signiert am {{ contract.signed_at }} durch {{ contract.signer_name }}.
-        E-Mail verifiziert: {{ contract.signer_email }}{% if contract.signed_ip %} · IP {{ contract.signed_ip }}{% endif %}.
+        Rechtsverbindlich elektronisch signiert. Dienstleister: {{ contract.agency_signer_name }} am {{ contract.agency_signed_at }}.
+        Kunde: {{ contract.signer_name }} am {{ contract.signed_at }} (E-Mail verifiziert: {{ contract.signer_email }}{% if contract.signed_ip %} · IP {{ contract.signed_ip }}{% endif %}).
         Vertrags-ID {{ contract.id }}.
       </div>
     {% else %}
-      <div class="pending" style="margin-top:10px">Noch nicht unterschrieben.</div>
+      <div class="pending">
+        {% if not contract.agency_signed_at %}Unterschrift Dienstleister ausstehend.{% endif %}
+        {% if not contract.signed_at %}Unterschrift Kunde ausstehend.{% endif %}
+      </div>
     {% endif %}
   </div>
 </body>

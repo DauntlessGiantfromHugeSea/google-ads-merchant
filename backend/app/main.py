@@ -35,7 +35,12 @@ _ORG_COLUMNS = {
     "agency_contact_name": "VARCHAR(255) DEFAULT ''", "agency_contact_email": "VARCHAR(255) DEFAULT ''",
     "agency_contact_phone": "VARCHAR(64) DEFAULT ''", "agency_contact_note": "TEXT DEFAULT ''",
     "ms_refresh_token": "TEXT DEFAULT ''", "ms_email": "VARCHAR(255) DEFAULT ''",
-    "monitor_token": "VARCHAR(64) DEFAULT ''",
+    "monitor_token": "VARCHAR(64) DEFAULT ''", "agency_address": "TEXT DEFAULT ''",
+}
+_CONTRACT_COLUMNS = {
+    "provider_block": "TEXT DEFAULT ''", "client_block": "TEXT DEFAULT ''",
+    "agency_signer_name": "VARCHAR(255) DEFAULT ''", "agency_signature_image": "TEXT DEFAULT ''",
+    "agency_signed_at": "TIMESTAMP",
 }
 _TODO_COLUMNS = {
     "priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''",
@@ -74,6 +79,7 @@ def _ensure_schema() -> None:
     insp = inspect(engine)
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
     _ensure_columns(insp, "offers", _OFFER_COLUMNS)
+    _ensure_columns(insp, "contracts", _CONTRACT_COLUMNS)
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)
     _ensure_columns(insp, "todos", _TODO_COLUMNS)
     _ensure_columns(insp, "projects", _PROJECT_COLUMNS)

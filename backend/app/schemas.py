@@ -374,6 +374,8 @@ class ContractCreate(BaseModel):
     body: str = ""
     number: str = ""
     date: str = ""
+    provider_block: str = ""
+    client_block: str = ""
 
 
 class ContractPatch(BaseModel):
@@ -381,6 +383,8 @@ class ContractPatch(BaseModel):
     body: str | None = None
     number: str | None = None
     date: str | None = None
+    provider_block: str | None = None
+    client_block: str | None = None
 
 
 class ContractOut(BaseModel):
@@ -390,11 +394,15 @@ class ContractOut(BaseModel):
     date: str
     title: str
     body: str
+    provider_block: str = ""
+    client_block: str = ""
     status: str
     public_token: str
     signer_name: str
     signer_email: str
     signed_at: datetime | None = None
+    agency_signer_name: str = ""
+    agency_signed_at: datetime | None = None
     created_at: datetime
     sent_at: datetime | None = None
 
@@ -406,6 +414,11 @@ class ContractSign(BaseModel):
     name: str = ""
     email: str = ""
     code: str = ""
+    signature_image: str = ""
+
+
+class ContractAgencySign(BaseModel):
+    name: str = ""
     signature_image: str = ""
 
 
@@ -707,6 +720,7 @@ class AgencyContact(BaseModel):
     agency_contact_email: str = ""
     agency_contact_phone: str = ""
     agency_contact_note: str = ""
+    agency_address: str = ""
 
 
 # --- Passwort-Anforderung (öffentlicher Einreich-Link) ---

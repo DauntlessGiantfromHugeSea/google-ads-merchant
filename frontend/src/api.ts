@@ -140,8 +140,10 @@ export interface Offer {
 }
 export interface Contract {
   id: string; client_id: string; number: string; date: string; title: string; body: string;
+  provider_block: string; client_block: string;
   status: string; public_token: string; signer_name: string; signer_email: string;
-  signed_at: string | null; created_at: string; sent_at: string | null;
+  signed_at: string | null; agency_signer_name: string; agency_signed_at: string | null;
+  created_at: string; sent_at: string | null;
 }
 export type TodoGlobal = Todo & { client_name: string; project_title: string };
 export type MyTodo = TodoGlobal;
@@ -166,7 +168,7 @@ export interface Account {
 }
 export interface AgencyContact {
   agency_contact_name: string; agency_contact_email: string;
-  agency_contact_phone: string; agency_contact_note: string;
+  agency_contact_phone: string; agency_contact_note: string; agency_address: string;
 }
 export interface SecretInfo { id: string; views_left: number; note: string; created_by: string; expires_at: string | null; }
 export interface SecretRequest { id: string; label: string; created_by: string; created_at: string; expires_at: string | null; submission_count: number; }
@@ -360,6 +362,7 @@ export const api = {
     const a = document.createElement("a"); a.href = url; a.download = `Vertrag-${number}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
   },
   publicContract: (token: string) => request<any>(`/contracts/${token}`),
+  publicContractPdfUrl: (token: string) => `/api/contracts/${token}/pdf`,
   requestContractCode: (token: string) => request<{ sent?: boolean; already?: boolean; email_hint?: string }>(`/contracts/${token}/request-code`, { method: "POST" }),
   signContract: (token: string, d: { name?: string; email?: string; code?: string; signature_image?: string }) =>
     request<{ ok: boolean }>(`/contracts/${token}/sign`, { method: "POST", body: JSON.stringify(d) }),

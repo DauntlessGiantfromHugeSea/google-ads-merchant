@@ -75,6 +75,8 @@ class Organization(Base):
     agency_contact_email: Mapped[str] = mapped_column(String(255), default="")
     agency_contact_phone: Mapped[str] = mapped_column(String(64), default="")
     agency_contact_note: Mapped[str] = mapped_column(Text, default="")
+    # Postanschrift der Agentur (für Verträge, Parteien-Block)
+    agency_address: Mapped[str] = mapped_column(Text, default="")
 
     # Microsoft-Mail (OAuth): verschlüsselter Refresh-Token + verbundene Adresse
     ms_refresh_token: Mapped[str] = mapped_column(Text, default="")
@@ -494,14 +496,21 @@ class Contract(Base):
     date: Mapped[str] = mapped_column(String(10), default="")
     title: Mapped[str] = mapped_column(String(512), default="")
     body: Mapped[str] = mapped_column(Text, default="")
+    # Parteien (automatisch aus Agentur-/Kundendaten, editierbar)
+    provider_block: Mapped[str] = mapped_column(Text, default="")  # Dienstleister/Agentur
+    client_block: Mapped[str] = mapped_column(Text, default="")    # Kunde
     status: Mapped[str] = mapped_column(String(16), default="draft")  # draft/sent/signed/declined
     public_token: Mapped[str] = mapped_column(String(64), default="")
-    # Digitale Unterschrift
+    # Digitale Unterschrift – Kunde
     signer_name: Mapped[str] = mapped_column(String(255), default="")
     signer_email: Mapped[str] = mapped_column(String(255), default="")
     signature_image: Mapped[str] = mapped_column(Text, default="")  # PNG data-URL
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     signed_ip: Mapped[str] = mapped_column(String(64), default="")
+    # Digitale Unterschrift – Agentur (Dienstleister)
+    agency_signer_name: Mapped[str] = mapped_column(String(255), default="")
+    agency_signature_image: Mapped[str] = mapped_column(Text, default="")
+    agency_signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # E-Mail-Verifizierung der Unterschrift
     sign_code: Mapped[str] = mapped_column(String(16), default="")
     sign_code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

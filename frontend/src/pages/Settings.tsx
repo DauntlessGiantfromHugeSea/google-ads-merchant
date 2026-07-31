@@ -217,7 +217,7 @@ function Team() {
 
 function AgencyContactForm() {
   const toast = useToast();
-  const [f, setF] = useState({ agency_contact_name: "", agency_contact_email: "", agency_contact_phone: "", agency_contact_note: "" });
+  const [f, setF] = useState({ agency_contact_name: "", agency_contact_email: "", agency_contact_phone: "", agency_contact_note: "", agency_address: "" });
   const [saving, setSaving] = useState(false);
   useEffect(() => { api.getAgencyContact().then(setF).catch(() => {}); }, []);
   const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -240,6 +240,7 @@ function AgencyContactForm() {
         <div className="row-inline">
           <div className="field" style={{ flex: 1 }}><label>Telefon</label><input className="input" value={f.agency_contact_phone} onChange={upd("agency_contact_phone")} /></div>
         </div>
+        <div className="field"><label>Postanschrift der Agentur (für Verträge)</label><textarea className="input" value={f.agency_address} onChange={upd("agency_address")} placeholder="Straße Nr.&#10;PLZ Ort" /></div>
         <div className="field"><label>Hinweis (z.B. Erreichbarkeit)</label><textarea className="input" value={f.agency_contact_note} onChange={upd("agency_contact_note")} /></div>
         <button className="btn btn-primary" onClick={save} disabled={saving}>{saving ? "Speichere…" : "Speichern"}</button>
       </div>

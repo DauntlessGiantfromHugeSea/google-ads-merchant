@@ -45,15 +45,34 @@ export default function Vertrag() {
         <h1 style={{ fontSize: 20 }}>{c.title || "Vertrag"}</h1>
         <div className="sub" style={{ marginTop: 4 }}>Nr. {c.number}{c.date ? ` · ${c.date}` : ""}</div>
 
+        {(c.provider_block || c.client_block) && (
+          <div style={{ margin: "16px 0 4px", textAlign: "center", fontSize: 14 }}>
+            <div className="sub">zwischen</div>
+            <div style={{ whiteSpace: "pre-line" }}>{c.provider_block}</div>
+            <div className="sub" style={{ fontStyle: "italic" }}>– nachfolgend Dienstleister genannt –</div>
+            <div className="sub" style={{ margin: "6px 0" }}>und</div>
+            <div style={{ whiteSpace: "pre-line" }}>{c.client_block}</div>
+            <div className="sub" style={{ fontStyle: "italic" }}>– nachfolgend Kunde genannt –</div>
+          </div>
+        )}
+
         <div style={{ margin: "16px 0", borderTop: "1px solid rgba(255,255,255,0.14)", paddingTop: 14, fontSize: 14 }}>
           {(c.body || "").split("\n").map((line: string, i: number) => (
             <div key={i} style={{ fontWeight: line.trim().startsWith("§") ? 700 : 400, marginBottom: line.trim() ? 4 : 8, whiteSpace: "pre-line" }}>{line}</div>
           ))}
         </div>
 
+        <div className="sub" style={{ marginBottom: 6 }}>
+          Dienstleister: {c.agency_signed ? `✓ ${c.agency_signer_name || "unterschrieben"}` : "Unterschrift ausstehend"}
+          {" · "}Kunde: {c.client_signed ? `✓ ${c.signer_name || "unterschrieben"}` : "Unterschrift ausstehend"}
+        </div>
+
         {signed ? (
           <div style={{ marginTop: 6, padding: "12px 14px", background: "rgba(52,211,153,0.18)", color: "#6ee7b7", borderRadius: 10 }}>
-            ✓ Vertrag rechtsverbindlich unterschrieben{c.signer_name ? ` von ${c.signer_name}` : ""}{c.signed_at ? ` am ${c.signed_at}` : ""}. Vielen Dank!
+            ✓ Von dir rechtsverbindlich unterschrieben{c.signed_at ? ` am ${c.signed_at}` : ""}. Vielen Dank!
+            <div style={{ marginTop: 10 }}>
+              <a className="btn btn-ghost btn-sm" href={api.publicContractPdfUrl(token)} target="_blank" rel="noreferrer">Vertrag als PDF herunterladen</a>
+            </div>
           </div>
         ) : (
           <form onSubmit={sign} style={{ marginTop: 8 }}>
