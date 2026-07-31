@@ -58,7 +58,7 @@ def _pdf_payload(contract: Contract) -> dict:
     return {
         "id": contract.id, "number": contract.number, "date": contract.date,
         "title": contract.title, "body_lines": _body_lines(contract.body),
-        "provider_block": contract.provider_block, "client_block": contract.client_block,
+        "provider_block": _dedupe_lines(contract.provider_block), "client_block": _dedupe_lines(contract.client_block),
         "fully_signed": bool(contract.signed_at and contract.agency_signed_at),
         # Kunde
         "signer_name": contract.signer_name, "signer_email": contract.signer_email,
@@ -101,13 +101,25 @@ def _valid_signature(sig: str) -> str:
         return ""
 
 
+def _dedupe_lines(text: str) -> str:
+    """Aufeinanderfolgende identische Zeilen entfernen (z.B. Name == Firma)."""
+    out: list[str] = []
+    for ln in (text or "").split("\n"):
+        if out and out[-1].strip().lower() == ln.strip().lower():
+            continue
+        out.append(ln)
+    return "\n".join(out).strip()
+
+
 def _provider_block(org) -> str:
-    parts = [org.name if org else ""]
-    if org and org.agency_contact_name:
+    if not org:
+        return ""
+    parts = [org.name]
+    if org.agency_contact_name and org.agency_contact_name.strip().lower() != (org.name or "").strip().lower():
         parts.append(org.agency_contact_name)
-    if org and org.agency_address:
+    if org.agency_address:
         parts.append(org.agency_address)
-    return "\n".join(p for p in parts if p).strip()
+    return _dedupe_lines("\n".join(p for p in parts if p))
 
 
 def _client_block(client) -> str:
@@ -266,7 +278,7 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
     client = db.get(Client, c.client_id)
     return {
         "number": c.number, "date": c.date, "title": c.title, "body": c.body, "status": c.status,
-        "provider_block": c.provider_block, "client_block": c.client_block,
+        "provider_block": _dedupe_lines(c.provider_block), "client_block": _dedupe_lines(c.client_block),
         "signer_name": c.signer_name,
         "signed_at": _aware(c.signed_at).strftime("%d.%m.%Y %H:%M") if c.signed_at else "",
         "client_signed": bool(c.signed_at),

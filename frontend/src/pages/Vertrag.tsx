@@ -57,9 +57,12 @@ export default function Vertrag() {
         )}
 
         <div style={{ margin: "16px 0", borderTop: "1px solid rgba(255,255,255,0.14)", paddingTop: 14, fontSize: 14 }}>
-          {(c.body || "").split("\n").map((line: string, i: number) => (
-            <div key={i} style={{ fontWeight: line.trim().startsWith("§") ? 700 : 400, marginBottom: line.trim() ? 4 : 8, whiteSpace: "pre-line" }}>{line}</div>
-          ))}
+          {(c.body || "").split("\n").map((line: string, i: number) => {
+            const t = line.trim();
+            if (!t) return <div key={i} style={{ height: 10 }} />;
+            const h = t.startsWith("§");
+            return <div key={i} style={{ fontWeight: h ? 700 : 400, marginTop: h ? 16 : 0, marginBottom: 3, lineHeight: 1.55 }}>{line}</div>;
+          })}
         </div>
 
         <div className="sub" style={{ marginBottom: 6 }}>
