@@ -147,7 +147,9 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
   const [body, setBody] = useState("");
   const [signId, setSignId] = useState<string | null>(null);
   const [sigName, setSigName] = useState("");
+  const [sigPlace, setSigPlace] = useState("");
   const [sig, setSig] = useState("");
+  const [editId, setEditId] = useState<string | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [pkgs, setPkgs] = useState<Package[]>([]);
   const [rows, setRows] = useState<LRow[]>([]);
@@ -169,12 +171,22 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
   };
 
   const applyTpl = (key: string) => { const t = TEMPLATES[key]; if (!t) return; if (!title.trim()) setTitle(t.title); setBody(t.body); };
+  const resetForm = () => { setTitle(""); setBody(""); setRows([]); setEditId(null); setShow(false); };
+  const startEdit = (c: Contract) => {
+    setEditId(c.id); setTitle(c.title); setBody(c.body);
+    setRows((c.services || []).map((s) => ({ description: s.description, qty: s.qty, unit: s.unit, price: s.price })));
+    setShow(true);
+    setTimeout(() => window.scrollTo({ top: 0, behavior: "smooth" }), 0);
+  };
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) { toast("Titel fehlt.", "err"); return; }
     const services = rows.filter((r) => r.description.trim());
-    await api.createContract(clientId, { title, body, services });
-    setTitle(""); setBody(""); setRows([]); setShow(false); load(); toast("Vertrag angelegt.");
+    try {
+      if (editId) { await api.updateContract(clientId, editId, { title, body, services } as any); toast("Vertrag gespeichert."); }
+      else { await api.createContract(clientId, { title, body, services }); toast("Vertrag angelegt."); }
+      resetForm(); load();
+    } catch (err) { toast((err as Error).message, "err"); }
   };
   const send = async (c: Contract) => { try { const r = await api.sendContract(clientId, c.id); load(); toast(`An ${r.to} gesendet.`); } catch (err) { toast((err as Error).message, "err"); } };
   const copyLink = (c: Contract) => { navigator.clipboard.writeText(`${location.origin}/vertrag/${c.public_token}`); toast("Link kopiert."); };
@@ -182,15 +194,15 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
   const openSign = (c: Contract) => window.open(`/vertrag/${c.public_token}`, "_blank");
   const doAgencySign = async (c: Contract) => {
     if (!sig) { toast("Bitte unterschreiben.", "err"); return; }
-    await api.signContractInApp(clientId, c.id, { name: sigName, signature_image: sig });
-    setSignId(null); setSigName(""); setSig(""); load(); toast("Unterschrieben.");
+    await api.signContractInApp(clientId, c.id, { name: sigName, signature_image: sig, place: sigPlace });
+    setSignId(null); setSigName(""); setSigPlace(""); setSig(""); load(); toast("Unterschrieben.");
   };
 
   return (
     <div className="section">
       <div className="row-inline" style={{ justifyContent: "space-between" }}>
         <h2>Verträge</h2>
-        {isAgency && <button className="btn btn-primary btn-sm" onClick={() => setShow((s) => !s)}>{show ? "Abbrechen" : "+ Vertrag"}</button>}
+        {isAgency && <button className="btn btn-primary btn-sm" onClick={() => (show ? resetForm() : setShow(true))}>{show ? "Abbrechen" : "+ Vertrag"}</button>}
       </div>
 
       {show && isAgency && (
@@ -235,7 +247,7 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
             </div>
             <textarea className="input" value={body} onChange={(e) => setBody(e.target.value)} rows={12} /></div>
           <p className="muted" style={{ fontSize: 12 }}>Die Vertragsparteien (deine Agentur & der Kunde) werden automatisch aus den Stammdaten eingesetzt. Deine Agentur-Anschrift pflegst du in den Einstellungen.</p>
-          <button className="btn btn-primary">Vertrag anlegen</button>
+          <button className="btn btn-primary">{editId ? "Änderungen speichern" : "Vertrag anlegen"}</button>
         </form>
       )}
 
@@ -252,18 +264,23 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
               <span className={`status-badge ${stCls(c.status)}`}>{ST[c.status] || c.status}</span>
               <button className="btn btn-ghost btn-sm" onClick={() => api.downloadContractPdf(clientId, c.id, c.number)}>PDF</button>
               {isAgency && <button className="btn btn-ghost btn-sm" onClick={() => copyLink(c)}>Link</button>}
+              {isAgency && !c.agency_signed_at && !c.signed_at && <button className="btn btn-ghost btn-sm" onClick={() => startEdit(c)}>bearbeiten</button>}
               {isAgency && !c.signed_at && <button className="btn btn-ghost btn-sm" onClick={() => send(c)}>senden</button>}
-              {isAgency && !c.agency_signed_at && <button className="btn btn-primary btn-sm" onClick={() => { setSignId(signId === c.id ? null : c.id); setSigName(""); setSig(""); }}>Ich unterschreibe</button>}
+              {isAgency && !c.agency_signed_at && <button className="btn btn-primary btn-sm" onClick={() => { setSignId(signId === c.id ? null : c.id); setSigName(""); setSigPlace(""); setSig(""); }}>Ich unterschreibe</button>}
               {!isAgency && !c.signed_at && <button className="btn btn-primary btn-sm" onClick={() => openSign(c)}>Jetzt unterschreiben</button>}
               {isAgency && <button className="del" onClick={() => del(c)}>löschen</button>}
             </div>
           </div>
           {isAgency && signId === c.id && (
             <div className="card form-light" style={{ marginTop: 10, boxShadow: "none" }}>
-              <div className="field"><label>Dein Name</label>
-                <input className="input" value={sigName} onChange={(e) => setSigName(e.target.value)} placeholder="Name der/des Unterzeichnenden" /></div>
-              <div className="field"><label>Unterschrift (Dienstleister)</label>
-                <SignaturePad onChange={setSig} /></div>
+              <div className="row-inline">
+                <div className="field" style={{ flex: 2 }}><label>Dein Name</label>
+                  <input className="input" value={sigName} onChange={(e) => setSigName(e.target.value)} placeholder="Name der/des Unterzeichnenden" /></div>
+                <div className="field" style={{ flex: 1 }}><label>Ort</label>
+                  <input className="input" value={sigPlace} onChange={(e) => setSigPlace(e.target.value)} placeholder="z.B. Essen" /></div>
+              </div>
+              <div className="field"><label>Unterschrift (Dienstleister) – zeichnen oder Bild hochladen</label>
+                <SignaturePad onChange={setSig} allowUpload /></div>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => doAgencySign(c)}>Verbindlich unterschreiben</button>
             </div>
           )}

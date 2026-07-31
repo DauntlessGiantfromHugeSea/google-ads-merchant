@@ -78,11 +78,13 @@ def _pdf_payload(contract: Contract) -> dict:
         "signature_image": contract.signature_image,
         "signed_at": fdt(contract.signed_at, "%d.%m.%Y %H:%M UTC"),
         "signed_date": fdt(contract.signed_at, "%d.%m.%Y"), "signed_ip": contract.signed_ip,
+        "signed_place": contract.signed_place,
         # Agentur
         "agency_signer_name": contract.agency_signer_name,
         "agency_signature_image": contract.agency_signature_image,
         "agency_signed_at": fdt(contract.agency_signed_at, "%d.%m.%Y %H:%M UTC"),
         "agency_signed_date": fdt(contract.agency_signed_at, "%d.%m.%Y"),
+        "agency_signed_place": contract.agency_signed_place,
     }
 
 
@@ -181,12 +183,13 @@ def _complete_if_done(c: Contract) -> None:
         c.status = "sent"
 
 
-def _finalize_sign(contract: Contract, name: str, email: str, signature: str, ip: str, db: Session) -> None:
+def _finalize_sign(contract: Contract, name: str, email: str, signature: str, ip: str, db: Session, place: str = "") -> None:
     """Unterschrift des Kunden."""
     contract.signer_name = name[:255]
     contract.signer_email = email[:255]
     contract.signature_image = _valid_signature(signature)
     contract.signed_ip = ip[:64]
+    contract.signed_place = (place or "")[:255]
     contract.signed_at = datetime.now(timezone.utc)
     contract.sign_code = ""
     contract.sign_code_expires = None
@@ -200,10 +203,11 @@ def _finalize_sign(contract: Contract, name: str, email: str, signature: str, ip
                  body=f"{name}", link=f"/clients/{contract.client_id}")
 
 
-def _finalize_agency_sign(contract: Contract, name: str, signature: str) -> None:
+def _finalize_agency_sign(contract: Contract, name: str, signature: str, place: str = "") -> None:
     """Unterschrift der Agentur (Dienstleister)."""
     contract.agency_signer_name = name[:255]
     contract.agency_signature_image = _valid_signature(signature)
+    contract.agency_signed_place = (place or "")[:255]
     contract.agency_signed_at = datetime.now(timezone.utc)
     _complete_if_done(contract)
 
@@ -295,11 +299,11 @@ def sign_inapp(client_id: str, cid: str, data: ContractSign, request: Request,
             return _out(c)
         ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
               or (request.client.host if request.client else ""))
-        _finalize_sign(c, name, user.email, data.signature_image, ip, db)
+        _finalize_sign(c, name, user.email, data.signature_image, ip, db, data.place)
     else:
         if c.agency_signed_at:
             return _out(c)
-        _finalize_agency_sign(c, name, data.signature_image)
+        _finalize_agency_sign(c, name, data.signature_image, data.place)
     db.commit()
     db.refresh(c)
     return _out(c)
@@ -322,10 +326,10 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
         "number": c.number, "date": c.date, "title": c.title, "body": c.body, "status": c.status,
         "provider_block": _dedupe_lines(c.provider_block), "client_block": _dedupe_lines(c.client_block),
         "services": _services_view(c.services),
-        "signer_name": c.signer_name,
+        "signer_name": c.signer_name, "signed_place": c.signed_place,
         "signed_at": _aware(c.signed_at).strftime("%d.%m.%Y %H:%M") if c.signed_at else "",
         "client_signed": bool(c.signed_at),
-        "agency_signer_name": c.agency_signer_name,
+        "agency_signer_name": c.agency_signer_name, "agency_signed_place": c.agency_signed_place,
         "agency_signed": bool(c.agency_signed_at),
         "agency_signature_image": c.agency_signature_image,
         "agency": {"name": getattr(org, "agency_contact_name", "") or (org.name if org else ""),
@@ -399,6 +403,6 @@ def sign_contract(token: str, data: ContractSign, request: Request, db: Session 
 
     ip = (request.headers.get("x-forwarded-for", "").split(",")[0].strip()
           or (request.client.host if request.client else ""))
-    _finalize_sign(c, data.name, verified_email, data.signature_image, ip, db)
+    _finalize_sign(c, data.name, verified_email, data.signature_image, ip, db, data.place)
     db.commit()
     return {"ok": True}

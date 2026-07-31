@@ -509,10 +509,12 @@ class Contract(Base):
     signature_image: Mapped[str] = mapped_column(Text, default="")  # PNG data-URL
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     signed_ip: Mapped[str] = mapped_column(String(64), default="")
+    signed_place: Mapped[str] = mapped_column(String(255), default="")
     # Digitale Unterschrift – Agentur (Dienstleister)
     agency_signer_name: Mapped[str] = mapped_column(String(255), default="")
     agency_signature_image: Mapped[str] = mapped_column(Text, default="")
     agency_signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    agency_signed_place: Mapped[str] = mapped_column(String(255), default="")
     # E-Mail-Verifizierung der Unterschrift
     sign_code: Mapped[str] = mapped_column(String(16), default="")
     sign_code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

@@ -75,12 +75,14 @@
       <div class="sign-col">
         <div class="sig-role">Dienstleister</div>
         <div class="sig-line">{% if contract.agency_signature_image %}<img src="{{ contract.agency_signature_image }}">{% endif %}</div>
-        <div class="sig-cap">{{ contract.agency_signer_name or "Unterschrift Dienstleister" }}{% if contract.agency_signed_date %} · {{ contract.agency_signed_date }}{% endif %}</div>
+        <div class="sig-cap">{{ contract.agency_signer_name or "Unterschrift Dienstleister" }}</div>
+        {% if contract.agency_signed_date %}<div class="sig-cap">{{ contract.agency_signed_place }}{% if contract.agency_signed_place %}, {% endif %}den {{ contract.agency_signed_date }}</div>{% else %}<div class="sig-cap">Ort, Datum</div>{% endif %}
       </div>
       <div class="sign-col">
         <div class="sig-role">Kunde</div>
         <div class="sig-line">{% if contract.signature_image %}<img src="{{ contract.signature_image }}">{% endif %}</div>
-        <div class="sig-cap">{{ contract.signer_name or "Unterschrift Kunde" }}{% if contract.signed_date %} · {{ contract.signed_date }}{% endif %}</div>
+        <div class="sig-cap">{{ contract.signer_name or "Unterschrift Kunde" }}</div>
+        {% if contract.signed_date %}<div class="sig-cap">{{ contract.signed_place }}{% if contract.signed_place %}, {% endif %}den {{ contract.signed_date }}</div>{% else %}<div class="sig-cap">Ort, Datum</div>{% endif %}
       </div>
     </div>
 

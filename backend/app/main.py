@@ -41,6 +41,7 @@ _CONTRACT_COLUMNS = {
     "provider_block": "TEXT DEFAULT ''", "client_block": "TEXT DEFAULT ''",
     "agency_signer_name": "VARCHAR(255) DEFAULT ''", "agency_signature_image": "TEXT DEFAULT ''",
     "agency_signed_at": "TIMESTAMP", "services": "JSON DEFAULT '[]'",
+    "signed_place": "VARCHAR(255) DEFAULT ''", "agency_signed_place": "VARCHAR(255) DEFAULT ''",
 }
 _TODO_COLUMNS = {
     "priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''",

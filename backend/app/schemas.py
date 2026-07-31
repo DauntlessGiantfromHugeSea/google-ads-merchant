@@ -430,11 +430,7 @@ class ContractSign(BaseModel):
     email: str = ""
     code: str = ""
     signature_image: str = ""
-
-
-class ContractAgencySign(BaseModel):
-    name: str = ""
-    signature_image: str = ""
+    place: str = ""
 
 
 # --- Kundendaten-Formular (Intake) ---

@@ -355,7 +355,7 @@ export const api = {
     request<Contract>(`/clients/${cid}/contracts/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteContract: (cid: string, id: string) => request<void>(`/clients/${cid}/contracts/${id}`, { method: "DELETE" }),
   sendContract: (cid: string, id: string) => request<{ to: string; link: string }>(`/clients/${cid}/contracts/${id}/send`, { method: "POST" }),
-  signContractInApp: (cid: string, id: string, d: { name: string; signature_image: string }) =>
+  signContractInApp: (cid: string, id: string, d: { name: string; signature_image: string; place?: string }) =>
     request<Contract>(`/clients/${cid}/contracts/${id}/sign`, { method: "POST", body: JSON.stringify(d) }),
   async downloadContractPdf(cid: string, id: string, number: string) {
     const res = await fetch(`/api/clients/${cid}/contracts/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
@@ -366,7 +366,7 @@ export const api = {
   publicContract: (token: string) => request<any>(`/contracts/${token}`),
   publicContractPdfUrl: (token: string) => `/api/contracts/${token}/pdf`,
   requestContractCode: (token: string) => request<{ sent?: boolean; already?: boolean; email_hint?: string }>(`/contracts/${token}/request-code`, { method: "POST" }),
-  signContract: (token: string, d: { name?: string; email?: string; code?: string; signature_image?: string }) =>
+  signContract: (token: string, d: { name?: string; email?: string; code?: string; signature_image?: string; place?: string }) =>
     request<{ ok: boolean }>(`/contracts/${token}/sign`, { method: "POST", body: JSON.stringify(d) }),
   async downloadOfferPdf(cid: string, id: string, number: string) {
     const res = await fetch(`/api/clients/${cid}/offers/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });

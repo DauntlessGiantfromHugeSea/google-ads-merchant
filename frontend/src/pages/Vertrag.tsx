@@ -8,6 +8,7 @@ export default function Vertrag() {
   const [c, setC] = useState<any>(null);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
+  const [place, setPlace] = useState("");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
   const [sig, setSig] = useState("");
@@ -28,7 +29,7 @@ export default function Vertrag() {
   };
   const sign = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError("");
-    try { await api.signContract(token, { name, email, code, signature_image: sig }); setDone(true); load(); }
+    try { await api.signContract(token, { name, email, code, signature_image: sig, place }); setDone(true); load(); }
     catch (err) { setError((err as Error).message); }
     finally { setBusy(false); }
   };
@@ -99,8 +100,12 @@ export default function Vertrag() {
         ) : (
           <form onSubmit={sign} style={{ marginTop: 8 }}>
             <h3 style={{ fontSize: 15, margin: "6px 0" }}>Digital unterschreiben</h3>
-            <div className="field"><label>Dein vollständiger Name</label>
-              <input className="input" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+            <div className="row-inline">
+              <div className="field" style={{ flex: 2 }}><label>Dein vollständiger Name</label>
+                <input className="input" value={name} onChange={(e) => setName(e.target.value)} required /></div>
+              <div className="field" style={{ flex: 1 }}><label>Ort</label>
+                <input className="input" value={place} onChange={(e) => setPlace(e.target.value)} placeholder="z.B. Moers" /></div>
+            </div>
 
             <div className="field"><label>Unterschrift</label>
               <SignaturePad onChange={setSig} /></div>
