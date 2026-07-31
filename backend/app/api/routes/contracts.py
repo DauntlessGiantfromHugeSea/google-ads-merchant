@@ -71,6 +71,7 @@ def _pdf_payload(contract: Contract) -> dict:
         "id": contract.id, "number": contract.number, "date": contract.date,
         "title": contract.title, "body_lines": _body_lines(contract.body),
         "provider_block": _dedupe_lines(contract.provider_block), "client_block": _dedupe_lines(contract.client_block),
+        "services": _services_view(contract.services),
         "fully_signed": bool(contract.signed_at and contract.agency_signed_at),
         # Kunde
         "signer_name": contract.signer_name, "signer_email": contract.signer_email,
@@ -111,6 +112,34 @@ def _valid_signature(sig: str) -> str:
         return sig
     except Exception:
         return ""
+
+
+def _eur(n: float) -> str:
+    return f"{n:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " €"
+
+
+def _services_view(services: list | None) -> dict:
+    """Leistungen für Anzeige aufbereiten (Zeilen + einmalige/monatliche Summe)."""
+    items = []
+    one = mon = 0.0
+    for s in services or []:
+        q = s.get("qty", 1) or 1
+        price = s.get("price", 0) or 0
+        unit = s.get("unit", "") or ""
+        per = " / Monat" if re.search("monat", unit, re.I) else ""
+        amt = price * q
+        if per:
+            mon += amt
+        else:
+            one += amt
+        qty_str = f"{int(q) if float(q).is_integer() else q} × " if q and q != 1 else ""
+        items.append({"description": s.get("description", ""), "amount": qty_str + _eur(price) + per})
+    totals = []
+    if one:
+        totals.append({"label": "Einmalig", "value": _eur(one)})
+    if mon:
+        totals.append({"label": "Monatlich", "value": _eur(mon) + " / Monat"})
+    return {"items": items, "totals": totals}
 
 
 def _dedupe_lines(text: str) -> str:
@@ -189,7 +218,8 @@ def create_contract(client_id: str, data: ContractCreate, user: User = Depends(r
     c = Contract(organization_id=user.organization_id, client_id=client_id, number=number, date=date,
                  title=data.title, body=data.body, public_token=pysecrets.token_urlsafe(20),
                  provider_block=data.provider_block or _provider_block(org),
-                 client_block=data.client_block or _client_block(client))
+                 client_block=data.client_block or _client_block(client),
+                 services=[s.model_dump() for s in data.services])
     db.add(c)
     db.commit()
     db.refresh(c)
@@ -291,6 +321,7 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
     return {
         "number": c.number, "date": c.date, "title": c.title, "body": c.body, "status": c.status,
         "provider_block": _dedupe_lines(c.provider_block), "client_block": _dedupe_lines(c.client_block),
+        "services": _services_view(c.services),
         "signer_name": c.signer_name,
         "signed_at": _aware(c.signed_at).strftime("%d.%m.%Y %H:%M") if c.signed_at else "",
         "client_signed": bool(c.signed_at),

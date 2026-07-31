@@ -138,9 +138,10 @@ export interface Offer {
   created_at: string; sent_at: string | null; accepted_at: string | null;
   items: OfferItem[]; net: number; vat: number; gross: number;
 }
+export interface ContractService { description: string; qty: number; unit: string; price: number; }
 export interface Contract {
   id: string; client_id: string; number: string; date: string; title: string; body: string;
-  provider_block: string; client_block: string;
+  provider_block: string; client_block: string; services: ContractService[];
   status: string; public_token: string; signer_name: string; signer_email: string;
   signed_at: string | null; agency_signer_name: string; agency_signed_at: string | null;
   created_at: string; sent_at: string | null;
@@ -348,7 +349,7 @@ export const api = {
     request<Offer>(`/clients/${cid}/offers/${offerId}/accept`, { method: "POST" }),
 
   contracts: (cid: string) => request<Contract[]>(`/clients/${cid}/contracts`),
-  createContract: (cid: string, d: { title: string; body: string; number?: string; date?: string }) =>
+  createContract: (cid: string, d: { title: string; body: string; number?: string; date?: string; services?: ContractService[] }) =>
     request<Contract>(`/clients/${cid}/contracts`, { method: "POST", body: JSON.stringify(d) }),
   updateContract: (cid: string, id: string, d: Partial<Contract>) =>
     request<Contract>(`/clients/${cid}/contracts/${id}`, { method: "PATCH", body: JSON.stringify(d) }),

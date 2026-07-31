@@ -118,24 +118,14 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
     const p = pkgs.find((x) => x.id === id); if (!p) return;
     setRows((r) => [...r, { description: p.name, qty: 1, unit: p.unit || "", price: p.unit_price || 0 }]);
   };
-  const insertLeistungen = () => {
-    const lines = rows.filter((r) => r.description.trim()).map((r) => {
-      const per = /monat/i.test(r.unit) ? " / Monat" : "";
-      const q = r.qty && r.qty !== 1 ? `${r.qty} × ` : "";
-      return `- ${r.description} – ${q}${eur(r.price)}${per}`;
-    });
-    if (!lines.length) { toast("Keine Leistungen ausgewählt.", "err"); return; }
-    const block = `§ 1 Vertragsgegenstand\n(1) Der Dienstleister erbringt für den Auftraggeber folgende Leistungen:\n${lines.join("\n")}`;
-    setBody((b) => (b.trim() ? `${block}\n\n${b}` : block));
-    setRows([]); toast("Leistungen eingefügt.");
-  };
 
   const applyTpl = (key: string) => { const t = TEMPLATES[key]; if (!t) return; if (!title.trim()) setTitle(t.title); setBody(t.body); };
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) { toast("Titel fehlt.", "err"); return; }
-    await api.createContract(clientId, { title, body });
-    setTitle(""); setBody(""); setShow(false); load(); toast("Vertrag angelegt.");
+    const services = rows.filter((r) => r.description.trim());
+    await api.createContract(clientId, { title, body, services });
+    setTitle(""); setBody(""); setRows([]); setShow(false); load(); toast("Vertrag angelegt.");
   };
   const send = async (c: Contract) => { try { const r = await api.sendContract(clientId, c.id); load(); toast(`An ${r.to} gesendet.`); } catch (err) { toast((err as Error).message, "err"); } };
   const copyLink = (c: Contract) => { navigator.clipboard.writeText(`${location.origin}/vertrag/${c.public_token}`); toast("Link kopiert."); };
@@ -159,7 +149,8 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
           <div className="field"><label>Titel</label>
             <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z.B. Vertrag über SEO-Dienstleistungen" required /></div>
           <div className="field">
-            <label>§ 1 Leistungen (aus Angebot oder Katalog – Preis & Text änderbar)</label>
+            <label>Inkludierte Leistungen (aus Angebot oder Katalog – Preis & Text änderbar)</label>
+            <p className="muted" style={{ fontSize: 12, margin: "0 0 6px" }}>Erscheinen am Vertragsende unter „Inkludierte Leistungen" (vor den Unterschriften) – nicht im §-Text.</p>
             <div className="row-inline">
               <select className="select" defaultValue="" onChange={(e) => { fromOffer(e.target.value); e.target.value = ""; }}>
                 <option value="">Aus Angebot übernehmen…</option>
@@ -180,7 +171,7 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
                 <button type="button" className="del" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>✕</button>
               </div>
             ))}
-            {rows.length > 0 && <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={insertLeistungen}>In Vertragstext einfügen</button>}
+            {rows.length > 0 && <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{rows.filter((r) => r.description.trim()).length} Leistung(en) – werden mit dem Vertrag gespeichert.</div>}
           </div>
 
           <div className="field">

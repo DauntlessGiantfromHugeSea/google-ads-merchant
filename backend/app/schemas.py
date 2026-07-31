@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 
 from app.models import AccountType, ReportStatus, ReportType, UserRole
 
@@ -369,6 +369,13 @@ class OfferAccept(BaseModel):
 
 
 # --- Verträge (digital unterschreibbar) ---
+class ContractServiceItem(BaseModel):
+    description: str = ""
+    qty: float = 1.0
+    unit: str = ""
+    price: float = 0.0
+
+
 class ContractCreate(BaseModel):
     title: str = ""
     body: str = ""
@@ -376,6 +383,7 @@ class ContractCreate(BaseModel):
     date: str = ""
     provider_block: str = ""
     client_block: str = ""
+    services: list[ContractServiceItem] = []
 
 
 class ContractPatch(BaseModel):
@@ -385,6 +393,7 @@ class ContractPatch(BaseModel):
     date: str | None = None
     provider_block: str | None = None
     client_block: str | None = None
+    services: list[ContractServiceItem] | None = None
 
 
 class ContractOut(BaseModel):
@@ -396,6 +405,7 @@ class ContractOut(BaseModel):
     body: str
     provider_block: str = ""
     client_block: str = ""
+    services: list[ContractServiceItem] = []
     status: str
     public_token: str
     signer_name: str
@@ -405,6 +415,11 @@ class ContractOut(BaseModel):
     agency_signed_at: datetime | None = None
     created_at: datetime
     sent_at: datetime | None = None
+
+    @field_validator("services", mode="before")
+    @classmethod
+    def _svc_default(cls, v):
+        return v or []
 
     class Config:
         from_attributes = True

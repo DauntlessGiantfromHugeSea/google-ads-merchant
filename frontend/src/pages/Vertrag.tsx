@@ -68,6 +68,22 @@ export default function Vertrag() {
           })}
         </div>
 
+        {c.services?.items?.length > 0 && (
+          <div style={{ margin: "16px 0" }}>
+            <div style={{ fontWeight: 700, marginBottom: 6 }}>Inkludierte Leistungen</div>
+            {c.services.items.map((it: any, i: number) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "5px 0", borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+                <span>{it.description}</span><span style={{ whiteSpace: "nowrap" }}>{it.amount}</span>
+              </div>
+            ))}
+            {c.services.totals.map((t: any, i: number) => (
+              <div key={`t${i}`} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", fontWeight: 700, borderTop: "1px solid rgba(255,255,255,0.3)" }}>
+                <span>{t.label}</span><span>{t.value}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="sub" style={{ marginBottom: 6 }}>
           Dienstleister: {c.agency_signed ? `✓ ${c.agency_signer_name || "unterschrieben"}` : "Unterschrift ausstehend"}
           {" · "}Kunde: {c.client_signed ? `✓ ${c.signer_name || "unterschrieben"}` : "Unterschrift ausstehend"}

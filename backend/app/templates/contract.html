@@ -18,6 +18,11 @@
   .para.heading { font-weight: 700; margin-top: 14px; }
   .para.clause { margin-left: 14px; padding-left: 24px; text-indent: -24px; }
   .para.bullet { margin-left: 34px; padding-left: 16px; text-indent: -16px; }
+  .services { margin-top: 16px; }
+  table.svc { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  table.svc td { padding: 4px 6px; border-bottom: 1px solid #e4e7eb; }
+  table.svc td.amt { text-align: right; white-space: nowrap; }
+  table.svc tr.tot td { font-weight: 700; border-bottom: none; border-top: 1.5px solid #1f2933; }
   .sign { margin-top: 32px; }
   .sign-grid { display: flex; justify-content: space-between; gap: 30px; }
   .sign-col { flex: 1; }
@@ -50,6 +55,20 @@
   {% for p in contract.body_lines %}
     <div class="para {{ p.kind }}">{{ p.text }}</div>
   {% endfor %}
+
+  {% if contract.services and contract.services["items"] %}
+  <div class="services">
+    <div class="para heading">Inkludierte Leistungen</div>
+    <table class="svc">
+      {% for it in contract.services["items"] %}
+      <tr><td>{{ it.description }}</td><td class="amt">{{ it.amount }}</td></tr>
+      {% endfor %}
+      {% for t in contract.services["totals"] %}
+      <tr class="tot"><td>{{ t.label }}</td><td class="amt">{{ t.value }}</td></tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endif %}
 
   <div class="sign">
     <div class="sign-grid">

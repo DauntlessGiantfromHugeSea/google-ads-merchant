@@ -499,6 +499,8 @@ class Contract(Base):
     # Parteien (automatisch aus Agentur-/Kundendaten, editierbar)
     provider_block: Mapped[str] = mapped_column(Text, default="")  # Dienstleister/Agentur
     client_block: Mapped[str] = mapped_column(Text, default="")    # Kunde
+    # Inkludierte Leistungen (Liste {description, qty, unit, price}) – am Ende vor den Unterschriften
+    services: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(16), default="draft")  # draft/sent/signed/declined
     public_token: Mapped[str] = mapped_column(String(64), default="")
     # Digitale Unterschrift – Kunde
