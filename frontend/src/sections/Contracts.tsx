@@ -1,8 +1,11 @@
 import { useState } from "react";
 import { useEffect } from "react";
-import { Contract, api } from "../api";
+import { Contract, Offer, Package, api } from "../api";
 import { useToast } from "../toast";
 import SignaturePad from "../components/SignaturePad";
+
+type LRow = { description: string; qty: number; unit: string; price: number };
+const eur = (n: number) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
 
 const ST: Record<string, string> = { draft: "Entwurf", sent: "gesendet", signed: "unterschrieben", declined: "abgelehnt" };
 const stCls = (s: string) => s === "signed" ? "st-aktiv" : s === "sent" ? "st-lead" : s === "declined" ? "st-pausiert" : "st-beendet";
@@ -96,9 +99,36 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
   const [signId, setSignId] = useState<string | null>(null);
   const [sigName, setSigName] = useState("");
   const [sig, setSig] = useState("");
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [pkgs, setPkgs] = useState<Package[]>([]);
+  const [rows, setRows] = useState<LRow[]>([]);
 
   const load = () => api.contracts(clientId).then(setList).catch(() => {});
-  useEffect(() => { load(); }, [clientId]);
+  useEffect(() => {
+    load();
+    if (isAgency) { api.offers(clientId).then(setOffers).catch(() => {}); api.packages().then(setPkgs).catch(() => {}); }
+  }, [clientId]);
+
+  const setRow = (i: number, patch: Partial<LRow>) => setRows((r) => r.map((x, j) => (j === i ? { ...x, ...patch } : x)));
+  const fromOffer = (id: string) => {
+    const o = offers.find((x) => x.id === id); if (!o) return;
+    setRows(o.items.map((it) => ({ description: (it.description || "").split("\n")[0], qty: it.quantity || 1, unit: it.unit || "", price: it.unit_price || 0 })));
+  };
+  const fromPkg = (id: string) => {
+    const p = pkgs.find((x) => x.id === id); if (!p) return;
+    setRows((r) => [...r, { description: p.name, qty: 1, unit: p.unit || "", price: p.unit_price || 0 }]);
+  };
+  const insertLeistungen = () => {
+    const lines = rows.filter((r) => r.description.trim()).map((r) => {
+      const per = /monat/i.test(r.unit) ? " / Monat" : "";
+      const q = r.qty && r.qty !== 1 ? `${r.qty} × ` : "";
+      return `- ${r.description} – ${q}${eur(r.price)}${per}`;
+    });
+    if (!lines.length) { toast("Keine Leistungen ausgewählt.", "err"); return; }
+    const block = `§ 1 Vertragsgegenstand\n(1) Der Dienstleister erbringt für den Auftraggeber folgende Leistungen:\n${lines.join("\n")}`;
+    setBody((b) => (b.trim() ? `${block}\n\n${b}` : block));
+    setRows([]); toast("Leistungen eingefügt.");
+  };
 
   const applyTpl = (key: string) => { const t = TEMPLATES[key]; if (!t) return; if (!title.trim()) setTitle(t.title); setBody(t.body); };
   const create = async (e: React.FormEvent) => {
@@ -128,6 +158,31 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
         <form className="form-light" style={{ margin: "12px 0 18px" }} onSubmit={create}>
           <div className="field"><label>Titel</label>
             <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z.B. Vertrag über SEO-Dienstleistungen" required /></div>
+          <div className="field">
+            <label>§ 1 Leistungen (aus Angebot oder Katalog – Preis & Text änderbar)</label>
+            <div className="row-inline">
+              <select className="select" defaultValue="" onChange={(e) => { fromOffer(e.target.value); e.target.value = ""; }}>
+                <option value="">Aus Angebot übernehmen…</option>
+                {offers.map((o) => <option key={o.id} value={o.id}>{o.number}{o.title ? ` · ${o.title}` : ""}</option>)}
+              </select>
+              <select className="select" defaultValue="" onChange={(e) => { fromPkg(e.target.value); e.target.value = ""; }}>
+                <option value="">+ Leistung aus Katalog…</option>
+                {pkgs.map((p) => <option key={p.id} value={p.id}>{p.name}{p.unit_price ? ` (${eur(p.unit_price)})` : ""}</option>)}
+              </select>
+              <button type="button" className="btn btn-ghost btn-sm" onClick={() => setRows((r) => [...r, { description: "", qty: 1, unit: "", price: 0 }])}>+ Zeile</button>
+            </div>
+            {rows.map((r, i) => (
+              <div key={i} className="row-inline" style={{ marginTop: 6 }}>
+                <input className="input" style={{ flex: 2 }} value={r.description} placeholder="Leistung / Text" onChange={(e) => setRow(i, { description: e.target.value })} />
+                <input className="input" style={{ width: 70 }} type="number" step="0.5" value={r.qty} onChange={(e) => setRow(i, { qty: parseFloat(e.target.value) || 0 })} title="Menge" />
+                <input className="input" style={{ width: 100 }} value={r.unit} placeholder="Einheit" onChange={(e) => setRow(i, { unit: e.target.value })} />
+                <input className="input" style={{ width: 110 }} type="number" step="0.01" value={r.price} onChange={(e) => setRow(i, { price: parseFloat(e.target.value) || 0 })} title="Preis €" />
+                <button type="button" className="del" onClick={() => setRows((x) => x.filter((_, j) => j !== i))}>✕</button>
+              </div>
+            ))}
+            {rows.length > 0 && <button type="button" className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={insertLeistungen}>In Vertragstext einfügen</button>}
+          </div>
+
           <div className="field">
             <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
               <label>Vertragstext (Zeilen mit „§" werden fett)</label>

@@ -1,6 +1,7 @@
 """Verträge je Kunde – online digital unterschreibbar (einfache elektronische
 Signatur: gezeichnete/getippte Unterschrift + E-Mail-Verifizierung + Audit)."""
 import io
+import re
 import secrets as pysecrets
 from datetime import datetime, timedelta, timezone
 
@@ -43,13 +44,24 @@ def _mail_ready(contract, client, db) -> bool:
     return bool(org and org.ms_refresh_token and _client_email(client))
 
 
+def _line_kind(t: str) -> str:
+    s = t.lstrip()
+    if s.startswith("§"):
+        return "heading"
+    if re.match(r"^\(\d+\)", s):        # (1), (2) … -> eingerückter Unterabsatz
+        return "clause"
+    if s[:1] in "-*•":                  # Aufzählungspunkt
+        return "bullet"
+    return "normal"
+
+
 def _body_lines(body: str) -> list[dict]:
     out = []
     for raw in (body or "").split("\n"):
         t = raw.rstrip()
         if not t.strip():
             continue
-        out.append({"text": t, "heading": t.lstrip().startswith("§")})
+        out.append({"text": t, "kind": _line_kind(t)})
     return out
 
 

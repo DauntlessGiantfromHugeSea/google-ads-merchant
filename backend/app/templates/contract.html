@@ -14,8 +14,10 @@
   .parties .p { white-space: pre-line; }
   .parties .role { font-style: italic; color: #52606d; }
   .parties .lbl { margin: 8px 0 2px; }
-  .para { margin: 0 0 6px; white-space: pre-line; }
-  .para.h { font-weight: 700; margin-top: 14px; }
+  .para { margin: 0 0 5px; white-space: pre-line; }
+  .para.heading { font-weight: 700; margin-top: 14px; }
+  .para.clause { margin-left: 14px; padding-left: 24px; text-indent: -24px; }
+  .para.bullet { margin-left: 34px; padding-left: 16px; text-indent: -16px; }
   .sign { margin-top: 32px; }
   .sign-grid { display: flex; justify-content: space-between; gap: 30px; }
   .sign-col { flex: 1; }
@@ -46,7 +48,7 @@
   {% endif %}
 
   {% for p in contract.body_lines %}
-    <div class="para {{ 'h' if p.heading else '' }}">{{ p.text }}</div>
+    <div class="para {{ p.kind }}">{{ p.text }}</div>
   {% endfor %}
 
   <div class="sign">

@@ -60,8 +60,11 @@ export default function Vertrag() {
           {(c.body || "").split("\n").map((line: string, i: number) => {
             const t = line.trim();
             if (!t) return <div key={i} style={{ height: 10 }} />;
-            const h = t.startsWith("§");
-            return <div key={i} style={{ fontWeight: h ? 700 : 400, marginTop: h ? 16 : 0, marginBottom: 3, lineHeight: 1.55 }}>{line}</div>;
+            const base: React.CSSProperties = { marginBottom: 3, lineHeight: 1.55 };
+            if (t.startsWith("§")) return <div key={i} style={{ ...base, fontWeight: 700, marginTop: 16 }}>{line}</div>;
+            if (/^\(\d+\)/.test(t)) return <div key={i} style={{ ...base, marginLeft: 14, paddingLeft: 24, textIndent: -24 }}>{line}</div>;
+            if ("-*•".includes(t[0])) return <div key={i} style={{ ...base, marginLeft: 34, paddingLeft: 16, textIndent: -16 }}>{line}</div>;
+            return <div key={i} style={base}>{line}</div>;
           })}
         </div>
 
