@@ -12,12 +12,12 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_scoped_client, require_agency
+from app.api.deps import get_current_user, get_scoped_client, require_admin
 from app.config import get_settings
 from app.database import get_db
-from app.models import Client, Participant, User
+from app.models import Client, Participant, User, UserRole
 from app.schemas import ParticipantOut, ParticipantPatch, ParticipantsStatus
-from app.services.notify import _agency_user_ids, notify_users
+from app.services.notify import _agency_admin_ids, notify_users
 
 settings = get_settings()
 router = APIRouter(prefix="/api/clients/{client_id}/participants", tags=["participants"])
@@ -82,15 +82,24 @@ def _count(db: Session, client_id: str) -> int:
     return db.query(Participant).filter(Participant.client_id == client_id).count()
 
 
+def _forbid_member(user: User) -> None:
+    """Anmeldungen sind vertraulich: nur Agentur-Admin und der Kunde, nicht
+    Agentur-Mitarbeiter."""
+    if user.role == UserRole.agency_member:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Anmeldungen sind nur für Admins und den Kunden sichtbar.")
+
+
 @router.get("/status", response_model=ParticipantsStatus)
 def status_(client_id: str, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _forbid_member(user)
     client = get_scoped_client(client_id, user, db)
     url = _webhook_url(request, client.participant_token) if client.participants_enabled and client.participant_token else ""
     return ParticipantsStatus(enabled=client.participants_enabled, webhook_url=url, count=_count(db, client_id))
 
 
 @router.post("/enable", response_model=ParticipantsStatus)
-def enable(client_id: str, request: Request, data: dict, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+def enable(client_id: str, request: Request, data: dict, user: User = Depends(require_admin), db: Session = Depends(get_db)):
     client = get_scoped_client(client_id, user, db)
     client.participants_enabled = bool(data.get("enabled", True))
     if client.participants_enabled and not client.participant_token:
@@ -102,7 +111,7 @@ def enable(client_id: str, request: Request, data: dict, user: User = Depends(re
 
 
 @router.post("/rotate", response_model=ParticipantsStatus)
-def rotate(client_id: str, request: Request, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+def rotate(client_id: str, request: Request, user: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Neuen Webhook-Token erzeugen (alte URL wird ungültig)."""
     client = get_scoped_client(client_id, user, db)
     client.participant_token = pysecrets.token_urlsafe(24)
@@ -115,6 +124,7 @@ def rotate(client_id: str, request: Request, user: User = Depends(require_agency
 
 @router.get("", response_model=list[ParticipantOut])
 def list_participants(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _forbid_member(user)
     get_scoped_client(client_id, user, db)
     return (db.query(Participant).filter(Participant.client_id == client_id)
             .order_by(Participant.created_at.desc()).all())
@@ -122,7 +132,7 @@ def list_participants(client_id: str, user: User = Depends(get_current_user), db
 
 @router.patch("/{pid}", response_model=ParticipantOut)
 def update_participant(client_id: str, pid: str, data: ParticipantPatch,
-                       user: User = Depends(require_agency), db: Session = Depends(get_db)):
+                       user: User = Depends(require_admin), db: Session = Depends(get_db)):
     get_scoped_client(client_id, user, db)
     p = db.get(Participant, pid)
     if not p or p.client_id != client_id:
@@ -135,7 +145,7 @@ def update_participant(client_id: str, pid: str, data: ParticipantPatch,
 
 
 @router.delete("/{pid}", status_code=204)
-def delete_participant(client_id: str, pid: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+def delete_participant(client_id: str, pid: str, user: User = Depends(require_admin), db: Session = Depends(get_db)):
     get_scoped_client(client_id, user, db)
     p = db.get(Participant, pid)
     if p and p.client_id == client_id:
@@ -145,6 +155,7 @@ def delete_participant(client_id: str, pid: str, user: User = Depends(require_ag
 
 @router.get("/export.csv")
 def export_csv(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _forbid_member(user)
     client = get_scoped_client(client_id, user, db)
     rows = (db.query(Participant).filter(Participant.client_id == client_id)
             .order_by(Participant.created_at.desc()).all())
@@ -189,7 +200,7 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
     p = Participant(organization_id=client.organization_id, client_id=client.id,
                     form_name=form_name, name=name, email=email, data=data)
     db.add(p)
-    notify_users(db, _agency_user_ids(db, client.organization_id),
+    notify_users(db, _agency_admin_ids(db, client.organization_id),
                  org_id=client.organization_id, client_id=client.id,
                  type_="participant_new", title=f"Neue Anmeldung: {client.name}",
                  body=(name or email or "Teilnehmer")[:140], link=f"/clients/{client.id}")

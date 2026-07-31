@@ -35,6 +35,12 @@ def _agency_user_ids(db: Session, org_id: str) -> list[str]:
         User.is_active.is_(True)).all()]
 
 
+def _agency_admin_ids(db: Session, org_id: str) -> list[str]:
+    return [u.id for u in db.query(User.id).filter(
+        User.organization_id == org_id, User.role == UserRole.agency_admin,
+        User.is_active.is_(True)).all()]
+
+
 def _client_user_ids(db: Session, client_id: str) -> list[str]:
     return [u.id for u in db.query(User.id).filter(
         User.client_id == client_id, User.is_active.is_(True)).all()]

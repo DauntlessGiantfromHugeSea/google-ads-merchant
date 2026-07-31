@@ -33,6 +33,7 @@ export default function ClientDetail() {
   const navigate = useNavigate();
   const { user, impersonating, startImpersonate } = useAuth();
   const isAgency = user?.role !== "client_user";
+  const isAdmin = user?.role === "agency_admin";
 
   const viewAsClient = async () => {
     const r = await api.impersonate(id);
@@ -97,7 +98,7 @@ export default function ClientDetail() {
       <div className="client-layout">
         <nav className="client-nav">
           <div className="client-name">{client.name}</div>
-          {(isAgency || client.participants_enabled
+          {(isAdmin || (client.participants_enabled && user?.role !== "agency_member")
             ? [...NAV.slice(0, 4), TEILNEHMER_TAB, ...NAV.slice(4)] : NAV).map((n) => (
             <button key={n.key} className={`nav-item ${section === n.key ? "active" : ""}`}
               onClick={() => setSection(n.key)}>
@@ -125,7 +126,7 @@ export default function ClientDetail() {
           {section === "monitoring" && (
             <Monitoring clientId={id} clientName={client.name} isAgency={isAgency} />
           )}
-          {section === "participants" && (
+          {section === "participants" && user?.role !== "agency_member" && (
             <Participants clientId={id} clientName={client.name} isAgency={isAgency} />
           )}
           {section === "business" && (
