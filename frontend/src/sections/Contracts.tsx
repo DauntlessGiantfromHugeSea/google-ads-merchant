@@ -85,9 +85,58 @@ const TPL_WEB = `§ 1 Vertragsgegenstand
 (2) Sollten einzelne Bestimmungen unwirksam sein, bleibt der Vertrag im Übrigen wirksam.
 (3) Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist, soweit zulässig, ______________________.`;
 
+const TPL_HOST = `§ 1 Vertragsgegenstand
+(1) Der Dienstleister richtet die technische Hosting-Umgebung für das Webprojekt des Auftraggebers ein und übernimmt die laufende technische Überwachung und Betreuung.
+(2) Die Leistungen umfassen insbesondere:
+- Einrichtung und Grundkonfiguration von Webspace/Server, Domainanbindung und SSL-Zertifikat,
+- technische Überwachung der Erreichbarkeit (Monitoring) sowie Benachrichtigung bei erkannten Störungen,
+- Einspielen sicherheitsrelevanter Updates und regelmäßige technische Kontrolle,
+- Unterstützung bei technischen Störungen im Rahmen der Möglichkeiten des Dienstleisters.
+(3) Der Betrieb der eigentlichen Server-/Hosting-Infrastruktur erfolgt bei einem Hosting-Anbieter (Provider). Die Auswahl kann durch den Auftraggeber oder den Dienstleister erfolgen; die Vertragsbeziehung zum Provider besteht zwischen Auftraggeber und Provider.
+
+§ 2 Verfügbarkeit und Haftungsausschluss (externer Provider)
+(1) Der Dienstleister betreibt die zugrunde liegende Server-/Hosting-Infrastruktur nicht selbst, sofern diese bei einem externen Provider liegt. Er schuldet die technische Einrichtung und Überwachung, nicht jedoch den physischen Betrieb der Server.
+(2) Der Dienstleister übernimmt daher keine Gewähr und keine Haftung für die Verfügbarkeit, Geschwindigkeit, Ausfälle, Wartungsfenster, Datenverluste oder Sicherheitsvorfälle, die im Verantwortungsbereich des externen Providers liegen.
+(3) Es wird keine bestimmte Verfügbarkeit (Uptime) zugesichert. Maßgeblich sind die Leistungsbeschreibungen und SLAs des jeweiligen Providers.
+(4) Bei Störungen im Provider-Bereich wirkt der Dienstleister im zumutbaren Umfang auf eine Behebung hin (z. B. Meldung an den Provider), schuldet jedoch keinen bestimmten Erfolg und keine bestimmte Reaktionszeit des Providers.
+(5) Ausgeschlossen ist ferner die Haftung für Ausfälle durch höhere Gewalt, DDoS-Angriffe, Eingriffe Dritter, sowie durch eigene Änderungen des Auftraggebers an Server, Website oder Konfiguration.
+
+§ 3 Mitwirkungspflichten des Auftraggebers
+(1) Der Auftraggeber stellt die erforderlichen Zugänge (Provider, Domain, Server) rechtzeitig und vollständig bereit und hält diese aktuell.
+(2) Die laufenden Kosten für Hosting, Domain und Lizenzen trägt der Auftraggeber und schließt die entsprechenden Verträge selbst ab, sofern nicht ausdrücklich anders vereinbart.
+(3) Sicherungskopien (Backups) liegen im Verantwortungsbereich des Auftraggebers, soweit sie nicht ausdrücklich als Leistung vereinbart sind.
+
+§ 4 Vergütung und Zahlung
+(1) Für die technische Einrichtung und Betreuung wird eine monatliche Pauschale von ______ € netto vereinbart.
+(2) Einmalige Einrichtungskosten betragen ______ € netto und werden nach Einrichtung in Rechnung gestellt.
+(3) Provider-, Domain- und Lizenzkosten sind nicht enthalten und werden vom Auftraggeber getragen.
+(4) Rechnungen sind innerhalb von 14 Tagen ohne Abzug zur Zahlung fällig.
+
+§ 5 Laufzeit und Kündigung
+(1) Der Vertrag beginnt am ______ und läuft auf unbestimmte Zeit.
+(2) Er kann von beiden Parteien mit einer Frist von vier Wochen zum Monatsende in Textform gekündigt werden.
+(3) Das Recht zur fristlosen Kündigung aus wichtigem Grund bleibt unberührt.
+(4) Nach Vertragsende endet die technische Überwachung; für den Fortbestand des Hostings ist der Auftraggeber gegenüber dem Provider selbst verantwortlich.
+
+§ 6 Haftung
+(1) Der Dienstleister haftet bei Vorsatz und grober Fahrlässigkeit unbeschränkt.
+(2) Die Haftung für einfache Fahrlässigkeit ist ausgeschlossen, soweit keine wesentliche Vertragspflicht verletzt wird; in diesem Fall ist die Haftung auf den vorhersehbaren, vertragstypischen Schaden begrenzt, höchstens jedoch auf die Höhe der vereinbarten Jahresvergütung.
+(3) Eine Haftung für entgangenen Gewinn, ausbleibende Besucher- oder Auftragszahlen oder sonstige wirtschaftliche Erfolge wird nicht übernommen.
+(4) Gesetzlich zwingende Haftungstatbestände, insbesondere bei Verletzung von Leben, Körper und Gesundheit, bleiben unberührt.
+
+§ 7 Vertraulichkeit
+(1) Beide Parteien verpflichten sich zur vertraulichen Behandlung aller Zugangsdaten und im Rahmen des Vertrags erlangten Informationen.
+(2) Diese Pflicht besteht über die Vertragslaufzeit hinaus fort.
+
+§ 8 Schlussbestimmungen
+(1) Änderungen und Ergänzungen dieses Vertrags bedürfen der Schriftform; Textform (z. B. E-Mail) genügt.
+(2) Sollten einzelne Bestimmungen unwirksam sein, bleibt der Vertrag im Übrigen wirksam.
+(3) Es gilt das Recht der Bundesrepublik Deutschland. Gerichtsstand ist, soweit zulässig, ______________________.`;
+
 const TEMPLATES: Record<string, { label: string; title: string; body: string }> = {
   seo: { label: "SEO-Betreuung", title: "Vertrag über SEO-Dienstleistungen", body: TPL_SEO },
   web: { label: "Webseite (One-Pager)", title: "Vertrag über die Erstellung einer Webseite", body: TPL_WEB },
+  host: { label: "Hosting & Betreuung", title: "Vertrag über Hosting-Einrichtung und technische Betreuung", body: TPL_HOST },
 };
 
 export default function Contracts({ clientId, isAgency }: { clientId: string; isAgency: boolean }) {
