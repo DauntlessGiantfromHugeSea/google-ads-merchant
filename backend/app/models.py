@@ -589,6 +589,22 @@ class IntakeSubmission(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 
+class SeoAudit(Base):
+    """Gespeicherter SEO-Audit (Verlauf/Drift), optional einem Kunden zugeordnet."""
+
+    __tablename__ = "seo_audits"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True, index=True)
+    url: Mapped[str] = mapped_column(String(512), default="")
+    score: Mapped[int] = mapped_column(default=0)
+    grade: Mapped[str] = mapped_column(String(2), default="")
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class Participant(Base):
     """Teilnehmer-/Anmeldungseintrag (aus Contact Form 7 per Webhook)."""
 

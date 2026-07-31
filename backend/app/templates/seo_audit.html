@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 4cm 5cm 3.2cm 2.8cm; }
+  html, body { background: transparent; }
+  .letterhead { position: fixed; top: -4cm; left: -2.8cm; width: 210mm; height: 297mm; z-index: -1; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 22px; margin: 0 0 2px; color: #1a56db; }
+  h2 { font-size: 14px; margin: 18px 0 6px; border-bottom: 2px solid #1a56db; padding-bottom: 3px; color: #1a56db; }
+  .sub { color: #687481; font-size: 11px; }
+  .score { display: flex; align-items: center; gap: 16px; margin: 12px 0; }
+  .score .big { font-size: 40px; font-weight: 800; color: #1a56db; }
+  .kpis { display: flex; gap: 8px; flex-wrap: wrap; }
+  .kpi { background: #f5f7fa; border-radius: 6px; padding: 8px 12px; }
+  .kpi .v { font-size: 16px; font-weight: 700; }
+  .kpi .l { font-size: 9px; text-transform: uppercase; color: #687481; }
+  table.cats { width: 100%; border-collapse: collapse; margin: 6px 0 10px; }
+  table.cats td { padding: 4px 7px; border-bottom: 1px solid #e4e7eb; }
+  .bar { height: 8px; background: #e4e7eb; border-radius: 4px; overflow: hidden; width: 120px; }
+  .bar > span { display: block; height: 8px; background: #1a56db; }
+  .finding { margin: 6px 0; padding: 7px 10px; border-left: 3px solid #cdd3da; background: #f9fafb; border-radius: 4px; }
+  .sev { display: inline-block; font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 3px; margin-right: 6px; }
+  .Critical { background: #fde8e8; color: #c81e1e; } .High { background: #fef0e7; color: #b43403; }
+  .Medium { background: #fdf6b2; color: #8e6a03; } .Low { background: #e1effe; color: #1a56db; } .Info { background: #edeff2; color: #52606d; }
+  .rec { color: #374151; } .ver { color: #687481; font-style: italic; }
+  ol { margin: 4px 0 4px 16px; padding: 0; } li { margin: 3px 0; }
+  .muted { color: #687481; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}">{% endif %}
+
+  <h1>SEO-Audit</h1>
+  <div class="sub">{{ audit.domain }}{% if audit.client_name %} · {{ audit.client_name }}{% endif %} · {{ audit.created_at }}</div>
+
+  <div class="score">
+    <div class="big">{{ audit.health_score }}<span style="font-size:16px">/100 · {{ audit.grade }}</span></div>
+    <div class="kpis">
+      <div class="kpi"><div class="v">{{ audit.summary.critical }}</div><div class="l">Kritisch</div></div>
+      <div class="kpi"><div class="v">{{ audit.summary.high }}</div><div class="l">Hoch</div></div>
+      <div class="kpi"><div class="v">{{ audit.summary.medium }}</div><div class="l">Mittel</div></div>
+      <div class="kpi"><div class="v">{{ audit.pages_analyzed }}</div><div class="l">Seiten geprüft</div></div>
+    </div>
+  </div>
+
+  <h2>Kategorien</h2>
+  <table class="cats">
+    {% for cat in audit.categories %}
+    <tr>
+      <td style="width:45%">{{ cat.name }}</td>
+      <td><div class="bar"><span style="width: {{ cat.score }}%"></span></div></td>
+      <td style="width:60px; text-align:right; font-weight:700">{{ cat.score }}</td>
+      <td class="muted" style="text-align:right">{{ cat.findings|length }} Findings</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  {% if audit.action_plan %}
+  <h2>Action-Plan</h2>
+  {% for phase in audit.action_plan %}
+    <div style="font-weight:700; margin-top:8px">{{ phase.name }} <span class="muted">· {{ phase.timeframe }}</span></div>
+    <ol>{% for it in phase["items"] %}<li><strong>{{ it.title }}</strong> — {{ it.recommendation }}</li>{% endfor %}</ol>
+  {% endfor %}
+  {% endif %}
+
+  {% for cat in audit.categories %}
+    {% if cat.findings %}
+    <h2>{{ cat.name }} · {{ cat.score }}/100</h2>
+    {% for f in cat.findings %}
+      <div class="finding">
+        <div><span class="sev {{ f.severity }}">{{ f.severity }}</span><strong>{{ f.title }}</strong></div>
+        <div>{{ f.description }}</div>
+        <div class="rec">→ {{ f.recommendation }}</div>
+        {% if f.verification %}<div class="ver">Prüffrage: {{ f.verification }}</div>{% endif %}
+      </div>
+    {% endfor %}
+    {% if cat.what_works %}<div class="muted" style="margin-top:4px">In Ordnung: {{ cat.what_works|join(", ") }}</div>{% endif %}
+    {% endif %}
+  {% endfor %}
+</body>
+</html>

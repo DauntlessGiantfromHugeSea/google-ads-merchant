@@ -145,6 +145,7 @@ export interface Contract {
   signed_at: string | null; agency_signer_name: string; agency_signed_at: string | null;
   created_at: string; sent_at: string | null;
 }
+export interface SeoAuditBrief { id: string; url: string; score: number; grade: string; client_id: string | null; created_at: string; }
 export type TodoGlobal = Todo & { client_name: string; project_title: string };
 export type MyTodo = TodoGlobal;
 export interface Doc {
@@ -376,6 +377,18 @@ export const api = {
     request<Package>(`/packages/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deletePackage: (id: string) => request<void>(`/packages/${id}`, { method: "DELETE" }),
   importNorthlab: () => request<{ added: number; skipped: number }>("/packages/import-northlab", { method: "POST" }),
+
+  runSeoAudit: (url: string, client_id?: string | null) =>
+    request<any>("/seo/audit", { method: "POST", body: JSON.stringify({ url, client_id: client_id || null }) }),
+  seoAudits: (clientId?: string) => request<SeoAuditBrief[]>(`/seo${clientId ? `?client_id=${clientId}` : ""}`),
+  seoAudit: (id: string) => request<any>(`/seo/${id}`),
+  deleteSeoAudit: (id: string) => request<void>(`/seo/${id}`, { method: "DELETE" }),
+  async downloadSeoPdf(id: string, domain: string) {
+    const res = await fetch(`/api/seo/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `SEO-${domain}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
+  },
 
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),

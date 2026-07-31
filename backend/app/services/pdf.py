@@ -98,6 +98,14 @@ def render_offer_pdf(offer: dict) -> bytes:
     return _pdf_from_html(html, letterhead)
 
 
+def render_seo_pdf(audit: dict) -> bytes:
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    template = _env.get_template("seo_audit.html")
+    html = template.render(audit=audit, letterhead_image=image_url)
+    return _pdf_from_html(html, letterhead)
+
+
 def render_contract_pdf(contract: dict) -> bytes:
     letterhead = _find_letterhead()
     image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
