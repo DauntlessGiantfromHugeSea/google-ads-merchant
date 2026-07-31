@@ -211,6 +211,7 @@ def build_envelope(crawl: dict, home_headers: dict, home_html: str, robots_txt: 
     return {
         "url": crawl.get("site"), "domain": urlparse(crawl.get("site", "")).netloc,
         "health_score": health, "grade": _grade(health),
+        "fetched_live": crawl.get("fetched_live", False),
         "pages_analyzed": crawl.get("pages_analyzed", 0), "pages_total": crawl.get("pages_total", 0),
         "cwv": cwv, "categories": categories, "action_plan": action_plan,
         "summary": {"critical": len([f for f in all_findings if f["severity"] == "Critical"]),

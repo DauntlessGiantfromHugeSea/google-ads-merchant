@@ -118,61 +118,34 @@
   {% if report.seo_data and report.seo_data.sites %}
   <h2>3. SEO-Analyse</h2>
   {% for s in report.seo_data.sites %}
-  <h3 style="margin-top:18px;">{{ s.site }}</h3>
-  <p class="sub">
-    robots.txt: {% if s.robots_found %}gefunden{% else %}nicht gefunden{% endif %} ·
-    Sitemap: {% if s.sitemap_found %}gefunden{% else %}nicht gefunden (interne Links genutzt){% endif %} ·
-    {{ s.pages_analyzed }} von {{ s.pages_total }} Seiten live geprüft
-  </p>
+  <h3 style="margin-top:18px;">{{ s.domain or s.url }}</h3>
+  <p class="sub">{{ s.pages_analyzed }} Seiten geprüft · {{ s.summary.critical }} kritisch · {{ s.summary.high }} hoch · {{ s.summary.medium }} mittel</p>
   <div class="kpis">
-    <div class="kpi"><div class="score-circle grade-{{ s.grade }}">{{ s.score }}</div><div class="l">Gesamt-Score (Note {{ s.grade }})</div></div>
-    {% for cat, val in s.category_scores.items() %}
-    <div class="kpi"><div class="v">{{ val }}</div><div class="l">{{ cat }}</div></div>
+    <div class="kpi"><div class="score-circle grade-{{ s.grade }}">{{ s.health_score }}</div><div class="l">Health-Score (Note {{ s.grade }})</div></div>
+    {% for cat in s.categories %}
+    <div class="kpi"><div class="v">{{ cat.score }}</div><div class="l">{{ cat.name }}</div></div>
     {% endfor %}
   </div>
 
-  <h4 style="margin:12px 0 4px;">Wo etwas fehlt</h4>
-  {% if s.issue_groups %}
-    {% for g in s.issue_groups %}
-    <p style="margin:10px 0 2px;font-size:11px;"><strong>{{ g.label }} — {{ g.count }} Seite(n)</strong></p>
+  {% if s.action_plan %}
+  <h4 style="margin:14px 0 4px;">Action-Plan</h4>
+  {% for phase in s.action_plan %}
+    <p style="margin:8px 0 2px;font-size:11px;"><strong>{{ phase.name }}</strong> <span class="muted">· {{ phase.timeframe }}</span></p>
+    <ol style="margin:2px 0 0 16px;">{% for it in phase["items"] %}<li>{{ it.title }} — {{ it.recommendation }}</li>{% endfor %}</ol>
+  {% endfor %}
+  {% endif %}
+
+  {% for cat in s.categories %}
+    {% if cat.findings %}
+    <h4 style="margin:12px 0 4px;">{{ cat.name }} · {{ cat.score }}/100</h4>
     <table>
-      <tr><th>Seite</th><th>Befund</th></tr>
-      {% for it in g.examples %}
-      <tr><td>{{ it.url }}</td><td>{{ it.detail }}</td></tr>
+      <tr><th style="width:70px;">Priorität</th><th>Finding</th><th>Empfehlung</th></tr>
+      {% for f in cat.findings %}
+      <tr><td>{{ f.severity }}</td><td>{{ f.title }}<div class="muted" style="font-size:9px;">{{ f.description }}</div></td><td>{{ f.recommendation }}</td></tr>
       {% endfor %}
-      {% if g.count > g.examples|length %}<tr><td colspan="2" class="muted">… und {{ g.count - g.examples|length }} weitere Seite(n)</td></tr>{% endif %}
     </table>
-    {% endfor %}
-  {% else %}
-    <p class="sub">Keine kritischen Mängel auf den geprüften Seiten gefunden.</p>
-  {% endif %}
-
-  <h4 style="margin:12px 0 4px;">Seitenübersicht</h4>
-  <table>
-    <tr><th>Seite</th><th class="num">Score</th><th>Note</th><th>Wichtigste Mängel</th></tr>
-    {% for p in s.pages %}
-    <tr>
-      <td>{{ p.url }}</td>
-      <td class="num">{% if p.score is not none %}{{ p.score }}{% else %}–{% endif %}</td>
-      <td>{{ p.grade }}</td>
-      <td>{{ p.issues | join('; ') }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-
-  <h4 style="margin:12px 0 4px;">Sitemap ({{ s.sitemap_urls|length }} von {{ s.pages_total }} URLs)</h4>
-  <table>
-    <tr><th>URL</th></tr>
-    {% for u in s.sitemap_urls[:30] %}<tr><td>{{ u }}</td></tr>{% endfor %}
-    {% if s.pages_total > 30 %}<tr><td class="muted">… und weitere</td></tr>{% endif %}
-  </table>
-
-  {% if s.robots_found %}
-  <h4 style="margin:12px 0 4px;">robots.txt</h4>
-  <pre style="font-size:9px;background:#f5f7fa;padding:8px;border-radius:4px;white-space:pre-wrap;">{{ s.robots_txt }}</pre>
-  {% endif %}
-
-  <div class="recs"><strong>Priorisierte Empfehlungen</strong><ul>{% for r in s.recommendations %}<li>{{ r }}</li>{% endfor %}</ul></div>
+    {% endif %}
+  {% endfor %}
   {% endfor %}
   {% endif %}
 </body>
