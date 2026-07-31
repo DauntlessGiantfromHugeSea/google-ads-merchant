@@ -259,6 +259,12 @@ export default function Settings() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
+  const [tagline, setTagline] = useState("");
+  useEffect(() => { api.loginInfo().then((r) => setTagline(r.tagline)).catch(() => {}); }, []);
+  const saveTagline = async () => {
+    try { await api.setLoginTagline(tagline); setMsg("Login-Untertitel gespeichert."); }
+    catch (err) { setError((err as Error).message); }
+  };
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -307,6 +313,12 @@ export default function Settings() {
         </div>
         {msg && <div className="muted" style={{ marginTop: 10 }}>{msg}</div>}
         {error && <div className="error">{error}</div>}
+
+        <div className="field form-light" style={{ marginTop: 18, borderTop: "1px solid var(--line)", paddingTop: 16 }}>
+          <label>Login-Untertitel (Text unter „Anmelden")</label>
+          <input className="input" value={tagline} onChange={(e) => setTagline(e.target.value)} placeholder="z.B. Willkommen bei North Lab" />
+          <button className="btn btn-primary btn-sm" style={{ marginTop: 8 }} onClick={saveTagline}>Untertitel speichern</button>
+        </div>
       </div>
 
       <MailSettings />

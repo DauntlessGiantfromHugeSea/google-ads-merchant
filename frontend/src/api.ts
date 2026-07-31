@@ -204,6 +204,8 @@ export const api = {
     return r;
   },
   me: () => request<User>("/auth/me"),
+  loginInfo: () => request<{ tagline: string }>("/branding/login-info"),
+  setLoginTagline: (tagline: string) => request<{ tagline: string }>("/branding/login-info", { method: "PATCH", body: JSON.stringify({ tagline }) }),
   twoFASetup: () => request<TwoFASetup>("/auth/2fa/setup", { method: "POST" }),
   twoFAEnable: (code: string) => request<User>("/auth/2fa/enable", { method: "POST", body: JSON.stringify({ code }) }),
   twoFADisable: (code: string) => request<User>("/auth/2fa/disable", { method: "POST", body: JSON.stringify({ code }) }),

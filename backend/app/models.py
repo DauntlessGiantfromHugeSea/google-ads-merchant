@@ -79,6 +79,8 @@ class Organization(Base):
     agency_address: Mapped[str] = mapped_column(Text, default="")
     # E-Mail-Benachrichtigungen bei wichtigen Ereignissen (über Microsoft-Mail)
     email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Untertitel auf der Login-Seite (editierbar im Branding)
+    login_tagline: Mapped[str] = mapped_column(String(255), default="Reporting-Plattform für deine Kunden.")
 
     # Microsoft-Mail (OAuth): verschlüsselter Refresh-Token + verbundene Adresse
     ms_refresh_token: Mapped[str] = mapped_column(Text, default="")

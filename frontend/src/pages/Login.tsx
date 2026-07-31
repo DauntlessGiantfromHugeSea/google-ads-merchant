@@ -14,12 +14,14 @@ export default function Login() {
   const [needOtp, setNeedOtp] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [tagline, setTagline] = useState("Reporting-Plattform für deine Kunden.");
 
   // Selbst-Registrierung nur anzeigen, solange noch keine Agentur existiert.
   useEffect(() => {
     api.registrationOpen()
       .then((r) => { setRegOpen(r.open); if (r.open) setMode("register"); })
       .catch(() => setRegOpen(false));
+    api.loginInfo().then((r) => r.tagline && setTagline(r.tagline)).catch(() => {});
   }, []);
 
   const submit = async (e: React.FormEvent) => {
@@ -53,7 +55,7 @@ export default function Login() {
           onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/logo.svg"; }} />
         <h1>{mode === "login" ? "Anmelden" : "Agentur einrichten"}</h1>
         <div className="sub">
-          {mode === "login" ? "Reporting-Plattform für deine Kunden." : "Lege deine Agentur und den Admin-Zugang an."}
+          {mode === "login" ? tagline : "Lege deine Agentur und den Admin-Zugang an."}
         </div>
 
         {mode === "register" && (

@@ -86,20 +86,43 @@ h1, h2, h3, h4 { font-family: var(--display); font-weight: 500; letter-spacing: 
 .auth-wrap {
   min-height: 100%; display: grid; place-items: center; padding: 24px;
   background:
-    radial-gradient(120% 80% at 20% 10%, rgba(20,184,166,0.5), transparent 55%),
-    radial-gradient(120% 90% at 85% 80%, rgba(124,58,237,0.6), transparent 55%),
-    #0a0a0e;
+    radial-gradient(90% 60% at 18% 8%, rgba(20,184,166,0.42), transparent 55%),
+    radial-gradient(90% 70% at 88% 92%, rgba(124,58,237,0.5), transparent 55%),
+    radial-gradient(60% 50% at 50% 50%, rgba(248,131,107,0.10), transparent 60%),
+    #08080c;
 }
 .auth-card {
-  width: 100%; max-width: 400px; padding: 34px; color: #fff;
-  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 24px 60px rgba(0,0,0,0.55);
+  width: 100%; max-width: 420px; padding: 40px 38px; color: #fff; position: relative; overflow: hidden;
+  border-radius: 24px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.09), rgba(255,255,255,0.035));
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 30px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
 }
-.auth-card h1 { font-size: 26px; margin-bottom: 4px; }
-.auth-card .sub { color: var(--muted); font-size: 14px; margin-bottom: 22px; }
+/* zarter Farbverlauf-Rand (liquid glass) */
+.auth-card::before {
+  content: ""; position: absolute; inset: 0; border-radius: 24px; padding: 1px; pointer-events: none;
+  background: linear-gradient(140deg, rgba(45,212,191,0.55), rgba(167,139,250,0.4) 45%, transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.auth-card > * { position: relative; }
+.auth-card h1 { font-size: 30px; letter-spacing: -0.02em; margin-bottom: 4px; }
+.auth-card .sub { color: rgba(255,255,255,0.62); font-size: 14.5px; margin-bottom: 26px; }
+.auth-card .field label { color: rgba(255,255,255,0.72); }
+.auth-card .input {
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.14); color: #fff;
+  padding: 13px 14px; border-radius: 13px; font-size: 15px; transition: border-color .15s, box-shadow .15s;
+}
+.auth-card .input::placeholder { color: rgba(255,255,255,0.32); }
+.auth-card .input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(45,212,191,0.18); }
+.auth-card .btn-primary { padding: 14px; border-radius: 13px; font-size: 15px; font-weight: 700; box-shadow: 0 10px 26px rgba(248,131,107,0.3); }
 .logo { font-family: var(--display); font-weight: 700; font-size: 20px; }
 .logo b { color: var(--coral); }
-.login-logo { display: block; margin: 0 auto 18px; width: auto; height: auto; max-width: min(220px, 72%); max-height: 72px; object-fit: contain; }
+.login-logo {
+  display: block; margin: 4px auto 22px; width: auto; height: auto;
+  max-width: min(230px, 72%); max-height: 82px; object-fit: contain;
+  filter: drop-shadow(0 8px 22px rgba(0,0,0,0.45));
+}
 
 /* Felder */
 .field { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }

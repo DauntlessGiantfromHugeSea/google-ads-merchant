@@ -10,6 +10,23 @@ from app.models import Organization, User
 
 router = APIRouter(prefix="/api/branding", tags=["branding"])
 
+_DEFAULT_TAGLINE = "Reporting-Plattform für deine Kunden."
+
+
+@router.get("/login-info")
+def login_info(db: Session = Depends(get_db)) -> dict:
+    """Öffentlich: Texte für die Login-Seite (Untertitel)."""
+    org = db.query(Organization).first()
+    return {"tagline": (org.login_tagline if org and org.login_tagline else _DEFAULT_TAGLINE)}
+
+
+@router.patch("/login-info")
+def set_login_info(data: dict, user: User = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    org = db.get(Organization, user.organization_id)
+    org.login_tagline = (data.get("tagline") or _DEFAULT_TAGLINE)[:255]
+    db.commit()
+    return {"tagline": org.login_tagline}
+
 _ALLOWED = {"image/png", "image/jpeg", "image/svg+xml", "image/webp", "image/gif"}
 _MAX_BYTES = 2 * 1024 * 1024  # 2 MB
 
