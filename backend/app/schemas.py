@@ -263,6 +263,41 @@ class ProjectEventCreate(BaseModel):
     kind: str = "decision"
 
 
+# --- Termine ---
+class AppointmentCreate(BaseModel):
+    title: str = ""
+    starts_at: str = ""
+    link: str = ""
+    note: str = ""
+    assignees: list[str] = []
+
+
+class AppointmentPatch(BaseModel):
+    title: str | None = None
+    starts_at: str | None = None
+    link: str | None = None
+    note: str | None = None
+    protocol: str | None = None
+    assignees: list[str] | None = None
+
+
+class AppointmentOut(BaseModel):
+    id: str
+    client_id: str
+    client_name: str = ""
+    title: str
+    starts_at: str
+    link: str
+    note: str
+    protocol: str
+    assignees: list[str] = []
+    assignee_names: list[str] = []
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class TodoGlobalOut(TodoOut):
     client_name: str = ""
     project_title: str = ""

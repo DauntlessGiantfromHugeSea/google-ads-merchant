@@ -8,7 +8,8 @@ export default function WorkCalendar({ clientId, clientName }: { clientId: strin
 
   useEffect(() => {
     let done = false;
-    Promise.all([api.projects(clientId), api.todos(clientId)]).then(([projects, todos]) => {
+    Promise.all([api.projects(clientId), api.todos(clientId), api.appointments(clientId).catch(() => [])])
+      .then(([projects, todos, appts]) => {
       if (done) return;
       const p: WorkItem[] = projects.map((x) => ({
         id: x.id, kind: "project", title: x.title, clientId, clientName,
@@ -18,7 +19,11 @@ export default function WorkCalendar({ clientId, clientName }: { clientId: strin
         id: x.id, kind: "todo", title: x.title, clientId, clientName,
         status: x.status, dueDate: x.due_date || "", assignee: x.assignee || "", priority: x.priority || "normal", type: "",
       }));
-      setItems([...p, ...t]);
+      const a: WorkItem[] = (appts || []).map((x) => ({
+        id: x.id, kind: "appointment", title: `📅 ${x.title}`, clientId, clientName,
+        status: "", dueDate: (x.starts_at || "").slice(0, 10), assignee: x.assignee_names.join(", "), priority: "normal", type: "",
+      }));
+      setItems([...p, ...t, ...a]);
     }).catch(() => {});
     return () => { done = true; };
   }, [clientId]);
@@ -29,7 +34,7 @@ export default function WorkCalendar({ clientId, clientName }: { clientId: strin
     <div className="section">
       <h2>Kalender</h2>
       {withDates === 0
-        ? <div className="empty">Noch keine Termine. Setze bei Projekten oder To-Dos ein Fälligkeitsdatum.</div>
+        ? <div className="empty">Noch keine Termine. Setze bei Projekten/To-Dos ein Datum oder buche einen Termin.</div>
         : <Calendar items={items} onOpen={() => {}} />}
     </div>
   );

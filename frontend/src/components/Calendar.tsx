@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 
 export interface WorkItem {
   id: string;
-  kind: "project" | "todo";
+  kind: "project" | "todo" | "appointment";
   title: string;
   clientId: string;
   clientName: string;

@@ -17,6 +17,7 @@ import Offers from "../sections/Offers";
 import Contracts from "../sections/Contracts";
 import WorkCalendar from "../sections/WorkCalendar";
 import Participants from "../sections/Participants";
+import Appointments from "../sections/Appointments";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -118,6 +119,7 @@ export default function ClientDetail() {
               <Launch clientId={id} isAgency={isAgency} />
               <Projects clientId={id} isAgency={isAgency} />
               <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />
+              <Appointments clientId={id} isAgency={isAgency} />
               <WorkCalendar clientId={id} clientName={client.name} />
             </>
           )}

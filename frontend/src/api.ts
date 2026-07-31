@@ -147,6 +147,10 @@ export interface Contract {
   created_at: string; sent_at: string | null;
 }
 export interface SeoAuditBrief { id: string; url: string; score: number; grade: string; client_id: string | null; created_at: string; }
+export interface Appointment {
+  id: string; client_id: string; client_name: string; title: string; starts_at: string;
+  link: string; note: string; protocol: string; assignees: string[]; assignee_names: string[]; created_at: string;
+}
 export type TodoGlobal = Todo & { client_name: string; project_title: string };
 export type MyTodo = TodoGlobal;
 export interface Doc {
@@ -248,6 +252,13 @@ export const api = {
   deleteProject: (cid: string, pid: string) =>
     request<void>(`/clients/${cid}/projects/${pid}`, { method: "DELETE" }),
   allProjects: () => request<Project[]>("/projects"),
+  appointments: (cid: string) => request<Appointment[]>(`/clients/${cid}/appointments`),
+  createAppointment: (cid: string, d: { title: string; starts_at: string; link?: string; note?: string; assignees?: string[] }) =>
+    request<Appointment>(`/clients/${cid}/appointments`, { method: "POST", body: JSON.stringify(d) }),
+  updateAppointment: (cid: string, id: string, d: Partial<Appointment>) =>
+    request<Appointment>(`/clients/${cid}/appointments/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteAppointment: (cid: string, id: string) => request<void>(`/clients/${cid}/appointments/${id}`, { method: "DELETE" }),
+  allAppointments: () => request<Appointment[]>("/appointments"),
   projectEvents: (cid: string, pid: string) => request<ProjectEvent[]>(`/clients/${cid}/projects/${pid}/events`),
   addProjectEvent: (cid: string, pid: string, d: { text: string; kind?: string }) =>
     request<ProjectEvent>(`/clients/${cid}/projects/${pid}/events`, { method: "POST", body: JSON.stringify(d) }),

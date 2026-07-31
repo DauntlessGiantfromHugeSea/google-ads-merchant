@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Project, TodoGlobal, api } from "../api";
+import { Appointment, Project, TodoGlobal, api } from "../api";
 import { useToast } from "../toast";
 import Kanban from "../components/Kanban";
 import Calendar, { WorkItem, isDone } from "../components/Calendar";
@@ -28,6 +28,7 @@ export default function Planner() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [todos, setTodos] = useState<TodoGlobal[]>([]);
+  const [appts, setAppts] = useState<Appointment[]>([]);
   const [view, setView] = useState<View>("kalender");
   const [assignee, setAssignee] = useState("");
   const [kind, setKind] = useState<"" | "project" | "todo">("");
@@ -37,6 +38,7 @@ export default function Planner() {
   const load = () => {
     api.allProjects().then(setProjects).catch((e) => setError((e as Error).message));
     api.allTodos().then(setTodos).catch((e) => setError((e as Error).message));
+    api.allAppointments().then(setAppts).catch(() => {});
   };
   useEffect(() => { load(); }, []);
 
@@ -50,8 +52,12 @@ export default function Planner() {
       status: x.status, dueDate: x.due_date || "", assignee: x.assignee_name || x.assignee || "",
       priority: x.priority || "normal", type: "", projectTitle: x.project_title || "",
     }));
-    return [...p, ...t];
-  }, [projects, todos]);
+    const a: WorkItem[] = appts.map((x) => ({
+      id: x.id, kind: "appointment", title: `📅 ${x.title}`, clientId: x.client_id, clientName: x.client_name || "",
+      status: "", dueDate: (x.starts_at || "").slice(0, 10), assignee: x.assignee_names.join(", "), priority: "normal", type: "",
+    }));
+    return [...p, ...t, ...a];
+  }, [projects, todos, appts]);
 
   const filtered = useMemo(() => items
     .filter((i) => (kind ? i.kind === kind : true))

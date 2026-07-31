@@ -298,6 +298,24 @@ class Project(Base):
     client: Mapped[Client] = relationship()
 
 
+class Appointment(Base):
+    """Termin je Kunde – mit Link, Teilnehmern (Mitarbeitern) und Protokoll."""
+
+    __tablename__ = "appointments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"), index=True)
+    title: Mapped[str] = mapped_column(String(512), default="")
+    starts_at: Mapped[str] = mapped_column(String(32), default="")   # "YYYY-MM-DDTHH:MM"
+    link: Mapped[str] = mapped_column(String(512), default="")
+    note: Mapped[str] = mapped_column(Text, default="")
+    protocol: Mapped[str] = mapped_column(Text, default="")          # Protokoll/Notizen
+    assignees: Mapped[list] = mapped_column(JSON, default=list)      # Mitarbeiter-User-IDs
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
 class ProjectEvent(Base):
     """Projektchronik: automatisch protokollierte Änderungen + Entscheidungen."""
 

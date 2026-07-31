@@ -15,6 +15,7 @@ from app.database import get_db
 from app.models import (
     Account,
     AdsActivity,
+    Appointment,
     Approval,
     Client,
     ChecklistItem,
@@ -106,7 +107,7 @@ def delete_client(client_id: str, user: User = Depends(require_admin), db: Sessi
     db.query(Todo).filter(Todo.client_id == client_id).update(
         {Todo.project_id: None}, synchronize_session=False)
     for model in (ProjectEvent, Offer, Contract, Project, Milestone, Approval, AdsActivity,
-                  Document, MonitorEvent, Participant, SeoAudit):
+                  Document, MonitorEvent, Participant, SeoAudit, Appointment):
         db.query(model).filter(model.client_id == client_id).delete(synchronize_session=False)
     # Nullbare Verweise lösen
     db.query(MonitorStatus).filter(MonitorStatus.client_id == client_id).update(
