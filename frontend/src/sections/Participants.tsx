@@ -124,14 +124,14 @@ export default function Participants({ clientId, clientName, isAgency }:
                   </div>
                 </div>
                 {open && (
-                  <dl className="kv" style={{ gridTemplateColumns: "200px 1fr", margin: "0 0 12px", fontSize: 13 }}>
+                  <div className="pdetail">
                     {fields.map(([k, v]) => (
-                      <div key={k} style={{ display: "contents" }}>
-                        <dt>{prettyKey(k)}</dt>
-                        <dd style={{ whiteSpace: "pre-line" }}>{showVal(v)}</dd>
+                      <div className="pdetail-row" key={k}>
+                        <div className="pdetail-k">{prettyKey(k)}</div>
+                        <div className="pdetail-v">{showVal(v)}</div>
                       </div>
                     ))}
-                  </dl>
+                  </div>
                 )}
               </div>
             );

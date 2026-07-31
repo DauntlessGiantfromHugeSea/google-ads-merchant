@@ -323,6 +323,17 @@ code { color: #e9eaf2; }
 .checklist { margin-top: 8px; padding: 8px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 10px; }
 .checklist-item { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; }
 
+/* Teilnehmer-Detail: alle Felder untereinander, je Feld eine Zeile */
+.pdetail { margin: 0 0 14px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.02); }
+.pdetail-row { display: flex; gap: 14px; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: 13px; }
+.pdetail-row:last-child { border-bottom: none; }
+.pdetail-k { flex: 0 0 210px; color: var(--muted); }
+.pdetail-v { flex: 1; min-width: 0; white-space: pre-line; word-break: break-word; color: var(--ink); }
+@media (max-width: 560px) {
+  .pdetail-row { flex-direction: column; gap: 2px; }
+  .pdetail-k { flex: none; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+}
+
 @media (max-width: 560px) {
   .todo-controls { width: 100%; margin-left: 0; margin-top: 6px; }
   .todo-project { max-width: none; flex: 1 1 45%; }
