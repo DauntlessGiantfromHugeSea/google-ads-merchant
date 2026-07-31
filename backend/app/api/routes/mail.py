@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin
+from app.api.deps import get_current_user, require_admin, require_agency
 from app.config import get_settings
 from app.core.crypto import decrypt, encrypt
 from app.core.security import create_access_token, decode_access_token
@@ -156,9 +156,16 @@ def disconnect(user: User = Depends(require_admin), db: Session = Depends(get_db
 
 
 @router.post("/send")
-def send(data: MailSend, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+def send(data: MailSend, user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
     org = db.get(Organization, user.organization_id)
-    send_via_graph(org, data.to, data.subject, render_email_html(org, data.body), html=True)
+    # Anhänge werden nur durchgereicht (nicht gespeichert). Größe begrenzen.
+    total = sum(len(a.content_bytes or "") for a in data.attachments)
+    if total > 18_000_000:  # ~13 MB nach Base64-Dekodierung
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Anhänge zu groß (max. ca. 13 MB gesamt).")
+    attachments = [{"name": a.name[:255], "contentType": a.content_type or "application/octet-stream",
+                    "contentBytes": a.content_bytes} for a in data.attachments if a.content_bytes]
+    send_via_graph(org, data.to, data.subject, render_email_html(org, data.body), html=True,
+                   attachments=attachments or None)
     return {"ok": True}
 
 

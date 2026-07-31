@@ -704,11 +704,18 @@ class MailStatus(BaseModel):
     configured: bool = False
 
 
+class MailAttachment(BaseModel):
+    name: str = "anhang"
+    content_type: str = "application/octet-stream"
+    content_bytes: str = ""  # Base64 (ohne data:-Präfix) – wird nur durchgereicht, nicht gespeichert
+
+
 class MailSend(BaseModel):
     to: str
     subject: str = ""
     body: str = ""
     html: bool = False
+    attachments: list[MailAttachment] = []
 
 
 # --- Dokumente ---

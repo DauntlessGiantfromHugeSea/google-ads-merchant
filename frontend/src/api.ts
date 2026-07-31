@@ -322,7 +322,7 @@ export const api = {
   mailDisconnect: () => request<void>("/mail/disconnect", { method: "POST" }),
   mailTest: () => request<{ ok: boolean; to: string }>("/mail/test", { method: "POST" }),
   mailPreview: () => request<{ html: string }>("/mail/preview"),
-  mailSend: (d: { to: string; subject: string; body: string; html?: boolean }) =>
+  mailSend: (d: { to: string; subject: string; body: string; html?: boolean; attachments?: { name: string; content_type: string; content_bytes: string }[] }) =>
     request<{ ok: boolean }>("/mail/send", { method: "POST", body: JSON.stringify(d) }),
 
   milestones: (cid: string) => request<Milestone[]>(`/clients/${cid}/milestones`),
