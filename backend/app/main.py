@@ -7,8 +7,8 @@ from sqlalchemy import inspect, text
 
 from app.api.routes import (
     ads_activity, auth, branding, briefings, clients, dashboard, documents, intake, launch,
-    mail, monitoring, notifications, offers, org, packages, projects, reports, requests,
-    secrets, tasks, team,
+    mail, monitoring, notifications, offers, org, packages, participants, projects, reports,
+    requests, secrets, tasks, team,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -28,6 +28,7 @@ _CLIENT_COLUMNS = {
     "archived": "BOOLEAN DEFAULT FALSE",
     "company": "VARCHAR(255) DEFAULT ''", "billing_address": "TEXT DEFAULT ''",
     "vat_id": "VARCHAR(64) DEFAULT ''", "billing_email": "VARCHAR(255) DEFAULT ''",
+    "participants_enabled": "BOOLEAN DEFAULT FALSE", "participant_token": "VARCHAR(64) DEFAULT ''",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",
@@ -140,6 +141,8 @@ app.include_router(offers.client_router)
 app.include_router(offers.public_router)
 app.include_router(notifications.router)
 app.include_router(briefings.router)
+app.include_router(participants.router)
+app.include_router(participants.public_router)
 
 
 @app.get("/api/health")

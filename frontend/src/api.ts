@@ -59,7 +59,13 @@ export interface Client {
   contract_package: string; contract_status: string; contract_start: string; contract_end: string;
   contract_fee: string; contract_billing: string; contract_notes: string;
   company: string; billing_address: string; vat_id: string; billing_email: string;
+  participants_enabled: boolean;
 }
+export interface Participant {
+  id: string; form_name: string; name: string; email: string; status: string;
+  data: Record<string, unknown>; created_at: string;
+}
+export interface ParticipantsStatus { enabled: boolean; webhook_url: string; count: number; }
 export interface IntakeForm {
   id: string; label: string; client_id: string | null; created_by: string;
   created_at: string; expires_at: string | null; submission_count: number;
@@ -264,6 +270,23 @@ export const api = {
   briefingPublic: (id: string) => request<BriefingPublic>(`/briefings/${id}/public`),
   submitBriefing: (id: string, d: Record<string, string>) =>
     request<{ ok: boolean }>(`/briefings/${id}/submit`, { method: "POST", body: JSON.stringify(d) }),
+
+  participantsStatus: (cid: string) => request<ParticipantsStatus>(`/clients/${cid}/participants/status`),
+  enableParticipants: (cid: string, enabled: boolean) =>
+    request<ParticipantsStatus>(`/clients/${cid}/participants/enable`, { method: "POST", body: JSON.stringify({ enabled }) }),
+  rotateParticipantToken: (cid: string) =>
+    request<ParticipantsStatus>(`/clients/${cid}/participants/rotate`, { method: "POST" }),
+  participants: (cid: string) => request<Participant[]>(`/clients/${cid}/participants`),
+  updateParticipant: (cid: string, pid: string, d: { status?: string; name?: string; email?: string }) =>
+    request<Participant>(`/clients/${cid}/participants/${pid}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteParticipant: (cid: string, pid: string) =>
+    request<void>(`/clients/${cid}/participants/${pid}`, { method: "DELETE" }),
+  async downloadParticipantsCsv(cid: string, clientName: string) {
+    const res = await fetch(`/api/clients/${cid}/participants/export.csv`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Export fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `Teilnehmer-${clientName}.csv`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
+  },
 
   adsActivities: (cid: string) => request<AdsActivity[]>(`/clients/${cid}/ads-activities`),
   createAdsActivity: (cid: string, d: { date?: string; category?: string; title: string; body?: string }) =>

@@ -149,6 +149,10 @@ class Client(Base):
     contract_billing: Mapped[str] = mapped_column(String(64), default="")  # monatlich/jährlich
     contract_notes: Mapped[str] = mapped_column(Text, default="")
 
+    # Teilnehmermanagement (Contact Form 7 -> Webhook)
+    participants_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    participant_token: Mapped[str] = mapped_column(String(64), default="")
+
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     organization: Mapped[Organization] = relationship(back_populates="clients")
 
@@ -546,6 +550,22 @@ class IntakeSubmission(Base):
     form_id: Mapped[str] = mapped_column(ForeignKey("intake_forms.id"))
     data: Mapped[dict] = mapped_column(JSON, default=dict)
     applied: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class Participant(Base):
+    """Teilnehmer-/Anmeldungseintrag (aus Contact Form 7 per Webhook)."""
+
+    __tablename__ = "participants"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"), index=True)
+    form_name: Mapped[str] = mapped_column(String(255), default="")
+    name: Mapped[str] = mapped_column(String(255), default="")
+    email: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(24), default="new")  # new/confirmed/cancelled
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
 

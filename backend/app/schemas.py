@@ -95,6 +95,7 @@ class ClientOut(BaseModel):
     billing_address: str = ""
     vat_id: str = ""
     billing_email: str = ""
+    participants_enabled: bool = False
 
     class Config:
         from_attributes = True
@@ -462,6 +463,32 @@ class BriefingSubmissionOut(BaseModel):
 
 class BriefingConvert(BaseModel):
     client_id: str | None = None  # Zielkunde; leer -> Formular-Kunde oder neuer Lead
+
+
+# --- Teilnehmermanagement (Contact Form 7) ---
+class ParticipantOut(BaseModel):
+    id: str
+    form_name: str
+    name: str
+    email: str
+    status: str
+    data: dict
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ParticipantPatch(BaseModel):
+    status: str | None = None
+    name: str | None = None
+    email: str | None = None
+
+
+class ParticipantsStatus(BaseModel):
+    enabled: bool
+    webhook_url: str = ""
+    count: int = 0
 
 
 # --- Google-Ads-Aktivitätsprotokoll ---

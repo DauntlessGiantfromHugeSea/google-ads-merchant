@@ -15,6 +15,7 @@ import Launch from "../sections/Launch";
 import Monitoring from "../sections/Monitoring";
 import Offers from "../sections/Offers";
 import WorkCalendar from "../sections/WorkCalendar";
+import Participants from "../sections/Participants";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -24,6 +25,7 @@ const NAV = [
   { key: "business", label: "Angebote & Vertrag" },
   { key: "contact", label: "Kontakt & Verlauf" },
 ];
+const TEILNEHMER_TAB = { key: "participants", label: "Teilnehmer" };
 const STATUS = ["lead", "aktiv", "pausiert", "beendet"];
 
 export default function ClientDetail() {
@@ -95,7 +97,8 @@ export default function ClientDetail() {
       <div className="client-layout">
         <nav className="client-nav">
           <div className="client-name">{client.name}</div>
-          {NAV.map((n) => (
+          {(isAgency || client.participants_enabled
+            ? [...NAV.slice(0, 4), TEILNEHMER_TAB, ...NAV.slice(4)] : NAV).map((n) => (
             <button key={n.key} className={`nav-item ${section === n.key ? "active" : ""}`}
               onClick={() => setSection(n.key)}>
               {n.label}
@@ -121,6 +124,9 @@ export default function ClientDetail() {
           )}
           {section === "monitoring" && (
             <Monitoring clientId={id} clientName={client.name} isAgency={isAgency} />
+          )}
+          {section === "participants" && (
+            <Participants clientId={id} clientName={client.name} isAgency={isAgency} />
           )}
           {section === "business" && (
             <>
