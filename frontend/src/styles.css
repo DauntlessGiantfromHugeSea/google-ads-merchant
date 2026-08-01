@@ -562,3 +562,16 @@ code { color: #e9eaf2; }
 .pipe-mini-row:hover { background: rgba(255,255,255,0.05); }
 .pipe-mini-label { flex: 1; font-size: 14px; }
 .pipe-mini-count { font-weight: 700; font-family: var(--display); font-size: 16px; }
+
+/* SEO im Kundenbereich */
+.seo-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+.seo-score { font-size: 40px; font-weight: 800; line-height: 1; }
+.seo-score span { font-size: 15px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+.seo-head > .muted { flex: 1; min-width: 180px; }
+.cwv-block { margin-top: 18px; padding: 16px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); }
+.cwv-title { font-family: var(--display); font-size: 15px; margin-bottom: 12px; }
+.cwv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.cwv-tile { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px; text-align: center; }
+.cwv-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.cwv-value { font-family: var(--display); font-size: 22px; font-weight: 700; margin: 6px 0 4px; }
+.cwv-cat { font-size: 12px; font-weight: 600; }

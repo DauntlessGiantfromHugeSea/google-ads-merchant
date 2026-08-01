@@ -18,6 +18,7 @@ import Contracts from "../sections/Contracts";
 import WorkCalendar from "../sections/WorkCalendar";
 import Participants from "../sections/Participants";
 import Appointments from "../sections/Appointments";
+import Seo from "../sections/Seo";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -132,7 +133,10 @@ export default function ClientDetail() {
             </>
           )}
           {section === "reporting" && (
-            <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
+            <>
+              <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
+              <Seo clientId={id} isAgency={isAgency} />
+            </>
           )}
           {section === "monitoring" && (
             <Monitoring clientId={id} clientName={client.name} isAgency={isAgency} />
