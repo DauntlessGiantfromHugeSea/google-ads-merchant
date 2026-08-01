@@ -5,14 +5,14 @@ Action-Plan, Health-Score). Ersetzt die frühere SEO-Analyse.
 """
 import io
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
-from app.models import Client, Organization, SeoAudit, User, UserRole
+from app.models import Account, AccountType, Client, Organization, SeoAudit, User, UserRole
 from app.services import pdf, seo_audit, timeutil
 from app.services.notify import _agency_user_ids, notify_users
 
@@ -22,6 +22,39 @@ router = APIRouter(prefix="/api/seo", tags=["seo"])
 class AuditRun(BaseModel):
     url: str
     client_id: str | None = None
+
+
+class ClientAuditRun(BaseModel):
+    url: str | None = None
+
+
+def _norm_url(u: str) -> str:
+    """Für den Vergleich: Schema/Slash/Case vereinheitlichen."""
+    u = (u or "").strip().lower().rstrip("/")
+    for pfx in ("https://", "http://"):
+        if u.startswith(pfx):
+            u = u[len(pfx):]
+            break
+    return u.removeprefix("www.")
+
+
+def _client_sites(client: Client, db: Session) -> list[str]:
+    """Alle Websites eines Kunden: Website-Feld + verknüpfte Website-Konten,
+    dedupliziert (Reihenfolge: Kundenfeld zuerst, dann Konten nach Anlage)."""
+    sites: list[str] = []
+    seen: set[str] = set()
+    for raw in [client.website or ""] + [
+        a.external_id for a in (db.query(Account)
+                                .filter(Account.client_id == client.id,
+                                        Account.type == AccountType.website)
+                                .order_by(Account.created_at.asc()).all())
+    ]:
+        raw = (raw or "").strip()
+        key = _norm_url(raw)
+        if raw and key and key not in seen:
+            seen.add(key)
+            sites.append(raw)
+    return sites
 
 
 def _scoped_audit(audit_id: str, user: User, db: Session) -> SeoAudit:
@@ -83,22 +116,41 @@ def list_client_audits(client_id: str, user: User = Depends(get_current_user), d
     return [_out(a) for a in audits]
 
 
-@router.post("/for/{client_id}/run")
-def run_client_audit(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
-    """Neu messen für einen Kunden. Die URL kommt aus dem hinterlegten
-    Website-Feld des Kunden – Kunden können also nur die eigene Seite messen."""
+@router.get("/for/{client_id}/sites")
+def client_sites(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> list[str]:
+    """Websites eines Kunden – für die Auswahl beim Messen (Mehrfach-Websites)."""
     client = get_scoped_client(client_id, user, db)
-    target = (client.website or "").strip()
-    if not target:
+    return _client_sites(client, db)
+
+
+@router.post("/for/{client_id}/run")
+def run_client_audit(client_id: str, data: ClientAuditRun = Body(default=None),
+                     user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Neu messen für einen Kunden. Die messbaren URLs stammen ausschließlich aus
+    den hinterlegten Websites des Kunden – Kunden können also nur eigene Seiten
+    messen. Bei mehreren Websites bestimmt `url`, welche gemessen wird."""
+    client = get_scoped_client(client_id, user, db)
+    sites = _client_sites(client, db)
+    if not sites:
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             "Für diesen Kunden ist keine Website hinterlegt.")
+    wanted = (data.url if data else None) or ""
+    if wanted.strip():
+        # Nur eine der hinterlegten Websites zulassen (kein freies Crawlen).
+        match = next((s for s in sites if _norm_url(s) == _norm_url(wanted)), None)
+        if not match:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                                "Diese Website ist für den Kunden nicht hinterlegt.")
+        target = match
+    else:
+        target = sites[0]
     result = _run_and_store(target, client_id, user, db)
     # Wenn ein Kunde selbst misst, die Agentur in-app informieren.
     if user.role == UserRole.client_user:
         notify_users(db, _agency_user_ids(db, user.organization_id),
                      org_id=user.organization_id, client_id=client_id,
                      type_="seo_rerun", title="SEO neu gemessen",
-                     body=f"{client.name}: Score {result.get('score', '')}".strip(),
+                     body=f"{client.name} · {result.get('url', '')}: Score {result.get('score', '')}".strip(),
                      link=f"/clients/{client_id}")
     return result
 

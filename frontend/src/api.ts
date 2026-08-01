@@ -397,9 +397,11 @@ export const api = {
   runSeoAudit: (url: string, client_id?: string | null) =>
     request<any>("/seo/audit", { method: "POST", body: JSON.stringify({ url, client_id: client_id || null }) }),
   seoAudits: (clientId?: string) => request<SeoAuditBrief[]>(`/seo${clientId ? `?client_id=${clientId}` : ""}`),
-  // Kunden-sichtbar: Audits eines Kunden + neu messen (URL kommt serverseitig aus der Kunden-Website)
+  // Kunden-sichtbar: Audits eines Kunden + neu messen (URL nur aus den hinterlegten Websites)
   clientSeoAudits: (clientId: string) => request<any[]>(`/seo/for/${clientId}`),
-  runClientSeoAudit: (clientId: string) => request<any>(`/seo/for/${clientId}/run`, { method: "POST" }),
+  clientSeoSites: (clientId: string) => request<string[]>(`/seo/for/${clientId}/sites`),
+  runClientSeoAudit: (clientId: string, url?: string) =>
+    request<any>(`/seo/for/${clientId}/run`, { method: "POST", body: JSON.stringify({ url: url || null }) }),
   seoAudit: (id: string) => request<any>(`/seo/${id}`),
   deleteSeoAudit: (id: string) => request<void>(`/seo/${id}`, { method: "DELETE" }),
   async downloadSeoPdf(id: string, domain: string) {

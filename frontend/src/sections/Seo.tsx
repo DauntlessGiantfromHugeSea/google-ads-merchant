@@ -23,9 +23,15 @@ function Vital({ label, value, cat }: { label: string; value: string; cat?: stri
   );
 }
 
+// Websites vergleichbar machen (Schema/Slash/www egal).
+const normUrl = (u: string) =>
+  (u || "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/+$/, "");
+
 export default function Seo({ clientId, isAgency }: { clientId: string; isAgency: boolean }) {
   const toast = useToast();
   const [audits, setAudits] = useState<any[]>([]);
+  const [sites, setSites] = useState<string[]>([]);
+  const [site, setSite] = useState("");
   const [current, setCurrent] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -33,15 +39,27 @@ export default function Seo({ clientId, isAgency }: { clientId: string; isAgency
   const load = () =>
     api.clientSeoAudits(clientId).then((list) => {
       setAudits(list);
-      setCurrent((cur: any) => cur ?? (list[0] || null));
       setLoaded(true);
     }).catch(() => setLoaded(true));
-  useEffect(() => { load(); }, [clientId]);
+  useEffect(() => {
+    api.clientSeoSites(clientId).then((s) => { setSites(s); setSite((cur) => cur || s[0] || ""); }).catch(() => {});
+    load();
+  }, [clientId]);
+
+  // Audits der aktuell gewählten Website (oder alle, falls keine Website hinterlegt).
+  const siteAudits = useMemo(() =>
+    site ? audits.filter((a) => normUrl(a.url) === normUrl(site)) : audits,
+  [audits, site]);
+  // Angezeigtes Audit = manuell gewählt, sonst das neueste der Website.
+  useEffect(() => {
+    setCurrent((cur: any) =>
+      cur && siteAudits.some((a) => a.id === cur.id) ? cur : (siteAudits[0] || null));
+  }, [siteAudits]);
 
   const remeasure = async () => {
     setBusy(true);
     try {
-      const r = await api.runClientSeoAudit(clientId);
+      const r = await api.runClientSeoAudit(clientId, site || undefined);
       setCurrent(r);
       toast(`Neu gemessen · Score ${r.data.health_score}/100`);
       load();
@@ -64,13 +82,30 @@ export default function Seo({ clientId, isAgency }: { clientId: string; isAgency
             Deine Sichtbarkeit &amp; Ladewerte – jederzeit neu messbar.
           </div>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={remeasure} disabled={busy}>
-          {busy ? "Messe…" : "↻ Neu messen"}
-        </button>
+        <div className="row-inline" style={{ alignItems: "center", gap: 8 }}>
+          {sites.length > 1 && (
+            <select className="select form-light" style={{ maxWidth: 240 }}
+              value={site} onChange={(e) => { setSite(e.target.value); setCurrent(null); }}>
+              {sites.map((s) => <option key={s} value={s}>{s.replace(/^https?:\/\//, "")}</option>)}
+            </select>
+          )}
+          <button className="btn btn-primary btn-sm" onClick={remeasure} disabled={busy}>
+            {busy ? "Messe…" : "↻ Neu messen"}
+          </button>
+        </div>
       </div>
 
+      {sites.length > 1 && (
+        <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+          {sites.length} Websites hinterlegt – „Neu messen" prüft die oben gewählte.
+        </div>
+      )}
+
       {!loaded ? null : !current ? (
-        <div className="empty">Noch keine Messung. Klick auf „Neu messen", um zu starten.</div>
+        <div className="empty">
+          {site ? <>Noch keine Messung für <strong>{site.replace(/^https?:\/\//, "")}</strong>. Klick auf „Neu messen".</>
+                : "Noch keine Messung. Klick auf „Neu messen\", um zu starten."}
+        </div>
       ) : (
         <>
           <div className="seo-head">
@@ -169,11 +204,11 @@ export default function Seo({ clientId, isAgency }: { clientId: string; isAgency
             </div>
           ))}
 
-          {/* Verlauf */}
-          {audits.length > 1 && (
+          {/* Verlauf (der gewählten Website) */}
+          {siteAudits.length > 1 && (
             <div style={{ marginTop: 18 }}>
               <h3 style={{ fontSize: 15, marginBottom: 8 }}>Verlauf</h3>
-              {audits.map((a) => (
+              {siteAudits.map((a) => (
                 <div key={a.id} className="list-row clickable" onClick={() => setCurrent(a)}
                   style={{ opacity: a.id === current.id ? 1 : 0.7 }}>
                   <div>
