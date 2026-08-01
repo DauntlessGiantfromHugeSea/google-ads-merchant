@@ -70,13 +70,14 @@ export default function Dashboard() {
 
       {isAgency && dash && (
         <div className="hero">
-          <h1>Übersicht</h1>
+          <h1>Hallo{user?.full_name ? `, ${user.full_name.split(" ")[0]}` : ""} 👋</h1>
           <div className="sub">Alle Kunden, Pakete und Aktivitäten auf einen Blick.</div>
           <div className="hero-stats">
             <div className="hero-stat"><div className="v">{dash.clients_total}</div><div className="l">Kunden</div></div>
+            <div className="hero-stat"><div className="v">{dash.status_counts["aktiv"] || 0}</div><div className="l">Aktiv</div></div>
+            <div className="hero-stat"><div className="v">{dash.status_counts["lead"] || 0}</div><div className="l">Leads</div></div>
             <div className="hero-stat"><div className="v">{dash.open_todos}</div><div className="l">Offene To-Dos</div></div>
             <div className="hero-stat"><div className="v">{dash.reports_total}</div><div className="l">Reports</div></div>
-            <div className="hero-stat"><div className="v">{dash.status_counts["aktiv"] || 0}</div><div className="l">Aktiv</div></div>
           </div>
         </div>
       )}
