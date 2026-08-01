@@ -489,6 +489,8 @@ export const api = {
     request<Account>(`/clients/${clientId}/accounts`, { method: "POST", body: JSON.stringify(d) }),
   invite: (clientId: string, d: { email: string; password?: string; full_name?: string }) =>
     request<InviteResult>(`/clients/${clientId}/invite`, { method: "POST", body: JSON.stringify(d) }),
+  clientAccess: (clientId: string) => request<{ id: string; email: string; full_name: string; status: string; two_factor: boolean; invite_url: string; created_at: string }[]>(`/clients/${clientId}/access`),
+  revokeClientAccess: (clientId: string, uid: string) => request<void>(`/clients/${clientId}/access/${uid}`, { method: "DELETE" }),
 
   setCredentials: (clientId: string, accountId: string, d: CredentialInput) =>
     request<CredentialStatus>(`/clients/${clientId}/accounts/${accountId}/credentials`, {

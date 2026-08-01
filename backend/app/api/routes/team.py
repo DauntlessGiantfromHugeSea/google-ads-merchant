@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_admin, require_agency
-from app.core.security import hash_password
+from app.core.security import hash_password, password_problem
 from app.database import get_db
 from app.models import User, UserRole
 from app.schemas import TeamInvite, TeamRoleUpdate, UserOut
@@ -26,6 +26,8 @@ def invite_member(data: TeamInvite, user: User = Depends(require_admin), db: Ses
     """Legt einen Agentur-Nutzer an (Mitarbeiter oder Admin)."""
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "E-Mail bereits registriert")
+    if (msg := password_problem(data.password)):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, msg)
     role = _ROLES.get(data.role, UserRole.agency_member)
     member = User(
         email=data.email, full_name=data.full_name,

@@ -59,10 +59,13 @@ export default function ClientDetail() {
   const [invName, setInvName] = useState("");
   const [invMsg, setInvMsg] = useState("");
   const [invLink, setInvLink] = useState("");
+  const [access, setAccess] = useState<{ id: string; email: string; full_name: string; status: string; two_factor: boolean; invite_url: string }[]>([]);
+  const loadAccess = () => { if (user?.role !== "client_user") api.clientAccess(id).then(setAccess).catch(() => {}); };
 
   useEffect(() => {
     api.client(id).then(setClient).catch((e) => setError((e as Error).message));
     api.todos(id).then((t) => setOpenTodos(t.filter((x) => x.status !== "done").length)).catch(() => {});
+    loadAccess();
   }, [id]);
 
   if (error) return <div className="empty">{error}</div>;
@@ -75,7 +78,12 @@ export default function ClientDetail() {
       setInvEmail(""); setInvName("");
       setInvMsg(r.emailed ? "Einladung per E-Mail gesendet." : "Zugang erstellt – bitte den Link teilen:");
       setInvLink(r.invite_url || "");
+      loadAccess();
     } catch (err) { setInvMsg((err as Error).message); }
+  };
+  const revokeAccess = async (uid: string) => {
+    if (!confirm("Diesen Kunden-Zugang entfernen?")) return;
+    await api.revokeClientAccess(id, uid); loadAccess();
   };
 
   return (
@@ -148,6 +156,28 @@ export default function ClientDetail() {
               {isAgency && (
                 <div className="section form-light">
                   <h2>Kunden-Zugang</h2>
+                  {access.length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                      {access.map((u) => (
+                        <div key={u.id} className="list-row">
+                          <div>
+                            <strong>{u.full_name || u.email}</strong> <span className="muted">· {u.email}</span>
+                            <div className="muted" style={{ fontSize: 12 }}>
+                              {u.two_factor && "🔒 2FA aktiv · "}
+                              {u.status === "aktiv" ? "Zugang aktiv" : u.status === "abgelaufen" ? "Einladung abgelaufen" : "Einladung offen (Passwort noch nicht gesetzt)"}
+                            </div>
+                            {u.invite_url && (
+                              <input className="input" readOnly value={u.invite_url} onFocus={(e) => e.currentTarget.select()} style={{ marginTop: 4, fontSize: 12 }} />
+                            )}
+                          </div>
+                          <div className="row-inline" style={{ alignItems: "center" }}>
+                            <span className={`status-badge ${u.status === "aktiv" ? "st-aktiv" : u.status === "abgelaufen" ? "st-pausiert" : "st-lead"}`}>{u.status}</span>
+                            <button className="del" onClick={() => revokeAccess(u.id)}>entfernen</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <p className="muted" style={{ marginTop: 0 }}>
                     Lädt den Kunden per E-Mail ein – er legt sein Passwort selbst fest. Ist Microsoft verbunden,
                     wird die Einladung automatisch gemailt; sonst teilst du den angezeigten Link.

@@ -2,14 +2,14 @@
 import secrets as pysecrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_admin, require_agency
 from app.config import get_settings
 from app.core.crypto import encrypt_json
-from app.core.security import create_access_token, hash_password
+from app.core.security import create_access_token, hash_password, password_problem
 from app.services.notify import notify_counterparts, notify_users
 from app.database import get_db
 from app.models import (
@@ -494,6 +494,8 @@ def invite_client_user(
     client = get_scoped_client(client_id, user, db)
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "E-Mail bereits registriert")
+    if data.password and (msg := password_problem(data.password)):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, msg)
 
     invite_mode = not data.password
     token = pysecrets.token_urlsafe(24) if invite_mode else ""
@@ -529,6 +531,45 @@ def invite_client_user(
             except Exception as exc:  # noqa: BLE001
                 result["email_error"] = str(exc)[:200]
     return result
+
+
+@router.get("/{client_id}/access")
+def list_client_access(client_id: str, request: Request,
+                       user: User = Depends(require_agency), db: Session = Depends(get_db)) -> list[dict]:
+    """Kunden-Logins dieses Kunden: aktiv oder Einladung offen."""
+    get_scoped_client(client_id, user, db)
+    users = (db.query(User).filter(User.client_id == client_id, User.role == UserRole.client_user)
+             .order_by(User.created_at.desc()).all())
+    host = request.headers.get("host", "")
+    proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    base = f"{proto}://{host}" if host and "localhost" not in host else _settings.public_base_url.rstrip("/")
+    out = []
+    for u in users:
+        pending = bool(u.invite_token)
+        exp = u.invite_expires
+        expired = False
+        if pending and exp is not None:
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            expired = exp < datetime.now(timezone.utc)
+        out.append({
+            "id": u.id, "email": u.email, "full_name": u.full_name,
+            "status": ("abgelaufen" if expired else "eingeladen") if pending else "aktiv",
+            "two_factor": u.totp_enabled,
+            "invite_url": f"{base}/einladung/{u.invite_token}" if pending else "",
+            "created_at": u.created_at.isoformat(),
+        })
+    return out
+
+
+@router.delete("/{client_id}/access/{user_id}", status_code=204)
+def revoke_client_access(client_id: str, user_id: str,
+                         user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    get_scoped_client(client_id, user, db)
+    u = db.get(User, user_id)
+    if u and u.client_id == client_id and u.role == UserRole.client_user:
+        db.delete(u)
+        db.commit()
 
 
 @router.post("/{client_id}/complete-onboarding", response_model=ClientOut)

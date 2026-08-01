@@ -11,6 +11,17 @@ _pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 ALGORITHM = "HS256"
 
 
+def password_problem(password: str) -> str | None:
+    """Gibt einen Fehlertext zurück, wenn das Passwort zu schwach ist, sonst None.
+    Regeln: mindestens 8 Zeichen, mindestens ein Buchstabe und eine Ziffer."""
+    pw = password or ""
+    if len(pw) < 8:
+        return "Passwort zu kurz (mindestens 8 Zeichen)."
+    if not any(c.isalpha() for c in pw) or not any(c.isdigit() for c in pw):
+        return "Passwort muss Buchstaben und Zahlen enthalten."
+    return None
+
+
 def hash_password(password: str) -> str:
     return _pwd.hash(password)
 

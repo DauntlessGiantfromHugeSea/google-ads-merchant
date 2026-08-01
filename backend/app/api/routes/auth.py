@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
 from app.core.crypto import decrypt, encrypt
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.security import create_access_token, hash_password, password_problem, verify_password
 from app.database import get_db
 from app.models import Organization, User, UserRole
 from app.schemas import (
@@ -48,8 +48,8 @@ def invite_info(token: str, db: Session = Depends(get_db)) -> dict:
 
 @router.post("/invite/{token}", response_model=Token)
 def invite_set_password(token: str, data: SetPasswordRequest, db: Session = Depends(get_db)) -> Token:
-    if len(data.password) < 6:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Passwort zu kurz (min. 6 Zeichen)")
+    if (msg := password_problem(data.password)):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, msg)
     u = _invite_user(token, db)
     u.hashed_password = hash_password(data.password)
     u.invite_token = ""
@@ -77,6 +77,8 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)) -> User:
         )
     if db.query(User).filter(User.email == data.email).first():
         raise HTTPException(status.HTTP_409_CONFLICT, "E-Mail bereits registriert")
+    if (msg := password_problem(data.password)):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, msg)
     org = Organization(name=data.organization_name)
     db.add(org)
     db.flush()

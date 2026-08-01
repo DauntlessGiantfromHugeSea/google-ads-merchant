@@ -58,6 +58,16 @@ export default function Dashboard() {
 
   return (
     <>
+      {user && !user.totp_enabled && (
+        <div className="section" style={{ borderLeft: "3px solid var(--teal)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <strong>🔒 Konto absichern</strong>
+            <div className="muted" style={{ fontSize: 13 }}>Aktiviere die Zwei-Faktor-Authentifizierung – zusätzlicher Schutz per Authenticator-App.</div>
+          </div>
+          <button className="btn btn-primary btn-sm" onClick={() => navigate("/konto")}>2FA einrichten</button>
+        </div>
+      )}
+
       {isAgency && dash && (
         <div className="hero">
           <h1>Übersicht</h1>
