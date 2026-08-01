@@ -501,3 +501,39 @@ code { color: #e9eaf2; }
   width: 100%; background: rgba(20,20,28,0.96); border: 1px solid var(--glass-border);
   border-radius: var(--radius); box-shadow: var(--glass-shadow); padding: 24px;
 }
+
+/* Sales / Gap-Analyse */
+.gap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; margin-top: 14px; }
+.gap-row { background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); padding: 14px; }
+.gap-head { display: flex; align-items: flex-start; gap: 10px; }
+.gap-icon { font-size: 20px; line-height: 1; }
+.gap-amp { width: 14px; height: 14px; border-radius: 50%; flex: none; box-shadow: 0 0 0 3px rgba(255,255,255,0.06); }
+.gap-scales { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.gap-scale { display: flex; align-items: center; gap: 10px; }
+.gap-scale-label { font-size: 11px; color: var(--muted); width: 30px; flex: none; text-transform: uppercase; letter-spacing: .05em; }
+.gap-seg { display: flex; gap: 4px; flex: 1; }
+.gap-seg-btn {
+  flex: 1; padding: 6px 4px; font-size: 12px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03); color: var(--muted);
+  transition: background .12s, color .12s, border-color .12s; font-family: var(--body);
+}
+.gap-seg-btn:hover { color: var(--ink); }
+.gap-seg-btn.on { background: var(--muted); color: #14141c; border-color: transparent; font-weight: 600; }
+.gap-seg-btn.on-accent { background: var(--coral); color: #2a1208; border-color: transparent; font-weight: 600; }
+.gap-reco { display: flex; flex-direction: column; gap: 10px; }
+.gap-reco-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.gap-reco-row:last-child { border-bottom: none; }
+.gap-reco-row .gap-amp { margin-top: 3px; }
+.gap-pkgs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.gap-pkg {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer;
+  background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+  transition: border-color .12s, background .12s;
+}
+.gap-pkg.on { border-color: var(--coral); background: rgba(248,131,107,0.07); }
+.gap-pkg input { width: 18px; height: 18px; flex: none; accent-color: var(--coral); }
+.gap-pkg-price { font-weight: 600; font-size: 14px; white-space: nowrap; }
+.gap-total {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  padding: 16px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
+}
