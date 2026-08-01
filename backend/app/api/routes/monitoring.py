@@ -20,7 +20,7 @@ from app.models import (
     Account, AccountType, Client, MonitorEvent, MonitorStatus, Organization, User,
 )
 from app.schemas import MonitorEventOut, MonitorOut
-from app.services import pdf
+from app.services import pdf, timeutil
 
 
 def _fmt_duration(seconds: float) -> str:
@@ -197,6 +197,8 @@ def client_report(client_id: str, days: int = 30, user: User = Depends(get_curre
     """Monitoring-Report (PDF) über einen Zeitraum – für Agentur und Kunde."""
     client = get_scoped_client(client_id, user, db)
     days = max(1, min(730, days))
+    org = db.get(Organization, user.organization_id)
+    tz = (org.timezone if org else None) or "Europe/Berlin"
     end = datetime.now(timezone.utc)
     start = end - timedelta(days=days)
 
@@ -225,7 +227,7 @@ def client_report(client_id: str, days: int = 30, user: User = Depends(get_curre
             "name": m.name, "url": m.url, "current": m.status,
             "current_label": label.get(m.status, m.status),
             "uptime": uptime, "incidents": incidents, "downtime": _fmt_duration(downtime),
-            "events": [{"time": _aware(e.created_at).strftime("%d.%m.%Y %H:%M"),
+            "events": [{"time": timeutil.fmt_local(e.created_at, "%d.%m.%Y %H:%M", tz),
                         "status": e.status, "label": label.get(e.status, e.status),
                         "message": e.message or ""} for e in win_events],
         })
@@ -233,8 +235,9 @@ def client_report(client_id: str, days: int = 30, user: User = Depends(get_curre
 
     report = {
         "client_name": client.name,
-        "period_start": start.strftime("%d.%m.%Y"), "period_end": end.strftime("%d.%m.%Y"),
-        "generated_at": end.strftime("%d.%m.%Y %H:%M UTC"),
+        "period_start": timeutil.fmt_local(start, "%d.%m.%Y", tz),
+        "period_end": timeutil.fmt_local(end, "%d.%m.%Y", tz),
+        "generated_at": timeutil.now_local_str("%d.%m.%Y %H:%M", tz, with_tz=True),
         "monitor_count": len(mon_rows), "overall_uptime": overall,
         "total_incidents": total_incidents, "monitors": mon_rows,
     }

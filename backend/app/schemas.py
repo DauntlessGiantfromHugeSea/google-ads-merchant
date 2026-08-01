@@ -782,6 +782,7 @@ class AgencyContact(BaseModel):
     agency_address: str = ""
     email_notifications: bool = True
     meeting_link: str = ""
+    timezone: str = "Europe/Berlin"
 
 
 # --- Passwort-Anforderung (öffentlicher Einreich-Link) ---

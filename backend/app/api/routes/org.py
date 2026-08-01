@@ -21,6 +21,7 @@ def get_contact(user: User = Depends(get_current_user), db: Session = Depends(ge
         agency_address=org.agency_address,
         email_notifications=org.email_notifications,
         meeting_link=org.meeting_link,
+        timezone=org.timezone or "Europe/Berlin",
     )
 
 
@@ -34,5 +35,6 @@ def set_contact(data: AgencyContact, user: User = Depends(require_admin), db: Se
     org.agency_address = data.agency_address
     org.email_notifications = data.email_notifications
     org.meeting_link = data.meeting_link
+    org.timezone = (data.timezone or "Europe/Berlin").strip()
     db.commit()
     return data

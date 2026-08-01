@@ -14,7 +14,7 @@ die direkt an den Browser gestreamt werden.
 from __future__ import annotations
 
 import io
-from datetime import datetime, timezone
+from app.services import timeutil
 from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -42,12 +42,13 @@ def _find_letterhead() -> Path | None:
     return None
 
 
-def render_report_html(report: dict, letterhead_image: str | None = None) -> str:
+def render_report_html(report: dict, letterhead_image: str | None = None,
+                       tz_name: str = timeutil.DEFAULT_TZ) -> str:
     template = _env.get_template("report.html")
     return template.render(
         report=report,
         letterhead_image=letterhead_image,
-        generated_at=datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M UTC"),
+        generated_at=timeutil.now_local_str("%d.%m.%Y %H:%M", tz_name, with_tz=True),
     )
 
 
@@ -79,10 +80,10 @@ def _pdf_from_html(html: str, letterhead: Path | None) -> bytes:
     return content_pdf
 
 
-def render_report_pdf(report: dict) -> bytes:
+def render_report_pdf(report: dict, tz_name: str = timeutil.DEFAULT_TZ) -> bytes:
     letterhead = _find_letterhead()
     image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
-    html = render_report_html(report, letterhead_image=image_url)
+    html = render_report_html(report, letterhead_image=image_url, tz_name=tz_name)
     return _pdf_from_html(html, letterhead)
 
 

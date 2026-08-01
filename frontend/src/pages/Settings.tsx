@@ -217,7 +217,7 @@ function Team() {
 
 function AgencyContactForm() {
   const toast = useToast();
-  const [f, setF] = useState({ agency_contact_name: "", agency_contact_email: "", agency_contact_phone: "", agency_contact_note: "", agency_address: "", email_notifications: true, meeting_link: "" });
+  const [f, setF] = useState({ agency_contact_name: "", agency_contact_email: "", agency_contact_phone: "", agency_contact_note: "", agency_address: "", email_notifications: true, meeting_link: "", timezone: "Europe/Berlin" });
   const [saving, setSaving] = useState(false);
   useEffect(() => { api.getAgencyContact().then(setF).catch(() => {}); }, []);
   const upd = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -244,6 +244,19 @@ function AgencyContactForm() {
         <div className="field"><label>Hinweis (z.B. Erreichbarkeit)</label><textarea className="input" value={f.agency_contact_note} onChange={upd("agency_contact_note")} /></div>
         <div className="field"><label>Standard-Terminlink (z.B. Zoom/Meet/Calendly)</label>
           <input className="input" value={f.meeting_link} onChange={upd("meeting_link")} placeholder="https://…" /></div>
+        <div className="field"><label>Zeitzone (für Anzeige &amp; Reports)</label>
+          <select className="select" value={f.timezone}
+            onChange={(e) => setF((p) => ({ ...p, timezone: e.target.value }))}>
+            <option value="Europe/Berlin">Berlin / Deutschland (Europe/Berlin)</option>
+            <option value="Europe/Vienna">Wien (Europe/Vienna)</option>
+            <option value="Europe/Zurich">Zürich (Europe/Zurich)</option>
+            <option value="Europe/London">London (Europe/London)</option>
+            <option value="Europe/Athens">Athen (Europe/Athens)</option>
+            <option value="America/New_York">New York (America/New_York)</option>
+            <option value="UTC">UTC</option>
+          </select>
+          <span className="muted" style={{ fontSize: 12 }}>Zeitstempel in Reports und Verträgen erscheinen in dieser Zeitzone.</span>
+        </div>
         <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, margin: "6px 0 12px" }}>
           <input type="checkbox" checked={f.email_notifications} onChange={(e) => setF((p) => ({ ...p, email_notifications: e.target.checked }))} />
           E-Mail-Benachrichtigung bei wichtigen Ereignissen (Vertrag unterschrieben, Angebot angenommen, neue Aufgabe/Anfrage/Termin) – über dein Microsoft-Konto.

@@ -81,6 +81,11 @@ class Organization(Base):
     email_notifications: Mapped[bool] = mapped_column(Boolean, default=True)
     # Untertitel auf der Login-Seite (editierbar im Branding)
     login_tagline: Mapped[str] = mapped_column(String(255), default="Reporting-Plattform für deine Kunden.")
+    # Standard-Terminlink (z. B. Zoom/Meet/Calendly)
+    meeting_link: Mapped[str] = mapped_column(String(512), default="")
+
+    # Zeitzone für Anzeige & Reports (IANA-Name, z. B. Europe/Berlin)
+    timezone: Mapped[str] = mapped_column(String(64), default="Europe/Berlin")
 
     # Microsoft-Mail (OAuth): verschlüsselter Refresh-Token + verbundene Adresse
     ms_refresh_token: Mapped[str] = mapped_column(Text, default="")

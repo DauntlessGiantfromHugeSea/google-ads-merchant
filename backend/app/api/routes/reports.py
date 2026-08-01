@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
-from app.models import ReportRun, User
+from app.models import Organization, ReportRun, User
 from app.schemas import ReportCreate, ReportDetailOut, ReportOut
 from app.services import pdf
 from app.services.reports import build_pdf_payload, run_report
@@ -83,7 +83,8 @@ def download_pdf(
     der Platte gespeichert – nach dem Download ist das PDF weg."""
     report = _load_report(client_id, report_id, user, db)
     payload = build_pdf_payload(db, report)
-    pdf_bytes = pdf.render_report_pdf(payload)
+    org = db.get(Organization, user.organization_id)
+    pdf_bytes = pdf.render_report_pdf(payload, tz_name=(org.timezone if org else None) or "Europe/Berlin")
     filename = f"report-{payload['client_name']}-{report.period_end}.pdf".replace(" ", "_")
     return StreamingResponse(
         io.BytesIO(pdf_bytes),

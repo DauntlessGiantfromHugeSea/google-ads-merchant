@@ -14,7 +14,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.models import Client, Contract, Organization, User
 from app.schemas import ContractCreate, ContractOut, ContractPatch, ContractSign
-from app.services import pdf
+from app.services import pdf, timeutil
 from app.services.notify import _agency_user_ids, notify_users
 
 settings = get_settings()
@@ -65,8 +65,8 @@ def _body_lines(body: str) -> list[dict]:
     return out
 
 
-def _pdf_payload(contract: Contract) -> dict:
-    fdt = lambda dt, f: _aware(dt).strftime(f) if dt else ""
+def _pdf_payload(contract: Contract, tz: str = "Europe/Berlin") -> dict:
+    fdt = lambda dt, f, with_tz=False: timeutil.fmt_local(dt, f, tz, with_tz) if dt else ""
     return {
         "id": contract.id, "number": contract.number, "date": contract.date,
         "title": contract.title, "body_lines": _body_lines(contract.body),
@@ -76,13 +76,13 @@ def _pdf_payload(contract: Contract) -> dict:
         # Kunde
         "signer_name": contract.signer_name, "signer_email": contract.signer_email,
         "signature_image": contract.signature_image,
-        "signed_at": fdt(contract.signed_at, "%d.%m.%Y %H:%M UTC"),
+        "signed_at": fdt(contract.signed_at, "%d.%m.%Y %H:%M", with_tz=True),
         "signed_date": fdt(contract.signed_at, "%d.%m.%Y"), "signed_ip": contract.signed_ip,
         "signed_place": contract.signed_place,
         # Agentur
         "agency_signer_name": contract.agency_signer_name,
         "agency_signature_image": contract.agency_signature_image,
-        "agency_signed_at": fdt(contract.agency_signed_at, "%d.%m.%Y %H:%M UTC"),
+        "agency_signed_at": fdt(contract.agency_signed_at, "%d.%m.%Y %H:%M", with_tz=True),
         "agency_signed_date": fdt(contract.agency_signed_at, "%d.%m.%Y"),
         "agency_signed_place": contract.agency_signed_place,
     }
@@ -259,7 +259,8 @@ def delete_contract(client_id: str, cid: str, user: User = Depends(require_agenc
 @client_router.get("/{cid}/pdf")
 def contract_pdf(client_id: str, cid: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     c = _load(client_id, cid, user, db)
-    data = pdf.render_contract_pdf(_pdf_payload(c))
+    org = db.get(Organization, c.organization_id)
+    data = pdf.render_contract_pdf(_pdf_payload(c, (org.timezone if org else None) or "Europe/Berlin"))
     fn = f"Vertrag-{c.number}.pdf".replace(" ", "_")
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})
@@ -327,7 +328,7 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
         "provider_block": _dedupe_lines(c.provider_block), "client_block": _dedupe_lines(c.client_block),
         "services": _services_view(c.services),
         "signer_name": c.signer_name, "signed_place": c.signed_place,
-        "signed_at": _aware(c.signed_at).strftime("%d.%m.%Y %H:%M") if c.signed_at else "",
+        "signed_at": timeutil.fmt_local(c.signed_at, "%d.%m.%Y %H:%M", (org.timezone if org else None) or "Europe/Berlin", with_tz=True) if c.signed_at else "",
         "client_signed": bool(c.signed_at),
         "agency_signer_name": c.agency_signer_name, "agency_signed_place": c.agency_signed_place,
         "agency_signed": bool(c.agency_signed_at),
@@ -343,7 +344,8 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
 def public_contract_pdf(token: str, db: Session = Depends(get_db)):
     """PDF über den Link – so kann auch der Kunde den (signierten) Vertrag laden."""
     c = _by_token(token, db)
-    data = pdf.render_contract_pdf(_pdf_payload(c))
+    org = db.get(Organization, c.organization_id)
+    data = pdf.render_contract_pdf(_pdf_payload(c, (org.timezone if org else None) or "Europe/Berlin"))
     fn = f"Vertrag-{c.number}.pdf".replace(" ", "_")
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})

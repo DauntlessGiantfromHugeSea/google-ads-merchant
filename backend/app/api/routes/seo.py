@@ -12,8 +12,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
-from app.models import Client, SeoAudit, User, UserRole
-from app.services import pdf, seo_audit
+from app.models import Client, Organization, SeoAudit, User, UserRole
+from app.services import pdf, seo_audit, timeutil
 from app.services.notify import _agency_user_ids, notify_users
 
 router = APIRouter(prefix="/api/seo", tags=["seo"])
@@ -128,8 +128,10 @@ def delete_audit(audit_id: str, user: User = Depends(require_agency), db: Sessio
 def audit_pdf(audit_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     a = _scoped_audit(audit_id, user, db)
     client = db.get(Client, a.client_id) if a.client_id else None
+    org = db.get(Organization, user.organization_id)
+    tz = (org.timezone if org else None) or "Europe/Berlin"
     payload = {**a.data, "client_name": client.name if client else "",
-               "created_at": a.created_at.strftime("%d.%m.%Y %H:%M")}
+               "created_at": timeutil.fmt_local(a.created_at, "%d.%m.%Y %H:%M", tz, with_tz=True)}
     data = pdf.render_seo_pdf(payload)
     fn = f"SEO-{payload.get('domain') or 'Audit'}.pdf".replace(" ", "_")
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",

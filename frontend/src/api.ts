@@ -176,7 +176,7 @@ export interface Account {
 export interface AgencyContact {
   agency_contact_name: string; agency_contact_email: string;
   agency_contact_phone: string; agency_contact_note: string; agency_address: string;
-  email_notifications: boolean; meeting_link: string;
+  email_notifications: boolean; meeting_link: string; timezone: string;
 }
 export interface SecretInfo { id: string; views_left: number; note: string; created_by: string; expires_at: string | null; }
 export interface SecretRequest { id: string; label: string; created_by: string; created_at: string; expires_at: string | null; submission_count: number; }
