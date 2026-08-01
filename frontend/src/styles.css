@@ -537,3 +537,28 @@ code { color: #e9eaf2; }
   display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
   padding: 16px; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm);
 }
+
+/* Dashboard-Cockpit */
+.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.empty.sm { padding: 12px 0; font-size: 13px; }
+.list-row.clickable { cursor: pointer; }
+.list-row.clickable:hover strong { color: var(--coral-soft); }
+.cockpit { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-bottom: 18px; }
+.cockpit-card { margin-bottom: 0; }
+.cockpit-card h2 { font-size: 17px; }
+.cockpit-list { margin-top: 6px; }
+.cockpit-list .list-row strong { font-size: 14px; }
+.appt-badge {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none;
+  min-width: 54px; padding: 5px 7px; border-radius: 10px; font-size: 10px; line-height: 1.25;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--muted);
+  text-transform: uppercase; letter-spacing: .02em;
+}
+.appt-badge b { font-size: 13px; color: var(--ink); letter-spacing: 0; }
+.appt-badge.today { background: rgba(45,212,191,0.14); border-color: rgba(45,212,191,0.4); color: var(--teal); }
+.appt-badge.today b { color: var(--teal); }
+.pipe-mini { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+.pipe-mini-row { display: flex; align-items: center; gap: 10px; padding: 8px 8px; border-radius: 8px; cursor: pointer; transition: background .12s; }
+.pipe-mini-row:hover { background: rgba(255,255,255,0.05); }
+.pipe-mini-label { flex: 1; font-size: 14px; }
+.pipe-mini-count { font-weight: 700; font-family: var(--display); font-size: 16px; }
