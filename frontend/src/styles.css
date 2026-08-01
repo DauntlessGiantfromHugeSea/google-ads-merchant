@@ -448,3 +448,56 @@ code { color: #e9eaf2; }
   .cal-cell { min-height: 64px; padding: 3px; }
   .cal-item { font-size: 10px; padding: 2px 4px; }
 }
+
+/* CRM / Pipeline-Board */
+.crm-board {
+  display: flex; gap: 14px; overflow-x: auto; padding-bottom: 10px;
+  scrollbar-width: thin;
+}
+.crm-col {
+  flex: 1 0 220px; min-width: 220px; max-width: 300px;
+  background: var(--glass); border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm); padding: 12px; display: flex; flex-direction: column;
+  transition: background .15s, border-color .15s;
+}
+.crm-col-over { background: var(--glass-2); border-color: var(--coral); }
+.crm-col-head { display: flex; align-items: center; gap: 8px; }
+.crm-col-head strong { font-family: var(--display); font-size: 14px; }
+.crm-dot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+.crm-count { margin-left: auto; font-size: 12px; color: var(--muted); background: rgba(255,255,255,0.06); padding: 1px 8px; border-radius: 999px; }
+.crm-col-sum { font-size: 12px; color: var(--teal); margin: 4px 0 10px; font-weight: 600; }
+.crm-col-body { display: flex; flex-direction: column; gap: 9px; min-height: 40px; flex: 1; }
+.crm-card {
+  position: relative; background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border);
+  border-radius: 10px; padding: 10px 11px; cursor: pointer;
+  transition: transform .1s, background .15s, box-shadow .15s;
+}
+.crm-card:hover { background: var(--glass-2); box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+.crm-card:active { cursor: grabbing; }
+.crm-card-top { display: flex; align-items: center; gap: 8px; }
+.crm-name { font-weight: 600; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.crm-pkg { font-size: 12px; color: var(--muted); margin: 5px 0 0 38px; }
+.crm-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+.crm-value { font-size: 13px; font-weight: 600; color: var(--ink); }
+.crm-fu { font-size: 11px; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.crm-fu.fu-red { background: rgba(248,113,113,0.18); color: #fca5a5; }
+.crm-fu.fu-amber { background: rgba(251,191,36,0.16); color: #fcd34d; }
+.crm-fu.fu-green { background: rgba(52,211,153,0.14); color: #6ee7b7; }
+.crm-edit {
+  position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 6px;
+  border: none; background: rgba(255,255,255,0.07); color: var(--muted); cursor: pointer;
+  opacity: 0; transition: opacity .12s, background .12s; font-size: 12px;
+}
+.crm-card:hover .crm-edit { opacity: 1; }
+.crm-edit:hover { background: var(--coral); color: #fff; }
+.crm-empty { font-size: 12px; color: var(--muted-light); text-align: center; padding: 14px 0; }
+
+/* Einfaches Modal */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 90; display: flex; align-items: center; justify-content: center;
+  background: rgba(4,4,8,0.6); backdrop-filter: blur(6px); padding: 20px;
+}
+.modal {
+  width: 100%; background: rgba(20,20,28,0.96); border: 1px solid var(--glass-border);
+  border-radius: var(--radius); box-shadow: var(--glass-shadow); padding: 24px;
+}

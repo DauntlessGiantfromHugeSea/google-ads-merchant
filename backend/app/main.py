@@ -29,6 +29,8 @@ _CLIENT_COLUMNS = {
     "company": "VARCHAR(255) DEFAULT ''", "billing_address": "TEXT DEFAULT ''",
     "vat_id": "VARCHAR(64) DEFAULT ''", "billing_email": "VARCHAR(255) DEFAULT ''",
     "participants_enabled": "BOOLEAN DEFAULT FALSE", "participant_token": "VARCHAR(64) DEFAULT ''",
+    "pipeline_stage": "VARCHAR(24) DEFAULT ''", "deal_value": "DOUBLE PRECISION DEFAULT 0",
+    "next_followup": "VARCHAR(10) DEFAULT ''",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",

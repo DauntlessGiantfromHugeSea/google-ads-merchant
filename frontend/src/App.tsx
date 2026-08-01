@@ -22,6 +22,7 @@ const Help = lazy(() => import("./pages/Help"));
 const Account = lazy(() => import("./pages/Account"));
 const Briefing = lazy(() => import("./pages/Briefing"));
 const Vertrag = lazy(() => import("./pages/Vertrag"));
+const Crm = lazy(() => import("./pages/Crm"));
 
 function Splash() {
   return <div className="boot-splash"><div className="boot-spinner" /></div>;
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="/settings" element={user?.role === "agency_admin" ? <Shell><Settings /></Shell> : <Navigate to="/" />} />
         <Route path="/vault" element={user ? <Shell><Vault /></Shell> : <Navigate to="/login" />} />
         <Route path="/planner" element={user && user.role !== "client_user" ? <Shell><Planner /></Shell> : <Navigate to="/" />} />
+        <Route path="/crm" element={user && user.role !== "client_user" ? <Shell><Crm /></Shell> : <Navigate to="/" />} />
         <Route path="/monitoring" element={user && user.role !== "client_user" ? <Shell><MonitoringPage /></Shell> : <Navigate to="/" />} />
         <Route path="/seo" element={user && user.role !== "client_user" ? <Shell><SeoPage /></Shell> : <Navigate to="/" />} />
         <Route path="/projects" element={<Navigate to="/planner" />} />
@@ -118,6 +120,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/")}>Kunden</button>
           {isAgency && (
             <>
+              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/crm")}>CRM</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/planner")}>Planner</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/monitoring")}>Monitoring</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/seo")}>SEO</button>

@@ -133,6 +133,11 @@ class Client(Base):
     tags: Mapped[str] = mapped_column(Text, default="")              # kommagetrennt
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Vertrieb / CRM-Pipeline
+    pipeline_stage: Mapped[str] = mapped_column(String(24), default="")  # lead/kontaktiert/angebot/gewonnen/verloren
+    deal_value: Mapped[float] = mapped_column(Float, default=0.0)        # erwarteter Wert (€)
+    next_followup: Mapped[str] = mapped_column(String(10), default="")   # nächstes Follow-up (YYYY-MM-DD)
+
     # Kontaktdaten
     contact_email: Mapped[str] = mapped_column(String(255), default="")
     contact_person: Mapped[str] = mapped_column(String(255), default="")

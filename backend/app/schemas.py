@@ -96,6 +96,9 @@ class ClientOut(BaseModel):
     vat_id: str = ""
     billing_email: str = ""
     participants_enabled: bool = False
+    pipeline_stage: str = ""
+    deal_value: float = 0.0
+    next_followup: str = ""
 
     class Config:
         from_attributes = True
@@ -124,6 +127,9 @@ class ClientPatch(BaseModel):
     contract_fee: str | None = None
     contract_billing: str | None = None
     contract_notes: str | None = None
+    pipeline_stage: str | None = None
+    deal_value: float | None = None
+    next_followup: str | None = None
 
 
 # --- To-Dos ---

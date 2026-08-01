@@ -60,6 +60,7 @@ export interface Client {
   contract_fee: string; contract_billing: string; contract_notes: string;
   company: string; billing_address: string; vat_id: string; billing_email: string;
   participants_enabled: boolean;
+  pipeline_stage: string; deal_value: number; next_followup: string;
 }
 export interface Participant {
   id: string; form_name: string; name: string; email: string; status: string;

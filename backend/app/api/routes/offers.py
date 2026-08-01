@@ -84,7 +84,10 @@ def _pdf_payload(offer: Offer, db: Session) -> dict:
 
 @client_router.post("", response_model=OfferOut, status_code=201)
 def create_offer(client_id: str, data: OfferCreate, user: User = Depends(require_agency), db: Session = Depends(get_db)):
-    get_scoped_client(client_id, user, db)
+    client = get_scoped_client(client_id, user, db)
+    # Pipeline vorziehen: bei früher Phase auf „angebot".
+    if (client.pipeline_stage or "lead") in ("", "lead", "kontaktiert"):
+        client.pipeline_stage = "angebot"
     number = data.number
     if not number:
         n = db.query(Offer).filter(Offer.organization_id == user.organization_id).count() + 1
@@ -134,6 +137,8 @@ def accept_offer_inapp(client_id: str, offer_id: str,
         client = db.get(Client, client_id)
         if client and client.status == "lead":
             client.status = "aktiv"
+        if client:
+            client.pipeline_stage = "gewonnen"
         notify_users(db, _agency_user_ids(db, offer.organization_id),
                      org_id=offer.organization_id, client_id=client_id,
                      type_="offer_accepted", title=f"Angebot {offer.number} angenommen",
@@ -318,6 +323,8 @@ def accept_offer(token: str, data: OfferAccept, db: Session = Depends(get_db)) -
     offer.accept_code_expires = None
     if client and client.status == "lead":
         client.status = "aktiv"
+    if client:
+        client.pipeline_stage = "gewonnen"
     # Agentur benachrichtigen
     notify_users(db, _agency_user_ids(db, offer.organization_id),
                  org_id=offer.organization_id, client_id=offer.client_id,
