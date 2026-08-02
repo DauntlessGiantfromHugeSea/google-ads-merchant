@@ -173,8 +173,9 @@ export interface Credential {
   username: string; notes: string; has_password: boolean; created_by: string; updated_at: string | null;
 }
 export interface TimeEntry {
-  id: string; client_id: string | null; client_name: string; description: string;
-  started_at: string; ended_at: string | null; duration_seconds: number; running: boolean;
+  id: string; client_id: string | null; client_name: string;
+  project_id: string | null; project_title: string; description: string;
+  started_at: string; ended_at: string | null; duration_seconds: number; billable_seconds: number; running: boolean;
 }
 export interface WorkLogEntry { id: string; date: string; title: string; text: string; author: string; }
 export interface ProjectDoc { sections: Record<string, string>; log: WorkLogEntry[]; status: string; updated_at: string | null; }
@@ -474,12 +475,12 @@ export const api = {
   // Zeiterfassung (Stoppuhr)
   timeEntries: () => request<TimeEntry[]>("/time"),
   runningTime: () => request<TimeEntry | null>("/time/running"),
-  startTimer: (d: { client_id?: string | null; description?: string }) =>
+  startTimer: (d: { client_id?: string | null; project_id?: string | null; description?: string }) =>
     request<TimeEntry>("/time/start", { method: "POST", body: JSON.stringify(d) }),
   stopTimer: (id: string) => request<TimeEntry>(`/time/${id}/stop`, { method: "POST" }),
-  addManualTime: (d: { client_id?: string | null; description?: string; date: string; minutes: number }) =>
+  addManualTime: (d: { client_id?: string | null; project_id?: string | null; description?: string; date: string; minutes: number }) =>
     request<TimeEntry>("/time/manual", { method: "POST", body: JSON.stringify(d) }),
-  updateTime: (id: string, d: { client_id?: string | null; description?: string; minutes?: number }) =>
+  updateTime: (id: string, d: { client_id?: string | null; project_id?: string | null; description?: string; minutes?: number; date?: string }) =>
     request<TimeEntry>(`/time/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteTime: (id: string) => request<void>(`/time/${id}`, { method: "DELETE" }),
 

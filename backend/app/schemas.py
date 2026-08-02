@@ -800,11 +800,13 @@ class VaultCredentialReveal(BaseModel):
 # --- Zeiterfassung (Stoppuhr) ---
 class TimeStart(BaseModel):
     client_id: str | None = None
+    project_id: str | None = None
     description: str = ""
 
 
 class TimeManual(BaseModel):
     client_id: str | None = None
+    project_id: str | None = None
     description: str = ""
     date: str = ""          # YYYY-MM-DD
     minutes: int = 0
@@ -812,18 +814,23 @@ class TimeManual(BaseModel):
 
 class TimePatch(BaseModel):
     client_id: str | None = None
+    project_id: str | None = None
     description: str | None = None
     minutes: int | None = None
+    date: str | None = None   # Tag verschieben (YYYY-MM-DD)
 
 
 class TimeEntryOut(BaseModel):
     id: str
     client_id: str | None = None
     client_name: str = ""
+    project_id: str | None = None
+    project_title: str = ""
     description: str = ""
     started_at: datetime
     ended_at: datetime | None = None
     duration_seconds: int = 0
+    billable_seconds: int = 0    # auf 15-Min-Takt aufgerundet
     running: bool = False
 
     class Config:

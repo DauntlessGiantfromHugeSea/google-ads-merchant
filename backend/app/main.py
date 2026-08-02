@@ -87,12 +87,16 @@ def _ensure_columns(insp, table: str, columns: dict) -> None:
 _ONBOARDING_COLUMNS = {
     "checklist": "JSON DEFAULT '[]'",
 }
+_TIME_COLUMNS = {
+    "project_id": "VARCHAR(36)",
+}
 
 
 def _ensure_schema() -> None:
     insp = inspect(engine)
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
     _ensure_columns(insp, "onboardings", _ONBOARDING_COLUMNS)
+    _ensure_columns(insp, "time_entries", _TIME_COLUMNS)
     _ensure_columns(insp, "offers", _OFFER_COLUMNS)
     _ensure_columns(insp, "contracts", _CONTRACT_COLUMNS)
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)

@@ -446,6 +446,7 @@ class TimeEntry(Base):
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
     client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
     client: Mapped[Client | None] = relationship()
 
 
