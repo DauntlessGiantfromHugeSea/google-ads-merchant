@@ -19,6 +19,7 @@ import WorkCalendar from "../sections/WorkCalendar";
 import Participants from "../sections/Participants";
 import Appointments from "../sections/Appointments";
 import Seo from "../sections/Seo";
+import Dashboards from "../sections/Dashboards";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -135,6 +136,7 @@ export default function ClientDetail() {
           {section === "reporting" && (
             <>
               <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
+              <Dashboards clientId={id} isAgency={isAgency} />
               <Seo clientId={id} isAgency={isAgency} />
             </>
           )}

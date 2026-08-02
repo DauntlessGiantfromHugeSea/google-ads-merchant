@@ -158,11 +158,22 @@ export interface Doc {
   id: string; filename: string; content_type: string; size: number;
   uploaded_by: string; created_at: string; client_id: string;
 }
+export interface Invoice {
+  id: string; number: string; amount: number; currency: string;
+  issue_date: string; due_date: string; status: string; overdue: boolean;
+  note: string; source: string; filename: string; has_file: boolean;
+  client_id: string | null; client_name: string; created_at: string;
+}
+export interface Dashboard {
+  id: string; label: string; url: string; position: number;
+  client_id: string; created_at: string;
+}
 export interface DashboardData {
   clients_total: number; open_todos: number; reports_total: number;
   status_counts: Record<string, number>;
   packages: { package: string; count: number; clients: { id: string; name: string; fee: string }[] }[];
   recent_updates: { client_id: string; client_name: string; title: string; body: string; category: string; author_name: string; created_at: string }[];
+  expiring_contracts?: { client_id: string; client_name: string; contract_end: string; days_left: number }[];
 }
 export interface ClientUpdate {
   id: string; title: string; body: string; category: string;
@@ -410,6 +421,39 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = `SEO-${domain}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
   },
+
+  // Rechnungs-Register (extern erstellte Rechnungen verwalten)
+  invoices: (clientId?: string, statusFilter?: string) => {
+    const p = new URLSearchParams();
+    if (clientId) p.set("client_id", clientId);
+    if (statusFilter) p.set("status_filter", statusFilter);
+    const qs = p.toString();
+    return request<Invoice[]>(`/invoices${qs ? `?${qs}` : ""}`);
+  },
+  uploadInvoice: (fields: { file?: File | null; client_id?: string; number?: string; amount?: string; currency?: string; issue_date?: string; due_date?: string; note?: string }) => {
+    const fd = new FormData();
+    if (fields.file) fd.set("file", fields.file);
+    for (const k of ["client_id", "number", "amount", "currency", "issue_date", "due_date", "note"] as const)
+      if (fields[k] != null) fd.set(k, String(fields[k]));
+    return request<Invoice>("/invoices", { method: "POST", body: fd });
+  },
+  updateInvoice: (id: string, d: Partial<Invoice>) =>
+    request<Invoice>(`/invoices/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteInvoice: (id: string) => request<void>(`/invoices/${id}`, { method: "DELETE" }),
+  remindInvoice: (id: string) => request<{ ok: boolean; to: string }>(`/invoices/${id}/remind`, { method: "POST" }),
+  async downloadInvoiceFile(id: string, filename: string) {
+    const res = await fetch(`/api/invoices/${id}/file`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = filename || "rechnung"; a.click(); URL.revokeObjectURL(url);
+  },
+
+  // Analytics-Dashboards (Embed je Kunde)
+  clientDashboards: (clientId: string) => request<Dashboard[]>(`/clients/${clientId}/dashboards`),
+  createDashboard: (clientId: string, d: { label: string; url: string }) =>
+    request<Dashboard>(`/clients/${clientId}/dashboards`, { method: "POST", body: JSON.stringify(d) }),
+  deleteDashboard: (clientId: string, id: string) =>
+    request<void>(`/clients/${clientId}/dashboards/${id}`, { method: "DELETE" }),
 
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),

@@ -575,3 +575,20 @@ code { color: #e9eaf2; }
 .cwv-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
 .cwv-value { font-family: var(--display); font-size: 22px; font-weight: 700; margin: 6px 0 4px; }
 .cwv-cat { font-size: 12px; font-weight: 600; }
+
+/* Rechnungs-Register */
+.inv-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.inv-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.inv-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.inv-table tr:last-child td { border-bottom: none; }
+.inv-table tr:hover td { background: rgba(255,255,255,0.03); }
+.inv-badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; white-space: nowrap; }
+.inv-open { background: rgba(148,163,184,0.18); color: #cbd5e1; }
+.inv-paid { background: rgba(52,211,153,0.16); color: #6ee7b7; }
+.inv-overdue { background: rgba(248,113,113,0.18); color: #fca5a5; }
+.inv-void { background: rgba(255,255,255,0.06); color: var(--muted); }
+.inv-actions { display: flex; align-items: center; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+
+/* Analytics-Embed */
+.embed-frame { position: relative; width: 100%; height: 620px; max-height: 78vh; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--glass-border); background: rgba(255,255,255,0.03); }
+.embed-frame iframe { width: 100%; height: 100%; border: 0; display: block; }

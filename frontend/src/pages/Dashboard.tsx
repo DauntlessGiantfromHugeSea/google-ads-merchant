@@ -154,6 +154,25 @@ export default function Dashboard() {
         )}
       </div>
 
+      {dash?.expiring_contracts && dash.expiring_contracts.length > 0 && (
+        <div className="section" style={{ borderLeft: "3px solid #fbbf24" }}>
+          <h2 style={{ margin: "0 0 8px" }}>⏳ Verträge laufen bald aus</h2>
+          <div className="cockpit-list">
+            {dash.expiring_contracts.map((e) => (
+              <div key={e.client_id} className="list-row clickable" onClick={() => navigate(`/clients/${e.client_id}`)}>
+                <div style={{ minWidth: 0 }}>
+                  <strong className="ellip">{e.client_name}</strong>
+                  <div className="muted" style={{ fontSize: 12 }}>endet {e.contract_end}</div>
+                </div>
+                <span className="muted" style={{ fontSize: 12, whiteSpace: "nowrap", color: e.days_left <= 7 ? "#f87171" : undefined }}>
+                  {e.days_left === 0 ? "heute" : `in ${e.days_left} Tag${e.days_left === 1 ? "" : "en"}`}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {downCount > 0 && (
         <div className="section" style={{ borderLeft: "3px solid #f87171" }}>
           <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
