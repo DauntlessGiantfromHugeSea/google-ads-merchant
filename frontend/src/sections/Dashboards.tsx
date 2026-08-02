@@ -34,7 +34,7 @@ export default function Dashboards({ clientId, isAgency }: { clientId: string; i
       <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h2 style={{ marginBottom: 2 }}>Live-Auswertung</h2>
-          <div className="muted" style={{ fontSize: 13 }}>Eingebettete Analytics – immer aktuell.</div>
+          <div className="muted" style={{ fontSize: 13 }}>Eingebettetes Dashboard (z. B. Looker Studio).</div>
         </div>
         {isAgency && (
           <button className="btn btn-ghost btn-sm" onClick={() => setAdding((s) => !s)}>
@@ -67,7 +67,7 @@ export default function Dashboards({ clientId, isAgency }: { clientId: string; i
               <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                 <strong>{d.label}</strong>
                 <div className="row-inline" style={{ alignItems: "center", gap: 8 }}>
-                  <a className="btn btn-ghost btn-sm" href={d.url} target="_blank" rel="noreferrer">↗ öffnen</a>
+                  <a className="btn btn-primary btn-sm" href={d.url} target="_blank" rel="noreferrer">↗ In neuem Tab öffnen</a>
                   {isAgency && <button className="del" onClick={() => del(d)}>entfernen</button>}
                 </div>
               </div>
@@ -75,6 +75,12 @@ export default function Dashboards({ clientId, isAgency }: { clientId: string; i
                 <iframe src={d.url} title={d.label} loading="lazy"
                   sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
                   referrerPolicy="no-referrer-when-downgrade" />
+              </div>
+              <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>
+                ℹ️ Bleibt das Dashboard leer oder verlangt „Drittanbieter-Cookies"? Das ist eine Browser-Vorgabe für
+                eingebettete Google-Berichte. Abhilfe: den Bericht in Looker Studio <strong>öffentlich freigeben</strong>
+                („Jeder mit dem Link") oder oben über <strong>„In neuem Tab öffnen"</strong> ansehen. Die Kennzahlen im
+                Bereich <strong>Analytics</strong> darüber funktionieren ganz ohne Einbettung.
               </div>
             </div>
           ))}

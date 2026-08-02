@@ -73,6 +73,10 @@ export default function Seo({ clientId, isAgency }: { clientId: string; isAgency
   const sorted = useMemo(() =>
     (data?.categories || []).filter((c: any) => c.findings.length), [data]);
 
+  // Kunden sehen SEO nur, wenn es eingerichtet ist: eine Messung liegt vor
+  // oder mindestens eine Website ist hinterlegt (dann können sie selbst messen).
+  if (!isAgency && loaded && audits.length === 0 && sites.length === 0) return null;
+
   return (
     <div className="section">
       <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>

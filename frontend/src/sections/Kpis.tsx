@@ -78,6 +78,9 @@ export default function Kpis({ clientId, isAgency }: { clientId: string; isAgenc
     finally { setBusy(false); }
   };
 
+  // Kunden sehen den Bereich nur, wenn er eingerichtet ist (Daten vorhanden).
+  if (!isAgency && loaded && kpis.length === 0) return null;
+
   const latest = kpis[kpis.length - 1];
   const prev = kpis[kpis.length - 2];
   const cards = useMemo(() =>
