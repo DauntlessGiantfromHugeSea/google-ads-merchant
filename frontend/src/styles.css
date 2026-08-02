@@ -614,3 +614,19 @@ code { color: #e9eaf2; }
 .ob-progress { height: 8px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; margin-top: 5px; }
 .ob-progress-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--coral)); border-radius: 999px; transition: width .3s ease; }
 .ob-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+
+/* Onboarding-Checkliste */
+.ob-group-head { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: 6px; }
+.ob-check { display: flex; align-items: flex-start; gap: 10px; padding: 8px; border-radius: 10px; transition: background .12s; }
+.ob-check:hover { background: rgba(255,255,255,0.03); }
+.ob-check.is-done .ob-check-text { text-decoration: line-through; color: var(--muted); }
+.ob-check-box { flex: none; padding-top: 6px; }
+.ob-check-box input { width: 18px; height: 18px; accent-color: var(--teal); cursor: pointer; }
+.ob-check-text { width: 100%; background: transparent; border: none; color: var(--ink); font-size: 14px; font-weight: 500; padding: 4px 2px; font-family: var(--body); }
+.ob-check-text:focus { outline: none; border-bottom: 1px solid var(--coral); }
+.ob-check-note { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid var(--glass-border); border-radius: 8px; color: var(--ink); font-size: 13px; padding: 5px 8px; margin-top: 4px; font-family: var(--body); }
+.ob-check-note:focus { outline: none; border-color: var(--coral); }
+.ob-check-note::placeholder { color: var(--muted-light); }
+.ob-check-del { flex: none; background: none; border: none; color: var(--muted-light); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 6px; opacity: 0; transition: opacity .12s, color .12s; }
+.ob-check:hover .ob-check-del { opacity: 1; }
+.ob-check-del:hover { color: #f87171; }

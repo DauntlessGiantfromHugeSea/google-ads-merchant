@@ -84,9 +84,15 @@ def _ensure_columns(insp, table: str, columns: dict) -> None:
                 conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {sqltype}"))
 
 
+_ONBOARDING_COLUMNS = {
+    "checklist": "JSON DEFAULT '[]'",
+}
+
+
 def _ensure_schema() -> None:
     insp = inspect(engine)
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
+    _ensure_columns(insp, "onboardings", _ONBOARDING_COLUMNS)
     _ensure_columns(insp, "offers", _OFFER_COLUMNS)
     _ensure_columns(insp, "contracts", _CONTRACT_COLUMNS)
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)

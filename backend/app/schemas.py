@@ -774,11 +774,13 @@ class InvoiceOut(BaseModel):
 # --- Onboarding (Ist-Analyse + Anforderungen je Kunde) ---
 class OnboardingIn(BaseModel):
     data: dict = {}
+    checklist: list = []
     status: str = "offen"
 
 
 class OnboardingOut(BaseModel):
     data: dict = {}
+    checklist: list = []
     status: str = "offen"
     updated_at: datetime | None = None
 

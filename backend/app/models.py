@@ -420,6 +420,7 @@ class Onboarding(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     data: Mapped[dict] = mapped_column(JSON, default=dict)            # {feld_id: text}
+    checklist: Mapped[list] = mapped_column(JSON, default=list)       # [{id,text,done,note,group}]
     status: Mapped[str] = mapped_column(String(16), default="offen")  # offen/in_arbeit/fertig
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)

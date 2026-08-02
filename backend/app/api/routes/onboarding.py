@@ -27,7 +27,8 @@ def _get_or_create(client_id: str, org_id: str, db: Session) -> Onboarding:
 def get_onboarding(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
     get_scoped_client(client_id, user, db)
     ob = _get_or_create(client_id, user.organization_id, db)
-    return OnboardingOut(data=ob.data or {}, status=ob.status, updated_at=ob.updated_at)
+    return OnboardingOut(data=ob.data or {}, checklist=ob.checklist or [],
+                         status=ob.status, updated_at=ob.updated_at)
 
 
 @router.put("", response_model=OnboardingOut)
@@ -36,10 +37,12 @@ def save_onboarding(client_id: str, payload: OnboardingIn,
     client = get_scoped_client(client_id, user, db)
     ob = _get_or_create(client_id, user.organization_id, db)
     ob.data = payload.data or {}
+    ob.checklist = payload.checklist or []
     ob.status = payload.status or "offen"
     # Abschluss spiegelt sich im Kunden-Flag (Badge "Onboarding offen").
     client.onboarding_completed = (ob.status == "fertig")
     ob.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(ob)
-    return OnboardingOut(data=ob.data or {}, status=ob.status, updated_at=ob.updated_at)
+    return OnboardingOut(data=ob.data or {}, checklist=ob.checklist or [],
+                         status=ob.status, updated_at=ob.updated_at)
