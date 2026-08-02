@@ -168,6 +168,7 @@ export interface Dashboard {
   id: string; label: string; url: string; position: number;
   client_id: string; created_at: string;
 }
+export interface Onboarding { data: Record<string, string>; status: string; updated_at: string | null; }
 export interface Kpi { period: string; metrics: Record<string, number>; extras: Record<string, number>; }
 export interface KpiSource { url: string; has_url: boolean; synced_at: string | null; error: string; }
 export interface DashboardData {
@@ -449,6 +450,11 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = filename || "rechnung"; a.click(); URL.revokeObjectURL(url);
   },
+
+  // Onboarding (Ist-Analyse + Anforderungen)
+  getOnboarding: (clientId: string) => request<Onboarding>(`/clients/${clientId}/onboarding`),
+  saveOnboarding: (clientId: string, d: { data: Record<string, string>; status: string }) =>
+    request<Onboarding>(`/clients/${clientId}/onboarding`, { method: "PUT", body: JSON.stringify(d) }),
 
   // Native Analytics-KPIs (Google-Sheet-Import)
   clientKpis: (clientId: string) => request<Kpi[]>(`/clients/${clientId}/kpis`),

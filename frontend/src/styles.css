@@ -609,3 +609,8 @@ code { color: #e9eaf2; }
 .kpi-bar-track { flex: 1; height: 10px; background: rgba(255,255,255,0.08); border-radius: 999px; overflow: hidden; }
 .kpi-bar-fill { height: 100%; border-radius: 999px; }
 .kpi-bar-val { width: 120px; flex: none; text-align: right; font-size: 13px; white-space: nowrap; }
+
+/* Onboarding */
+.ob-progress { height: 8px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden; margin-top: 5px; }
+.ob-progress-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--coral)); border-radius: 999px; transition: width .3s ease; }
+.ob-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }

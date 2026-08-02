@@ -411,6 +411,24 @@ class Invoice(Base):
     client: Mapped[Client | None] = relationship()
 
 
+class Onboarding(Base):
+    """Onboarding-Dokument je Kunde: Ist-Analyse (Status quo) + Anforderungen
+    ans Projekt. Von der Agentur geführt gepflegt. Felder liegen als JSON, damit
+    die Struktur ohne Migration erweitert werden kann."""
+
+    __tablename__ = "onboardings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)            # {feld_id: text}
+    status: Mapped[str] = mapped_column(String(16), default="offen")  # offen/in_arbeit/fertig
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship()
+
+
 class KpiSnapshot(Base):
     """Kennzahlen eines Kunden für einen Zeitraum (Monat). Importiert aus einem
     veröffentlichten Google-Sheet (CSV) – nativ dargestellt, kein iframe."""

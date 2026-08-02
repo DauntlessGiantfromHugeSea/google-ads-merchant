@@ -771,6 +771,18 @@ class InvoiceOut(BaseModel):
         from_attributes = True
 
 
+# --- Onboarding (Ist-Analyse + Anforderungen je Kunde) ---
+class OnboardingIn(BaseModel):
+    data: dict = {}
+    status: str = "offen"
+
+
+class OnboardingOut(BaseModel):
+    data: dict = {}
+    status: str = "offen"
+    updated_at: datetime | None = None
+
+
 # --- KPIs (nativer Analytics-Import aus Google-Sheet) ---
 class KpiSnapshotOut(BaseModel):
     period: str
