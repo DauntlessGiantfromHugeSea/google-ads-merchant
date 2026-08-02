@@ -168,6 +168,10 @@ export interface Dashboard {
   id: string; label: string; url: string; position: number;
   client_id: string; created_at: string;
 }
+export interface Credential {
+  id: string; label: string; url: string; category: string;
+  username: string; notes: string; has_password: boolean; created_by: string; updated_at: string | null;
+}
 export interface ChecklistEntry { id: string; text: string; done: boolean; note: string; group: string; }
 export interface Onboarding { data: Record<string, string>; checklist: ChecklistEntry[]; status: string; updated_at: string | null; }
 export interface Kpi { period: string; metrics: Record<string, number>; extras: Record<string, number>; }
@@ -451,6 +455,15 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = filename || "rechnung"; a.click(); URL.revokeObjectURL(url);
   },
+
+  // Interne Zugangsdaten (Team-Tresor je Kunde)
+  credentials: (clientId: string) => request<Credential[]>(`/clients/${clientId}/credentials`),
+  createCredential: (clientId: string, d: { label: string; url?: string; category?: string; username?: string; password?: string; notes?: string }) =>
+    request<Credential>(`/clients/${clientId}/credentials`, { method: "POST", body: JSON.stringify(d) }),
+  updateCredential: (clientId: string, id: string, d: { label: string; url?: string; category?: string; username?: string; password?: string; notes?: string }) =>
+    request<Credential>(`/clients/${clientId}/credentials/${id}`, { method: "PUT", body: JSON.stringify(d) }),
+  revealCredential: (clientId: string, id: string) => request<{ password: string }>(`/clients/${clientId}/credentials/${id}/reveal`),
+  deleteCredential: (clientId: string, id: string) => request<void>(`/clients/${clientId}/credentials/${id}`, { method: "DELETE" }),
 
   // Onboarding (Ist-Analyse + Anforderungen)
   getOnboarding: (clientId: string) => request<Onboarding>(`/clients/${clientId}/onboarding`),

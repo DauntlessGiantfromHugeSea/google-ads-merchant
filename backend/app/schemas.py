@@ -771,6 +771,32 @@ class InvoiceOut(BaseModel):
         from_attributes = True
 
 
+# --- Interne Zugangsdaten (Team-Tresor je Kunde) ---
+class VaultCredentialIn(BaseModel):
+    label: str = ""
+    url: str = ""
+    category: str = ""
+    username: str = ""
+    password: str = ""
+    notes: str = ""
+
+
+class VaultCredentialOut(BaseModel):
+    id: str
+    label: str
+    url: str
+    category: str
+    username: str = ""
+    notes: str = ""
+    has_password: bool = False
+    created_by: str = ""
+    updated_at: datetime | None = None
+
+
+class VaultCredentialReveal(BaseModel):
+    password: str = ""
+
+
 # --- Onboarding (Ist-Analyse + Anforderungen je Kunde) ---
 class OnboardingIn(BaseModel):
     data: dict = {}

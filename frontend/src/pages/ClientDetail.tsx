@@ -22,6 +22,7 @@ import Seo from "../sections/Seo";
 import Dashboards from "../sections/Dashboards";
 import Kpis from "../sections/Kpis";
 import Onboarding from "../sections/Onboarding";
+import Credentials from "../sections/Credentials";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -166,6 +167,7 @@ export default function ClientDetail() {
           {section === "contact" && (
             <>
               <Contact client={client} isAgency={isAgency} onSaved={setClient} />
+              {isAgency && <Credentials clientId={id} />}
               <Updates clientId={id} isAgency={isAgency} />
               {isAgency && <MailCompose client={client} />}
               {isAgency && (

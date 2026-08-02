@@ -630,3 +630,11 @@ code { color: #e9eaf2; }
 .ob-check-del { flex: none; background: none; border: none; color: var(--muted-light); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 6px; opacity: 0; transition: opacity .12s, color .12s; }
 .ob-check:hover .ob-check-del { opacity: 1; }
 .ob-check-del:hover { color: #f87171; }
+
+/* Interne Zugangsdaten */
+.cred-row { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.cred-row:last-child { border-bottom: none; }
+.cred-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.cred-link { color: var(--teal); }
+.cred-pw code { font-family: ui-monospace, monospace; color: var(--ink); background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 6px; }
+.cred-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; flex: none; }

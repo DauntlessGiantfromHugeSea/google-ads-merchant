@@ -446,6 +446,27 @@ class KpiSnapshot(Base):
     client: Mapped[Client] = relationship()
 
 
+class Credential(Base):
+    """Interne Zugangsdaten je Kunde (nur fürs Agentur-Team). Benutzername,
+    Passwort und Notiz liegen verschlüsselt (Fernet) in payload_enc – auch in
+    DB-Backups nur verschlüsselt lesbar."""
+
+    __tablename__ = "credentials"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    label: Mapped[str] = mapped_column(String(255), default="")
+    url: Mapped[str] = mapped_column(String(512), default="")
+    category: Mapped[str] = mapped_column(String(80), default="")
+    payload_enc: Mapped[str] = mapped_column(Text, default="")  # verschlüsselt: {username,password,notes}
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship()
+
+
 class Dashboard(Base):
     """Eingebettetes Analytics-Dashboard je Kunde (z. B. Looker-Studio-Embed).
     Es wird nur der Link gespeichert – keine Zugangsdaten, keine Daten."""
