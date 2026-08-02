@@ -406,7 +406,15 @@ export const api = {
     const a = document.createElement("a"); a.href = url; a.download = `Vertrag-${number}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
   },
   publicContract: (token: string) => request<any>(`/contracts/${token}`),
-  publicContractPdfUrl: (token: string) => `/api/contracts/${token}/pdf`,
+  revealContract: (token: string, d: { code?: string; email?: string }) =>
+    request<any>(`/contracts/${token}/reveal`, { method: "POST", body: JSON.stringify(d) }),
+  publicContractPdfUrl: (token: string, code = "", email = "") => {
+    const p = new URLSearchParams();
+    if (code) p.set("code", code);
+    if (email) p.set("email", email);
+    const qs = p.toString();
+    return `/api/contracts/${token}/pdf${qs ? `?${qs}` : ""}`;
+  },
   requestContractCode: (token: string) => request<{ sent?: boolean; already?: boolean; email_hint?: string }>(`/contracts/${token}/request-code`, { method: "POST" }),
   signContract: (token: string, d: { name?: string; email?: string; code?: string; signature_image?: string; place?: string }) =>
     request<{ ok: boolean }>(`/contracts/${token}/sign`, { method: "POST", body: JSON.stringify(d) }),

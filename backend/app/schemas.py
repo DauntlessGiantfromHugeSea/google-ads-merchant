@@ -479,6 +479,12 @@ class ContractSign(BaseModel):
     place: str = ""
 
 
+class ContractView(BaseModel):
+    """E-Mail-Verifizierung, um den Vertrag überhaupt anzuzeigen."""
+    code: str = ""
+    email: str = ""
+
+
 # --- Kundendaten-Formular (Intake) ---
 class IntakeCreate(BaseModel):
     label: str = ""

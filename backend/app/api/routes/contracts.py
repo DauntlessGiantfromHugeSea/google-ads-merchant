@@ -13,7 +13,7 @@ from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.config import get_settings
 from app.database import get_db
 from app.models import Client, Contract, Organization, User
-from app.schemas import ContractCreate, ContractOut, ContractPatch, ContractSign
+from app.schemas import ContractCreate, ContractOut, ContractPatch, ContractSign, ContractView
 from app.services import pdf, timeutil
 from app.services.notify import _agency_user_ids, notify_users
 
@@ -318,12 +318,35 @@ def _by_token(token: str, db: Session) -> Contract:
     return c
 
 
-@public_router.get("/{token}")
-def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
-    c = _by_token(token, db)
-    org = db.get(Organization, c.organization_id)
-    client = db.get(Client, c.client_id)
+def _access_ok(c: Contract, client, db, code: str, email: str) -> bool:
+    """True, wenn der Betrachter berechtigt ist, den Vertrag zu sehen.
+
+    - Mit E-Mail-Versand: gültiger Code (vorher angefordert) nötig.
+    - Ohne Versand, aber mit hinterlegter E-Mail: eingegebene Adresse muss passen.
+    - Ganz ohne hinterlegte E-Mail: nicht per E-Mail schützbar -> sichtbar.
+    """
+    if _mail_ready(c, client, db):
+        exp = _aware(c.sign_code_expires)
+        return bool(c.sign_code and exp and exp >= datetime.now(timezone.utc)
+                    and (code or "").strip() == c.sign_code)
+    target = _client_email(client).lower()
+    if target:
+        return (email or "").strip().lower() == target
+    return True
+
+
+def _verify_access(c: Contract, client, db, code: str, email: str) -> None:
+    if not _access_ok(c, client, db, code, email):
+        if _mail_ready(c, client, db):
+            raise HTTPException(status.HTTP_403_FORBIDDEN,
+                                "Bitte bestätige zuerst deine E-Mail (Code anfordern).")
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Die E-Mail-Adresse stimmt nicht mit der hinterlegten Adresse überein.")
+
+
+def _full_payload(c: Contract, org, client, db) -> dict:
     return {
+        "locked": False,
         "number": c.number, "date": c.date, "title": c.title, "body": c.body, "status": c.status,
         "provider_block": _dedupe_lines(c.provider_block), "client_block": _dedupe_lines(c.client_block),
         "services": _services_view(c.services),
@@ -340,11 +363,43 @@ def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
     }
 
 
-@public_router.get("/{token}/pdf")
-def public_contract_pdf(token: str, db: Session = Depends(get_db)):
-    """PDF über den Link – so kann auch der Kunde den (signierten) Vertrag laden."""
+@public_router.get("/{token}")
+def public_contract(token: str, db: Session = Depends(get_db)) -> dict:
+    """Ohne Verifizierung nur Minimal-Infos – die Vertragsdaten bleiben verdeckt."""
     c = _by_token(token, db)
     org = db.get(Organization, c.organization_id)
+    client = db.get(Client, c.client_id)
+    has_email = bool(_client_email(client))
+    mail = _mail_ready(c, client, db)
+    # Ohne hinterlegte E-Mail lässt sich der Link nicht per Mail schützen -> direkt zeigen.
+    if not has_email:
+        return _full_payload(c, org, client, db)
+    return {
+        "locked": True,
+        "number": c.number,
+        "agency": {"name": getattr(org, "agency_contact_name", "") or (org.name if org else ""),
+                   "email": getattr(org, "agency_contact_email", "") or ""},
+        "verify": {"mail": mail, "email_hint": _mask_email(_client_email(client)), "has_email": has_email},
+    }
+
+
+@public_router.post("/{token}/reveal")
+def reveal_contract(token: str, data: ContractView, db: Session = Depends(get_db)) -> dict:
+    """Vertragsdaten nach E-Mail-Verifizierung (Code oder passende Adresse)."""
+    c = _by_token(token, db)
+    org = db.get(Organization, c.organization_id)
+    client = db.get(Client, c.client_id)
+    _verify_access(c, client, db, data.code, data.email)
+    return _full_payload(c, org, client, db)
+
+
+@public_router.get("/{token}/pdf")
+def public_contract_pdf(token: str, code: str = "", email: str = "", db: Session = Depends(get_db)):
+    """PDF über den Link – nur nach E-Mail-Verifizierung (Code/Adresse als Query)."""
+    c = _by_token(token, db)
+    org = db.get(Organization, c.organization_id)
+    client = db.get(Client, c.client_id)
+    _verify_access(c, client, db, code, email)
     data = pdf.render_contract_pdf(_pdf_payload(c, (org.timezone if org else None) or "Europe/Berlin"))
     fn = f"Vertrag-{c.number}.pdf".replace(" ", "_")
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
@@ -354,8 +409,6 @@ def public_contract_pdf(token: str, db: Session = Depends(get_db)):
 @public_router.post("/{token}/request-code")
 def request_code(token: str, db: Session = Depends(get_db)) -> dict:
     c = _by_token(token, db)
-    if c.signed_at:
-        return {"already": True}
     client = db.get(Client, c.client_id)
     to = _client_email(client)
     org = db.get(Organization, c.organization_id)
@@ -365,7 +418,7 @@ def request_code(token: str, db: Session = Depends(get_db)) -> dict:
     c.sign_code = code
     c.sign_code_expires = datetime.now(timezone.utc) + timedelta(minutes=15)
     from app.api.routes.mail import render_email_html, send_via_graph
-    body = (f"Guten Tag,\n\nzur digitalen Unterschrift von Vertrag {c.number} lautet dein "
+    body = (f"Guten Tag,\n\nzum Ansehen und Unterschreiben von Vertrag {c.number} lautet dein "
             f"Bestätigungscode:\n\n    {code}\n\nDer Code ist 15 Minuten gültig.")
     send_via_graph(org, to, f"Bestätigungscode für Vertrag {c.number}", render_email_html(org, body), html=True)
     db.commit()

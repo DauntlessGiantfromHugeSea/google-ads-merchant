@@ -27,6 +27,13 @@ export default function Vertrag() {
     catch (err) { setError((err as Error).message); }
     finally { setBusy(false); }
   };
+  // E-Mail-Verifizierung, um den Vertrag überhaupt zu zeigen.
+  const reveal = async (e: React.FormEvent) => {
+    e.preventDefault(); setBusy(true); setError("");
+    try { const full = await api.revealContract(token, { code, email }); setC(full); }
+    catch (err) { setError((err as Error).message); }
+    finally { setBusy(false); }
+  };
   const sign = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setError("");
     try { await api.signContract(token, { name, email, code, signature_image: sig, place }); setDone(true); load(); }
@@ -36,6 +43,46 @@ export default function Vertrag() {
 
   if (error && !c) return <div className="auth-wrap"><div className="auth-card">{error}</div></div>;
   if (!c) return <div className="auth-wrap"><div className="auth-card">Lädt…</div></div>;
+
+  // Verdeckt, bis die E-Mail bestätigt ist (schützt die Vertragsdaten).
+  if (c.locked) {
+    return (
+      <div className="auth-wrap" style={{ padding: "40px 16px" }}>
+        <form className="auth-card" style={{ maxWidth: 460, color: "#fff" }} onSubmit={reveal}>
+          <img className="login-logo" src="/api/branding/logo" alt=""
+            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "/logo.svg"; }} />
+          <h1 style={{ fontSize: 20 }}>🔒 Vertrag {c.number}</h1>
+          <p className="sub" style={{ marginTop: 4 }}>
+            Zum Schutz deiner Daten ist der Vertrag erst nach einer kurzen E-Mail-Bestätigung sichtbar.
+          </p>
+          {c.verify?.mail ? (
+            !codeSent ? (
+              <>
+                <p className="sub">Wir senden einen Code an <strong>{c.verify.email_hint}</strong>.</p>
+                <button type="button" className="btn btn-primary" style={{ width: "100%", justifyContent: "center" }}
+                  onClick={requestCode} disabled={busy}>{busy ? "…" : "Bestätigungscode senden"}</button>
+              </>
+            ) : (
+              <div className="field"><label>Bestätigungscode aus der E-Mail</label>
+                <input className="input" inputMode="numeric" autoComplete="one-time-code" placeholder="6-stellig"
+                  value={code} onChange={(e) => setCode(e.target.value)} required /></div>
+            )
+          ) : (
+            <div className="field"><label>Deine hinterlegte E-Mail-Adresse</label>
+              <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required
+                placeholder={c.verify?.email_hint || "name@firma.de"} /></div>
+          )}
+          {(codeSent || !c.verify?.mail) && (
+            <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", marginTop: 12 }}
+              disabled={busy}>{busy ? "…" : "Vertrag ansehen"}</button>
+          )}
+          {msg && <div className="sub" style={{ marginTop: 10, color: "#6ee7b7" }}>{msg}</div>}
+          {error && <div className="error" style={{ marginTop: 10 }}>{error}</div>}
+        </form>
+      </div>
+    );
+  }
+
   const signed = c.status === "signed" || done;
 
   return (
@@ -94,7 +141,7 @@ export default function Vertrag() {
           <div style={{ marginTop: 6, padding: "12px 14px", background: "rgba(52,211,153,0.18)", color: "#6ee7b7", borderRadius: 10 }}>
             ✓ Von dir rechtsverbindlich unterschrieben{c.signed_at ? ` am ${c.signed_at}` : ""}. Vielen Dank!
             <div style={{ marginTop: 10 }}>
-              <a className="btn btn-ghost btn-sm" href={api.publicContractPdfUrl(token)} target="_blank" rel="noreferrer">Vertrag als PDF herunterladen</a>
+              <a className="btn btn-ghost btn-sm" href={api.publicContractPdfUrl(token, code, email)} target="_blank" rel="noreferrer">Vertrag als PDF herunterladen</a>
             </div>
           </div>
         ) : (
