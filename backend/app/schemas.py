@@ -797,6 +797,39 @@ class VaultCredentialReveal(BaseModel):
     password: str = ""
 
 
+# --- Zeiterfassung (Stoppuhr) ---
+class TimeStart(BaseModel):
+    client_id: str | None = None
+    description: str = ""
+
+
+class TimeManual(BaseModel):
+    client_id: str | None = None
+    description: str = ""
+    date: str = ""          # YYYY-MM-DD
+    minutes: int = 0
+
+
+class TimePatch(BaseModel):
+    client_id: str | None = None
+    description: str | None = None
+    minutes: int | None = None
+
+
+class TimeEntryOut(BaseModel):
+    id: str
+    client_id: str | None = None
+    client_name: str = ""
+    description: str = ""
+    started_at: datetime
+    ended_at: datetime | None = None
+    duration_seconds: int = 0
+    running: bool = False
+
+    class Config:
+        from_attributes = True
+
+
 # --- Projekt-Dokumentation (feste Boxen + Arbeitsprotokoll) ---
 class ProjectDocIn(BaseModel):
     sections: dict = {}

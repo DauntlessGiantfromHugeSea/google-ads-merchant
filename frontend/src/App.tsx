@@ -25,6 +25,7 @@ const Vertrag = lazy(() => import("./pages/Vertrag"));
 const Crm = lazy(() => import("./pages/Crm"));
 const Sales = lazy(() => import("./pages/Sales"));
 const Invoices = lazy(() => import("./pages/Invoices"));
+const Zeit = lazy(() => import("./pages/Zeit"));
 
 function Splash() {
   return <div className="boot-splash"><div className="boot-spinner" /></div>;
@@ -90,6 +91,7 @@ export default function App() {
         <Route path="/crm" element={user && user.role !== "client_user" ? <Shell><Crm /></Shell> : <Navigate to="/" />} />
         <Route path="/sales" element={user && user.role !== "client_user" ? <Shell><Sales /></Shell> : <Navigate to="/" />} />
         <Route path="/rechnungen" element={user && user.role !== "client_user" ? <Shell><Invoices /></Shell> : <Navigate to="/" />} />
+        <Route path="/zeit" element={user && user.role !== "client_user" ? <Shell><Zeit /></Shell> : <Navigate to="/" />} />
         <Route path="/monitoring" element={user && user.role !== "client_user" ? <Shell><MonitoringPage /></Shell> : <Navigate to="/" />} />
         <Route path="/seo" element={user && user.role !== "client_user" ? <Shell><SeoPage /></Shell> : <Navigate to="/" />} />
         <Route path="/projects" element={<Navigate to="/planner" />} />
@@ -128,6 +130,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/sales")}>Sales</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/rechnungen")}>Rechnungen</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/planner")}>Planner</button>
+              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/zeit")}>Zeit</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/monitoring")}>Monitoring</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/seo")}>SEO</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>

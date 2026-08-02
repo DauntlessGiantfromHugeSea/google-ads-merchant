@@ -430,6 +430,25 @@ class Onboarding(Base):
     client: Mapped[Client] = relationship()
 
 
+class TimeEntry(Base):
+    """Zeiterfassung je Nutzer (Stoppuhr oder manuell). Läuft, solange
+    ended_at leer ist; duration_seconds wird beim Stoppen berechnet."""
+
+    __tablename__ = "time_entries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    description: Mapped[str] = mapped_column(Text, default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    duration_seconds: Mapped[int] = mapped_column(default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    client: Mapped[Client | None] = relationship()
+
+
 class ProjectDoc(Base):
     """Projekt-Dokumentation je Kunde: feste Abschnitts-Boxen (inkl. aktuellem
     Arbeitsstand) + Arbeitsprotokoll (was wurde gemacht). Beides als PDF."""
