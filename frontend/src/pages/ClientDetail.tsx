@@ -20,6 +20,7 @@ import Participants from "../sections/Participants";
 import Appointments from "../sections/Appointments";
 import Seo from "../sections/Seo";
 import Dashboards from "../sections/Dashboards";
+import Kpis from "../sections/Kpis";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -136,6 +137,7 @@ export default function ClientDetail() {
           {section === "reporting" && (
             <>
               <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
+              <Kpis clientId={id} isAgency={isAgency} />
               <Dashboards clientId={id} isAgency={isAgency} />
               <Seo clientId={id} isAgency={isAgency} />
             </>

@@ -771,6 +771,24 @@ class InvoiceOut(BaseModel):
         from_attributes = True
 
 
+# --- KPIs (nativer Analytics-Import aus Google-Sheet) ---
+class KpiSnapshotOut(BaseModel):
+    period: str
+    metrics: dict = {}
+    extras: dict = {}
+
+
+class KpiSourceIn(BaseModel):
+    url: str = ""
+
+
+class KpiSourceOut(BaseModel):
+    url: str = ""
+    has_url: bool = False
+    synced_at: datetime | None = None
+    error: str = ""
+
+
 # --- Analytics-Dashboards (Embed-Link je Kunde) ---
 class DashboardCreate(BaseModel):
     label: str = ""

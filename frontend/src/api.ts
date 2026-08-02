@@ -168,6 +168,8 @@ export interface Dashboard {
   id: string; label: string; url: string; position: number;
   client_id: string; created_at: string;
 }
+export interface Kpi { period: string; metrics: Record<string, number>; extras: Record<string, number>; }
+export interface KpiSource { url: string; has_url: boolean; synced_at: string | null; error: string; }
 export interface DashboardData {
   clients_total: number; open_todos: number; reports_total: number;
   status_counts: Record<string, number>;
@@ -447,6 +449,13 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = filename || "rechnung"; a.click(); URL.revokeObjectURL(url);
   },
+
+  // Native Analytics-KPIs (Google-Sheet-Import)
+  clientKpis: (clientId: string) => request<Kpi[]>(`/clients/${clientId}/kpis`),
+  getKpiSource: (clientId: string) => request<KpiSource>(`/clients/${clientId}/kpis/source`),
+  setKpiSource: (clientId: string, url: string) =>
+    request<KpiSource>(`/clients/${clientId}/kpis/source`, { method: "PUT", body: JSON.stringify({ url }) }),
+  syncKpis: (clientId: string) => request<KpiSource>(`/clients/${clientId}/kpis/sync`, { method: "POST" }),
 
   // Analytics-Dashboards (Embed je Kunde)
   clientDashboards: (clientId: string) => request<Dashboard[]>(`/clients/${clientId}/dashboards`),

@@ -7,8 +7,8 @@ from sqlalchemy import inspect, text
 
 from app.api.routes import (
     ads_activity, appointments, auth, branding, briefings, clients, contracts, dashboard,
-    documents, embeds, intake, invoices, launch, mail, monitoring, notifications, offers, org,
-    packages, participants, projects, reports, requests, secrets, seo, tasks, team,
+    documents, embeds, intake, invoices, kpis, launch, mail, monitoring, notifications, offers,
+    org, packages, participants, projects, reports, requests, secrets, seo, tasks, team,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -32,6 +32,7 @@ _CLIENT_COLUMNS = {
     "pipeline_stage": "VARCHAR(24) DEFAULT ''", "deal_value": "DOUBLE PRECISION DEFAULT 0",
     "next_followup": "VARCHAR(10) DEFAULT ''",
     "contract_end_notified": "BOOLEAN DEFAULT FALSE",
+    "kpi_sheet_url": "TEXT DEFAULT ''", "kpi_synced_at": "TIMESTAMP",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",
@@ -163,6 +164,7 @@ app.include_router(appointments.client_router)
 app.include_router(appointments.global_router)
 app.include_router(invoices.router)
 app.include_router(embeds.router)
+app.include_router(kpis.router)
 
 
 @app.get("/api/health")

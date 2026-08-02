@@ -167,6 +167,10 @@ class Client(Base):
     # Erinnerung "Vertrag läuft aus" schon verschickt? (Reset, wenn sich contract_end ändert)
     contract_end_notified: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Analytics: veröffentlichtes Google-Sheet (CSV) für den automatischen KPI-Import
+    kpi_sheet_url: Mapped[str] = mapped_column(Text, default="")
+    kpi_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     # Teilnehmermanagement (Contact Form 7 -> Webhook)
     participants_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     participant_token: Mapped[str] = mapped_column(String(64), default="")
@@ -405,6 +409,22 @@ class Invoice(Base):
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
     client: Mapped[Client | None] = relationship()
+
+
+class KpiSnapshot(Base):
+    """Kennzahlen eines Kunden für einen Zeitraum (Monat). Importiert aus einem
+    veröffentlichten Google-Sheet (CSV) – nativ dargestellt, kein iframe."""
+
+    __tablename__ = "kpi_snapshots"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    period: Mapped[str] = mapped_column(String(7), default="")  # YYYY-MM
+    metrics: Mapped[dict] = mapped_column(JSON, default=dict)   # {kanonischer_key: wert}
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship()
 
 
 class Dashboard(Base):
