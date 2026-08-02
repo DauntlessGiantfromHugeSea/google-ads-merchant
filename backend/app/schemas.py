@@ -738,6 +738,57 @@ class DocumentOut(BaseModel):
         from_attributes = True
 
 
+# --- Rechnungen (extern erstellt, hier verwaltet) ---
+class InvoiceUpdate(BaseModel):
+    number: str | None = None
+    amount: float | None = None
+    currency: str | None = None
+    issue_date: str | None = None
+    due_date: str | None = None
+    status: str | None = None
+    note: str | None = None
+    client_id: str | None = None
+
+
+class InvoiceOut(BaseModel):
+    id: str
+    number: str
+    amount: float
+    currency: str
+    issue_date: str
+    due_date: str
+    status: str          # offen/bezahlt/storniert (überfällig wird abgeleitet)
+    overdue: bool = False
+    note: str
+    source: str
+    filename: str
+    has_file: bool = False
+    client_id: str | None = None
+    client_name: str = ""
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- Analytics-Dashboards (Embed-Link je Kunde) ---
+class DashboardCreate(BaseModel):
+    label: str = ""
+    url: str
+
+
+class DashboardOut(BaseModel):
+    id: str
+    label: str
+    url: str
+    position: int
+    client_id: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # --- Team ---
 class TeamInvite(BaseModel):
     email: EmailStr

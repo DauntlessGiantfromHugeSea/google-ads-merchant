@@ -138,7 +138,11 @@ def update_client(
 ):
     """Kontakt- und Vertragsdaten bearbeiten (nur Agentur)."""
     client = get_scoped_client(client_id, user, db)
-    for field, value in data.model_dump(exclude_unset=True).items():
+    patch = data.model_dump(exclude_unset=True)
+    # Bei geändertem Vertragsende die Ablauf-Erinnerung neu scharf schalten.
+    if "contract_end" in patch and patch["contract_end"] != client.contract_end:
+        client.contract_end_notified = False
+    for field, value in patch.items():
         setattr(client, field, value)
     db.commit()
     db.refresh(client)

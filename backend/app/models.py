@@ -164,6 +164,8 @@ class Client(Base):
     contract_fee: Mapped[str] = mapped_column(String(64), default="")     # z.B. "990 € / Monat"
     contract_billing: Mapped[str] = mapped_column(String(64), default="")  # monatlich/jährlich
     contract_notes: Mapped[str] = mapped_column(Text, default="")
+    # Erinnerung "Vertrag läuft aus" schon verschickt? (Reset, wenn sich contract_end ändert)
+    contract_end_notified: Mapped[bool] = mapped_column(Boolean, default=False)
 
     # Teilnehmermanagement (Contact Form 7 -> Webhook)
     participants_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -372,6 +374,53 @@ class Document(Base):
     uploaded_by: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship()
+
+
+class Invoice(Base):
+    """Extern erstellte Rechnung (E-Rechnung), hier nur zur Übersicht/Status
+    verwaltet. Die Datei wird optional mitgespeichert."""
+
+    __tablename__ = "invoices"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    number: Mapped[str] = mapped_column(String(128), default="")
+    amount: Mapped[float] = mapped_column(Float, default=0.0)
+    currency: Mapped[str] = mapped_column(String(8), default="EUR")
+    issue_date: Mapped[str] = mapped_column(String(10), default="")   # YYYY-MM-DD
+    due_date: Mapped[str] = mapped_column(String(10), default="")     # YYYY-MM-DD
+    status: Mapped[str] = mapped_column(String(16), default="offen")  # offen/bezahlt/storniert
+    note: Mapped[str] = mapped_column(Text, default="")
+    source: Mapped[str] = mapped_column(String(16), default="upload")  # upload/xrechnung
+    # optional gespeicherte Datei
+    filename: Mapped[str] = mapped_column(String(512), default="")
+    content_type: Mapped[str] = mapped_column(String(128), default="")
+    data_base64: Mapped[str] = mapped_column(Text, default="")
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    client: Mapped[Client | None] = relationship()
+
+
+class Dashboard(Base):
+    """Eingebettetes Analytics-Dashboard je Kunde (z. B. Looker-Studio-Embed).
+    Es wird nur der Link gespeichert – keine Zugangsdaten, keine Daten."""
+
+    __tablename__ = "dashboards"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    label: Mapped[str] = mapped_column(String(255), default="")
+    url: Mapped[str] = mapped_column(Text, default="")
+    position: Mapped[int] = mapped_column(default=0)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
     client: Mapped[Client] = relationship()
 

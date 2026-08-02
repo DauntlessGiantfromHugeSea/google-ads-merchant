@@ -1,12 +1,53 @@
 """Agentur-Dashboard: Kennzahlen, gebuchte Pakete, letzte Aktivitäten."""
+from datetime import date, timedelta
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import require_agency
 from app.database import get_db
 from app.models import Client, ClientUpdate, ReportRun, Todo, User
+from app.services.notify import _agency_user_ids, notify_users
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+
+_EXPIRY_WINDOW_DAYS = 30  # so viele Tage vorher warnen
+
+
+def _days_until(iso: str) -> int | None:
+    try:
+        return (date.fromisoformat(iso[:10]) - date.today()).days
+    except (ValueError, TypeError):
+        return None
+
+
+def _check_expiring_contracts(db: Session, clients: list[Client], org_id: str) -> list[dict]:
+    """Verträge, die bald auslaufen. Beim Eintritt ins Fenster einmalig die
+    Agentur benachrichtigen (Flag verhindert Wiederholung)."""
+    expiring: list[dict] = []
+    agency_ids = None
+    changed = False
+    for c in clients:
+        if c.status == "beendet" or not c.contract_end:
+            continue
+        days = _days_until(c.contract_end)
+        if days is None or days < 0 or days > _EXPIRY_WINDOW_DAYS:
+            continue
+        expiring.append({"client_id": c.id, "client_name": c.name,
+                         "contract_end": c.contract_end, "days_left": days})
+        if not c.contract_end_notified:
+            if agency_ids is None:
+                agency_ids = _agency_user_ids(db, org_id)
+            notify_users(db, agency_ids, org_id=org_id, client_id=c.id,
+                         type_="contract_expiring", title="Vertrag läuft bald aus",
+                         body=f"{c.name}: endet am {c.contract_end} (in {days} Tagen)",
+                         link=f"/clients/{c.id}")
+            c.contract_end_notified = True
+            changed = True
+    if changed:
+        db.commit()
+    expiring.sort(key=lambda e: e["days_left"])
+    return expiring
 
 
 @router.get("")
@@ -38,6 +79,8 @@ def dashboard(user: User = Depends(require_agency), db: Session = Depends(get_db
                 "author_name": u.author_name, "created_at": u.created_at.isoformat(),
             })
 
+    expiring = _check_expiring_contracts(db, clients, org)
+
     return {
         "clients_total": len(clients),
         "status_counts": status_counts,
@@ -47,4 +90,5 @@ def dashboard(user: User = Depends(require_agency), db: Session = Depends(get_db
             [{"package": k, "count": len(v), "clients": v} for k, v in packages.items()],
             key=lambda p: p["count"], reverse=True),
         "recent_updates": recent,
+        "expiring_contracts": expiring,
     }
