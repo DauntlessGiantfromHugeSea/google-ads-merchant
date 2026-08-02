@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     # Wenn true: Rechnungs-/RE-Funktionen nur aus dem Tailscale-Netz (100.64.0.0/10)
     tailscale_guard: bool = False
 
+    # Verzeichnis mit den nächtlichen DB-Backups (vom backup-Container befüllt).
+    backup_dir: str = "/backups"
+
     # Briefpapier: Pfad zur eigenen Vorlage (PDF empfohlen, auch PNG/JPG/SVG).
     # Leer = automatische Suche nach templates/letterhead.{pdf,png,jpg,svg}.
     letterhead_path: str = ""

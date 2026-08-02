@@ -36,8 +36,12 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg://reporting:${POSTGRES_PASSWORD}@db:5432/reporting
       REDIS_URL: redis://redis:6379/0
+      BACKUP_DIR: /backups
     expose:
       - "8000"
+    volumes:
+      # Nur lesend: Admin kann die Sicherungen über Tailscale herunterladen.
+      - ./backups:/backups:ro
     depends_on:
       db:
         condition: service_healthy
@@ -74,6 +78,29 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+
+  # Nächtliche DB-Sicherung mit Rotation (Host-Ordner ./backups).
+  # Optionaler Push zur Synology über die SYNOLOGY_*-Variablen in .env.prod.
+  backup:
+    build: ./deploy/backup
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      POSTGRES_USER: reporting
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: reporting
+      BACKUP_DIR: /backups
+      KEEP_DAILY: ${KEEP_DAILY:-14}
+      KEEP_WEEKLY: ${KEEP_WEEKLY:-8}
+      # Leer lassen = kein Push; zum Aktivieren in .env.prod setzen:
+      SYNOLOGY_RSYNC_TARGET: ${SYNOLOGY_RSYNC_TARGET:-}
+      SYNOLOGY_SSH_PORT: ${SYNOLOGY_SSH_PORT:-22}
+    volumes:
+      - ./backups:/backups
+      - ./deploy/backup/keys:/keys:ro   # optionaler SSH-Key für den Synology-Push
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   pgdata:

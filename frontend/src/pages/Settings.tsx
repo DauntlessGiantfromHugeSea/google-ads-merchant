@@ -338,7 +338,58 @@ export default function Settings() {
       <MonitoringSettings />
       <Packages />
       <AgencyContactForm />
+      <Backups />
       <Team />
     </>
+  );
+}
+
+function Backups() {
+  const toast = useToast();
+  const [items, setItems] = useState<{ name: string; kind: string; size: number; modified: number }[]>([]);
+  const [state, setState] = useState<"loading" | "ok" | "blocked" | "empty">("loading");
+
+  useEffect(() => {
+    api.backups()
+      .then((r) => { setItems(r.backups); setState(r.count ? "ok" : "empty"); })
+      .catch((e) => setState((e as Error).message.includes("Tailscale") ? "blocked" : "empty"));
+  }, []);
+
+  const fmtSize = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`;
+  const fmtDate = (s: number) => new Date(s * 1000).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+  const dl = async (name: string) => { try { await api.downloadBackup(name); } catch (e) { toast((e as Error).message, "err"); } };
+
+  return (
+    <div className="section">
+      <h2>Datensicherung</h2>
+      <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+        Nächtliche Backups der Datenbank. Download nur für Admins und nur über Tailscale (die Dumps enthalten alle Daten).
+      </p>
+      {state === "loading" && <div className="muted">lädt…</div>}
+      {state === "blocked" && (
+        <div className="muted" style={{ fontSize: 13 }}>
+          🔒 Der Download ist nur über <strong>Tailscale</strong> (dein privates Netz) erreichbar. Öffne North Flow über die Tailscale-Adresse, um die Sicherungen zu laden.
+        </div>
+      )}
+      {state === "empty" && <div className="empty">Noch keine Sicherungen vorhanden.</div>}
+      {state === "ok" && (
+        <div style={{ overflowX: "auto" }}>
+          <table className="inv-table" style={{ fontSize: 13 }}>
+            <thead><tr><th>Datei</th><th>Typ</th><th>Datum</th><th style={{ textAlign: "right" }}>Größe</th><th></th></tr></thead>
+            <tbody>
+              {items.map((b) => (
+                <tr key={b.name}>
+                  <td><strong style={{ fontSize: 12 }}>{b.name}</strong></td>
+                  <td className="muted">{b.kind === "weekly" ? "wöchentlich" : "täglich"}</td>
+                  <td className="muted">{fmtDate(b.modified)}</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>{fmtSize(b.size)}</td>
+                  <td style={{ textAlign: "right" }}><button className="btn btn-ghost btn-sm" onClick={() => dl(b.name)}>herunterladen</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }

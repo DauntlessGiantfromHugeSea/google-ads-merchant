@@ -464,6 +464,17 @@ export const api = {
   deleteDashboard: (clientId: string, id: string) =>
     request<void>(`/clients/${clientId}/dashboards/${id}`, { method: "DELETE" }),
 
+  // Datensicherung (nur Admin, nur über Tailscale)
+  backups: () => request<{ backups: { name: string; kind: string; size: number; modified: number }[]; count: number; latest: string | null }>("/admin/backups"),
+  async downloadBackup(name: string) {
+    const res = await fetch(`/api/admin/backups/${encodeURIComponent(name)}/download`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    });
+    if (!res.ok) throw new Error(res.status === 403 ? "Nur über Tailscale erreichbar." : "Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+  },
+
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),
 
