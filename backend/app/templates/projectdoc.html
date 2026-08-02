@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 4cm 5cm 3.2cm 2.8cm; }
+  html, body { background: transparent; }
+  .letterhead { position: fixed; top: -4cm; left: -2.8cm; width: 210mm; height: 297mm; z-index: -1; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 24px; margin: 0 0 4px; color: #c4553f; }
+  .sub { color: #687481; font-size: 11px; margin-bottom: 14px; }
+  .box { border: 1px solid #e4e7eb; border-radius: 6px; padding: 10px 14px; margin: 0 0 12px; }
+  .box h2 { font-size: 13px; margin: 0 0 6px; color: #c4553f; }
+  .box .body { white-space: pre-wrap; }
+  .box.state { background: #fdf1ec; border-color: #c4553f; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
+  <h1>Projekt-Dokumentation</h1>
+  <div class="sub">{{ doc.client_name }} · Stand: {{ generated_at }}{% if doc.status %} · {{ doc.status }}{% endif %}</div>
+
+  {% for sec in doc.sections %}
+  <div class="box {% if sec.id == 'arbeitsstand' %}state{% endif %}">
+    <h2>{{ sec.label }}</h2>
+    <div class="body">{{ sec.text }}</div>
+  </div>
+  {% endfor %}
+</body>
+</html>

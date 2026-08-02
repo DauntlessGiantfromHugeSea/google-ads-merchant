@@ -797,6 +797,20 @@ class VaultCredentialReveal(BaseModel):
     password: str = ""
 
 
+# --- Projekt-Dokumentation (feste Boxen + Arbeitsprotokoll) ---
+class ProjectDocIn(BaseModel):
+    sections: dict = {}
+    log: list = []
+    status: str = ""
+
+
+class ProjectDocOut(BaseModel):
+    sections: dict = {}
+    log: list = []
+    status: str = ""
+    updated_at: datetime | None = None
+
+
 # --- Onboarding (Ist-Analyse + Anforderungen je Kunde) ---
 class OnboardingIn(BaseModel):
     data: dict = {}

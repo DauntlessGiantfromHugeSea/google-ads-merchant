@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 4cm 5cm 3.2cm 2.8cm; }
+  html, body { background: transparent; }
+  .letterhead { position: fixed; top: -4cm; left: -2.8cm; width: 210mm; height: 297mm; z-index: -1; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 24px; margin: 0 0 4px; color: #c4553f; }
+  .sub { color: #687481; font-size: 11px; margin-bottom: 16px; }
+  .entry { border-left: 3px solid #c4553f; padding: 2px 0 2px 12px; margin: 0 0 12px; }
+  .entry .date { font-size: 10px; text-transform: uppercase; letter-spacing: .3px; color: #c4553f; font-weight: 700; }
+  .entry .title { font-weight: 700; margin: 2px 0; }
+  .entry .body { white-space: pre-wrap; }
+  .empty { color: #687481; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
+  <h1>Arbeitsnachweis</h1>
+  <div class="sub">{{ doc.client_name }} · Was wurde gemacht · Stand: {{ generated_at }}</div>
+
+  {% if doc.entries %}
+    {% for e in doc.entries %}
+    <div class="entry">
+      <div class="date">{{ e.date }}{% if e.author %} · {{ e.author }}{% endif %}</div>
+      {% if e.title %}<div class="title">{{ e.title }}</div>{% endif %}
+      <div class="body">{{ e.text }}</div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">Noch keine Einträge.</div>
+  {% endif %}
+</body>
+</html>

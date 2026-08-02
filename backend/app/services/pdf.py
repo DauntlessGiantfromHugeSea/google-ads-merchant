@@ -121,3 +121,21 @@ def render_monitoring_pdf(report: dict) -> bytes:
     template = _env.get_template("monitoring_report.html")
     html = template.render(report=report, letterhead_image=image_url)
     return _pdf_from_html(html, letterhead)
+
+
+def render_projectdoc_pdf(doc: dict, tz_name: str = timeutil.DEFAULT_TZ) -> bytes:
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    template = _env.get_template("projectdoc.html")
+    html = template.render(doc=doc, letterhead_image=image_url,
+                           generated_at=timeutil.now_local_str("%d.%m.%Y %H:%M", tz_name, with_tz=True))
+    return _pdf_from_html(html, letterhead)
+
+
+def render_worklog_pdf(doc: dict, tz_name: str = timeutil.DEFAULT_TZ) -> bytes:
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    template = _env.get_template("worklog.html")
+    html = template.render(doc=doc, letterhead_image=image_url,
+                           generated_at=timeutil.now_local_str("%d.%m.%Y %H:%M", tz_name, with_tz=True))
+    return _pdf_from_html(html, letterhead)

@@ -23,11 +23,13 @@ import Dashboards from "../sections/Dashboards";
 import Kpis from "../sections/Kpis";
 import Onboarding from "../sections/Onboarding";
 import Credentials from "../sections/Credentials";
+import ProjectDoc from "../sections/ProjectDoc";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
   { key: "onboarding", label: "Onboarding" },
   { key: "work", label: "Projekte & Aufgaben" },
+  { key: "doku", label: "Doku" },
   { key: "reporting", label: "Reporting" },
   { key: "monitoring", label: "Monitoring" },
   { key: "business", label: "Angebote & Vertrag" },
@@ -116,7 +118,7 @@ export default function ClientDetail() {
           <div className="client-name">{client.name}</div>
           {(isAdmin || (client.participants_enabled && user?.role !== "agency_member")
             ? [...NAV.slice(0, 5), TEILNEHMER_TAB, ...NAV.slice(5)] : NAV)
-            .filter((n) => n.key !== "onboarding" || isAgency)  // Onboarding ist intern
+            .filter((n) => !["onboarding", "doku"].includes(n.key) || isAgency)  // intern
             .map((n) => (
             <button key={n.key} className={`nav-item ${section === n.key ? "active" : ""}`}
               onClick={() => setSection(n.key)}>
@@ -132,6 +134,9 @@ export default function ClientDetail() {
           )}
           {section === "onboarding" && isAgency && (
             <Onboarding clientId={id} onStatus={(done) => setClient({ ...client, onboarding_completed: done })} />
+          )}
+          {section === "doku" && isAgency && (
+            <ProjectDoc clientId={id} clientName={client.name} />
           )}
           {section === "work" && (
             <>

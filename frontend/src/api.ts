@@ -172,6 +172,8 @@ export interface Credential {
   id: string; label: string; url: string; category: string;
   username: string; notes: string; has_password: boolean; created_by: string; updated_at: string | null;
 }
+export interface WorkLogEntry { id: string; date: string; title: string; text: string; author: string; }
+export interface ProjectDoc { sections: Record<string, string>; log: WorkLogEntry[]; status: string; updated_at: string | null; }
 export interface ChecklistEntry { id: string; text: string; done: boolean; note: string; group: string; }
 export interface Onboarding { data: Record<string, string>; checklist: ChecklistEntry[]; status: string; updated_at: string | null; }
 export interface Kpi { period: string; metrics: Record<string, number>; extras: Record<string, number>; }
@@ -464,6 +466,20 @@ export const api = {
     request<Credential>(`/clients/${clientId}/credentials/${id}`, { method: "PUT", body: JSON.stringify(d) }),
   revealCredential: (clientId: string, id: string) => request<{ password: string }>(`/clients/${clientId}/credentials/${id}/reveal`),
   deleteCredential: (clientId: string, id: string) => request<void>(`/clients/${clientId}/credentials/${id}`, { method: "DELETE" }),
+
+  // Projekt-Dokumentation (feste Boxen + Arbeitsprotokoll, PDF)
+  getProjectDoc: (clientId: string) => request<ProjectDoc>(`/clients/${clientId}/projectdoc`),
+  saveProjectDoc: (clientId: string, d: { sections: Record<string, string>; log: WorkLogEntry[]; status: string }) =>
+    request<ProjectDoc>(`/clients/${clientId}/projectdoc`, { method: "PUT", body: JSON.stringify(d) }),
+  async downloadProjectDocPdf(clientId: string, name: string, kind: "doc" | "worklog") {
+    const path = kind === "worklog" ? "worklog.pdf" : "pdf";
+    const res = await fetch(`/api/clients/${clientId}/projectdoc/${path}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url;
+    a.download = `${kind === "worklog" ? "Arbeitsnachweis" : "Projekt-Doku"}-${name}.pdf`.replace(/\s+/g, "_");
+    a.click(); URL.revokeObjectURL(url);
+  },
 
   // Onboarding (Ist-Analyse + Anforderungen)
   getOnboarding: (clientId: string) => request<Onboarding>(`/clients/${clientId}/onboarding`),

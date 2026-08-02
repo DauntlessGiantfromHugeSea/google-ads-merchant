@@ -430,6 +430,24 @@ class Onboarding(Base):
     client: Mapped[Client] = relationship()
 
 
+class ProjectDoc(Base):
+    """Projekt-Dokumentation je Kunde: feste Abschnitts-Boxen (inkl. aktuellem
+    Arbeitsstand) + Arbeitsprotokoll (was wurde gemacht). Beides als PDF."""
+
+    __tablename__ = "project_docs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    sections: Mapped[dict] = mapped_column(JSON, default=dict)   # {abschnitt_id: text}
+    log: Mapped[list] = mapped_column(JSON, default=list)        # [{id,date,text,author}]
+    status: Mapped[str] = mapped_column(String(40), default="")  # Phase/Status frei
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+    client: Mapped[Client] = relationship()
+
+
 class KpiSnapshot(Base):
     """Kennzahlen eines Kunden für einen Zeitraum (Monat). Importiert aus einem
     veröffentlichten Google-Sheet (CSV) – nativ dargestellt, kein iframe."""
