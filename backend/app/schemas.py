@@ -99,6 +99,7 @@ class ClientOut(BaseModel):
     pipeline_stage: str = ""
     deal_value: float = 0.0
     next_followup: str = ""
+    hourly_rate: float = 0.0
 
     class Config:
         from_attributes = True
@@ -130,6 +131,7 @@ class ClientPatch(BaseModel):
     pipeline_stage: str | None = None
     deal_value: float | None = None
     next_followup: str | None = None
+    hourly_rate: float | None = None
 
 
 # --- To-Dos ---
@@ -217,6 +219,7 @@ class ProjectCreate(BaseModel):
     brief: str = ""
     budget: float = 0.0
     hours_quota: float = 0.0
+    hourly_rate: float = 0.0
 
 
 class ProjectPatch(BaseModel):
@@ -229,6 +232,7 @@ class ProjectPatch(BaseModel):
     brief: str | None = None
     budget: float | None = None
     hours_quota: float | None = None
+    hourly_rate: float | None = None
 
 
 class ProjectOut(BaseModel):
@@ -243,6 +247,7 @@ class ProjectOut(BaseModel):
     brief: str = ""
     budget: float = 0.0
     hours_quota: float = 0.0
+    hourly_rate: float = 0.0
     created_at: datetime
 
     class Config:
@@ -826,6 +831,7 @@ class TimeEntryOut(BaseModel):
     client_name: str = ""
     project_id: str | None = None
     project_title: str = ""
+    user_name: str = ""
     description: str = ""
     started_at: datetime
     ended_at: datetime | None = None

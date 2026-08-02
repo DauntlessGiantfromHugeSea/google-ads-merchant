@@ -13,6 +13,7 @@ from app.models import Client, Project, TimeEntry, User
 from app.schemas import TimeEntryOut, TimeManual, TimePatch, TimeStart
 
 router = APIRouter(prefix="/api/time", tags=["time"])
+client_router = APIRouter(prefix="/api/clients/{client_id}/time", tags=["time"])
 
 _BILL_STEP = 15 * 60  # Abrechnung im 15-Minuten-Takt
 
@@ -45,9 +46,11 @@ def _out(e: TimeEntry, db: Session) -> TimeEntryOut:
         dur = max(0, int((datetime.now(timezone.utc) - _aware(e.started_at)).total_seconds()))
     client = db.get(Client, e.client_id) if e.client_id else None
     proj = db.get(Project, e.project_id) if e.project_id else None
+    u = db.get(User, e.user_id)
     return TimeEntryOut(
         id=e.id, client_id=e.client_id, client_name=client.name if client else "",
         project_id=e.project_id, project_title=proj.title if proj else "",
+        user_name=(u.full_name or u.email) if u else "",
         description=e.description, started_at=e.started_at, ended_at=e.ended_at,
         duration_seconds=dur, billable_seconds=0 if running else _billable(dur), running=running,
     )
@@ -171,3 +174,15 @@ def delete_entry(entry_id: str, user: User = Depends(require_agency), db: Sessio
     if e and e.user_id == user.id:
         db.delete(e)
         db.commit()
+
+
+@client_router.get("", response_model=list[TimeEntryOut])
+def client_time(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Alle erfassten Zeiten eines Kunden (ganzes Team) – für die Abrechnung
+    im Kundenprofil."""
+    get_scoped_client(client_id, user, db)
+    rows = (db.query(TimeEntry)
+            .filter(TimeEntry.organization_id == user.organization_id,
+                    TimeEntry.client_id == client_id, TimeEntry.ended_at.isnot(None))
+            .order_by(TimeEntry.started_at.desc()).all())
+    return [_out(e, db) for e in rows]

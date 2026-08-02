@@ -648,3 +648,8 @@ code { color: #e9eaf2; }
 .timer-card { position: sticky; top: 74px; z-index: 5; }
 .timer-clock { font-family: var(--display); font-size: 40px; font-weight: 700; letter-spacing: .02em; line-height: 1; font-variant-numeric: tabular-nums; }
 .time-dur { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 78px; color: var(--teal); }
+
+/* Stundensatz-Eingabe in der Abrechnung */
+.rate-input { width: 74px; text-align: right; padding: 4px 6px; font-size: 13px; border-radius: 6px;
+  border: 1px solid var(--glass-border); background: rgba(255,255,255,0.04); color: var(--ink); font-family: var(--body); }
+.rate-input:focus { outline: none; border-color: var(--coral); }

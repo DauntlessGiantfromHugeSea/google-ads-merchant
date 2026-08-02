@@ -61,6 +61,7 @@ export interface Client {
   company: string; billing_address: string; vat_id: string; billing_email: string;
   participants_enabled: boolean;
   pipeline_stage: string; deal_value: number; next_followup: string;
+  hourly_rate: number;
 }
 export interface Participant {
   id: string; form_name: string; name: string; email: string; status: string;
@@ -124,7 +125,7 @@ export interface Assignee {
 export interface Project {
   id: string; client_id: string; title: string; description: string; type: string;
   status: string; assignee: string; due_date: string; created_at: string; client_name?: string;
-  brief: string; budget: number; hours_quota: number;
+  brief: string; budget: number; hours_quota: number; hourly_rate: number;
 }
 export interface Package {
   id: string; name: string; category: string; price: string; interval: string; description: string;
@@ -174,7 +175,7 @@ export interface Credential {
 }
 export interface TimeEntry {
   id: string; client_id: string | null; client_name: string;
-  project_id: string | null; project_title: string; description: string;
+  project_id: string | null; project_title: string; user_name: string; description: string;
   started_at: string; ended_at: string | null; duration_seconds: number; billable_seconds: number; running: boolean;
 }
 export interface WorkLogEntry { id: string; date: string; title: string; text: string; author: string; }
@@ -474,6 +475,7 @@ export const api = {
 
   // Zeiterfassung (Stoppuhr)
   timeEntries: () => request<TimeEntry[]>("/time"),
+  clientTime: (clientId: string) => request<TimeEntry[]>(`/clients/${clientId}/time`),
   runningTime: () => request<TimeEntry | null>("/time/running"),
   startTimer: (d: { client_id?: string | null; project_id?: string | null; description?: string }) =>
     request<TimeEntry>("/time/start", { method: "POST", body: JSON.stringify(d) }),

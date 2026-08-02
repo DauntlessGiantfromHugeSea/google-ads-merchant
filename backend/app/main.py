@@ -34,6 +34,7 @@ _CLIENT_COLUMNS = {
     "next_followup": "VARCHAR(10) DEFAULT ''",
     "contract_end_notified": "BOOLEAN DEFAULT FALSE",
     "kpi_sheet_url": "TEXT DEFAULT ''", "kpi_synced_at": "TIMESTAMP",
+    "hourly_rate": "DOUBLE PRECISION DEFAULT 0",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",
@@ -58,7 +59,7 @@ _TODO_COLUMNS = {
 }
 _PROJECT_COLUMNS = {
     "brief": "TEXT DEFAULT ''", "budget": "DOUBLE PRECISION DEFAULT 0",
-    "hours_quota": "DOUBLE PRECISION DEFAULT 0",
+    "hours_quota": "DOUBLE PRECISION DEFAULT 0", "hourly_rate": "DOUBLE PRECISION DEFAULT 0",
 }
 _USER_COLUMNS = {
     "invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP",
@@ -181,6 +182,7 @@ app.include_router(onboarding.router)
 app.include_router(credentials.router)
 app.include_router(projectdoc.router)
 app.include_router(timetracking.router)
+app.include_router(timetracking.client_router)
 
 
 @app.get("/api/health")

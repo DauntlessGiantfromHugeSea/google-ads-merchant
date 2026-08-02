@@ -155,6 +155,7 @@ class Client(Base):
     billing_address: Mapped[str] = mapped_column(Text, default="")
     vat_id: Mapped[str] = mapped_column(String(64), default="")        # USt-IdNr
     billing_email: Mapped[str] = mapped_column(String(255), default="")
+    hourly_rate: Mapped[float] = mapped_column(Float, default=0.0)     # €/h für die Zeitabrechnung
 
     # Vertragsdaten
     contract_package: Mapped[str] = mapped_column(String(255), default="")
@@ -310,6 +311,7 @@ class Project(Base):
     brief: Mapped[str] = mapped_column(Text, default="")
     budget: Mapped[float] = mapped_column(Float, default=0.0)
     hours_quota: Mapped[float] = mapped_column(Float, default=0.0)
+    hourly_rate: Mapped[float] = mapped_column(Float, default=0.0)   # €/h; überschreibt den Kundensatz
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
