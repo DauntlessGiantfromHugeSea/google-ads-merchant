@@ -59,6 +59,7 @@ export default function Invoices() {
   const setStatus = async (inv: Invoice, status: string) => { try { await api.updateInvoice(inv.id, { status }); load(); } catch (e) { toast((e as Error).message, "err"); } };
   const remind = async (inv: Invoice) => { try { const r = await api.remindInvoice(inv.id); toast(`Erinnerung an ${r.to} gesendet.`); } catch (e) { toast((e as Error).message, "err"); } };
   const del = async (inv: Invoice) => { if (!confirm(`Rechnung ${inv.number || ""} löschen?`)) return; await api.deleteInvoice(inv.id); load(); };
+  const upReceipt = async (inv: Invoice, file: File) => { try { await api.uploadReceipt(inv.id, file); load(); toast("Beleg gespeichert."); } catch (e) { toast((e as Error).message, "err"); } };
 
   return (
     <>
@@ -140,7 +141,11 @@ export default function Invoices() {
                           {inv.status !== "bezahlt" ? <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "bezahlt")}>bezahlt</button>
                             : <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "offen")}>offen</button>}
                           {inv.overdue && <button className="btn btn-ghost btn-sm" onClick={() => remind(inv)}>erinnern</button>}
-                          {inv.has_file && <button className="btn btn-ghost btn-sm" onClick={() => api.downloadInvoiceFile(inv.id, inv.filename)}>Datei</button>}
+                          {inv.has_file && <button className="btn btn-ghost btn-sm" onClick={() => api.downloadInvoiceFile(inv.id, inv.filename)}>Rechnung</button>}
+                          {inv.has_receipt
+                            ? <button className="btn btn-ghost btn-sm" onClick={() => api.downloadReceipt(inv.id, inv.receipt_filename)}>Beleg ✓</button>
+                            : <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>＋Beleg
+                                <input type="file" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upReceipt(inv, f); e.currentTarget.value = ""; }} /></label>}
                           <button className="del" onClick={() => del(inv)}>×</button>
                         </div></td>
                       </tr>
@@ -255,6 +260,8 @@ function Kostenaufstellung({ invoices, clients }: { invoices: Invoice[]; clients
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select></div>
           <button className="btn btn-ghost btn-sm" onClick={exportCsv}>⬇ CSV</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => api.downloadKosten("pdf", { year, month, basis, client }).catch(() => {})}>📄 PDF</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => api.downloadKosten("zip", { year, month, basis, client }).catch(() => alert("Keine Rechnungen im Zeitraum."))}>🗜 ZIP (mit Belegen)</button>
         </div>
       </div>
 

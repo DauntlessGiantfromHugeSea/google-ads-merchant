@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 4cm 2.2cm 2.4cm 2.2cm; }
+  {% if letterhead_image %}
+  @page { margin: 4cm 2.6cm 2.6cm 2.6cm; }
+  .letterhead { position: fixed; top: -4cm; left: -2.6cm; width: 210mm; height: 297mm; z-index: -1; }
+  {% endif %}
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 22px; margin: 0 0 2px; color: #c4553f; }
+  .sub { color: #687481; font-size: 11px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; margin: 6px 0 14px; }
+  th, td { text-align: left; padding: 6px 7px; border-bottom: 1px solid #e4e7eb; }
+  th { background: #f5f7fa; font-size: 9px; text-transform: uppercase; letter-spacing: .3px; color: #52606d; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .st { font-size: 9px; padding: 1px 6px; border-radius: 3px; }
+  .st.bezahlt { background: #def7ec; color: #03543f; }
+  .st.offen { background: #fef3c7; color: #92400e; }
+  .totals { margin-top: 10px; }
+  .totals td { border: none; padding: 4px 7px; }
+  .totals .lbl { color: #687481; }
+  .totals .big { font-size: 14px; font-weight: 700; color: #1f2933; }
+  .empty { color: #687481; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
+  <h1>Kostenaufstellung</h1>
+  <div class="sub">
+    {% if doc.client_name %}{{ doc.client_name }} · {% endif %}{{ doc.period }} · nach {{ doc.basis }} · Stand {{ doc.generated_at }}
+  </div>
+
+  {% if doc.rows %}
+  <table>
+    <thead><tr>
+      <th>Nummer</th><th>Rechnungsdatum</th><th>Leistungszeitraum</th>
+      <th class="num">Betrag</th><th>Status</th><th>Bezahlt am</th>
+    </tr></thead>
+    <tbody>
+      {% for r in doc.rows %}
+      <tr>
+        <td>{{ r.number or "—" }}</td>
+        <td>{{ r.issue_date or "—" }}</td>
+        <td>{{ r.service_period or "—" }}</td>
+        <td class="num">{{ r.amount }}</td>
+        <td>{% if r.status == 'bezahlt' %}<span class="st bezahlt">bezahlt</span>{% elif r.status == 'offen' %}<span class="st offen">offen</span>{% else %}{{ r.status }}{% endif %}</td>
+        <td>{{ r.paid_at or "—" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <table class="totals">
+    <tr><td class="lbl">Rechnungen gestellt</td><td class="num big">{{ doc.gestellt }}</td></tr>
+    <tr><td class="lbl">Zahlungseingänge</td><td class="num" style="color:#057a55">{{ doc.bezahlt }}</td></tr>
+    <tr><td class="lbl">Offen</td><td class="num">{{ doc.offen }}</td></tr>
+  </table>
+  {% else %}
+  <div class="empty">Keine Rechnungen im gewählten Zeitraum.</div>
+  {% endif %}
+</body>
+</html>

@@ -777,6 +777,8 @@ class InvoiceOut(BaseModel):
     source: str
     filename: str
     has_file: bool = False
+    has_receipt: bool = False
+    receipt_filename: str = ""
     client_id: str | None = None
     client_name: str = ""
     created_at: datetime

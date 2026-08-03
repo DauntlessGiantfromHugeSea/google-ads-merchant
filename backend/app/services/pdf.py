@@ -143,6 +143,14 @@ def _rich_fmt(text: str):
     return Markup(t)
 
 
+def render_kostenaufstellung_pdf(doc: dict) -> bytes:
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    template = _env.get_template("kostenaufstellung.html")
+    html = template.render(doc=doc, letterhead_image=image_url)
+    return _pdf_from_html(html, letterhead)
+
+
 def render_richdoc_pdf(doc: dict) -> bytes:
     """Report/Brief aus Blöcken rendern. Theme 'letterhead' legt es aufs
     Briefpapier, 'editorial' ist eine eigenständige, saubere Seite."""

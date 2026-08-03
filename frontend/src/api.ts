@@ -163,6 +163,7 @@ export interface Invoice {
   id: string; number: string; amount: number; currency: string;
   issue_date: string; due_date: string; service_period: string; status: string; overdue: boolean;
   paid_at: string; note: string; source: string; filename: string; has_file: boolean;
+  has_receipt: boolean; receipt_filename: string;
   client_id: string | null; client_name: string; created_at: string;
 }
 export interface Dashboard {
@@ -492,6 +493,25 @@ export const api = {
     if (!res.ok) throw new Error("Download fehlgeschlagen");
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = filename || "rechnung"; a.click(); URL.revokeObjectURL(url);
+  },
+  uploadReceipt: (id: string, file: File) => {
+    const fd = new FormData(); fd.set("file", file);
+    return request<Invoice>(`/invoices/${id}/receipt`, { method: "POST", body: fd });
+  },
+  async downloadReceipt(id: string, filename: string) {
+    const res = await fetch(`/api/invoices/${id}/receipt`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = filename || "beleg"; a.click(); URL.revokeObjectURL(url);
+  },
+  deleteReceipt: (id: string) => request<void>(`/invoices/${id}/receipt`, { method: "DELETE" }),
+  async downloadKosten(kind: "pdf" | "zip", p: { year: string; month: number; basis: string; client: string }) {
+    const q = new URLSearchParams({ year: p.year, month: String(p.month), basis: p.basis });
+    if (p.client) q.set("client_id", p.client);
+    const res = await fetch(`/api/invoices/report/${kind}?${q.toString()}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error(kind === "zip" ? "Keine Rechnungen im Zeitraum" : "PDF fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `Kostenaufstellung-${p.year}${p.month ? "-" + String(p.month).padStart(2, "0") : ""}.${kind}`; a.click(); URL.revokeObjectURL(url);
   },
 
   // Interne Zugangsdaten (Team-Tresor je Kunde)

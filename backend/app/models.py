@@ -400,10 +400,14 @@ class Invoice(Base):
     status: Mapped[str] = mapped_column(String(16), default="offen")  # offen/bezahlt/storniert
     note: Mapped[str] = mapped_column(Text, default="")
     source: Mapped[str] = mapped_column(String(16), default="upload")  # upload/xrechnung
-    # optional gespeicherte Datei
+    # optional gespeicherte Datei (die Rechnung)
     filename: Mapped[str] = mapped_column(String(512), default="")
     content_type: Mapped[str] = mapped_column(String(128), default="")
     data_base64: Mapped[str] = mapped_column(Text, default="")
+    # Zahlungsbeleg (Kontoauszug/Nachweis)
+    receipt_filename: Mapped[str] = mapped_column(String(512), default="")
+    receipt_content_type: Mapped[str] = mapped_column(String(128), default="")
+    receipt_base64: Mapped[str] = mapped_column(Text, default="")
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[str] = mapped_column(String(255), default="")
