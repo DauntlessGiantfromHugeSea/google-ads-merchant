@@ -16,6 +16,7 @@ from app.database import get_db
 from app.models import Client, Invoice, Organization, User
 from app.schemas import InvoiceOut, InvoiceUpdate
 from app.services import einvoice, pdf, timeutil
+from app.services.notify import notify_client_users
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
 client_router = APIRouter(prefix="/api/clients/{client_id}/invoices", tags=["invoices"])  # Kundenportal
@@ -119,7 +120,42 @@ async def upload_invoice(
     db.add(inv)
     db.commit()
     db.refresh(inv)
+    if inv.client_id:
+        _notify_new_invoice(inv, user, db)
     return _out(inv, db)
+
+
+def _notify_new_invoice(inv: Invoice, user: User, db: Session) -> None:
+    """Kunde über eine neue Rechnung informieren (In-App + Du-Mail mit PDF)."""
+    client = db.get(Client, inv.client_id)
+    if not client:
+        return
+    # In-App
+    try:
+        notify_client_users(db, inv.client_id, org_id=inv.organization_id, type_="invoice_new",
+                            title="Neue Rechnung", body=f"{inv.number or 'Rechnung'} · {inv.amount:.2f} {inv.currency}",
+                            link=f"/clients/{inv.client_id}")
+        db.commit()
+    except Exception:
+        db.rollback()
+    # E-Mail (best effort)
+    try:
+        org = db.get(Organization, inv.organization_id)
+        to = (client.billing_email or client.contact_email or "").strip()
+        if org and org.ms_refresh_token and to:
+            first = (client.contact_person or client.name or "").split(" ")[0]
+            body = (f"Hallo{(' ' + first) if first else ''},\n\n"
+                    f"für dich wurde eine neue Rechnung hinterlegt: {inv.number or 'Rechnung'} "
+                    f"über {inv.amount:.2f} {inv.currency}"
+                    f"{f' (fällig am {inv.due_date})' if inv.due_date else ''}.\n"
+                    f"Du findest sie im Anhang und jederzeit in deinem Portal.\n\nFreundliche Grüße")
+            attachments = ([{"name": inv.filename or f"Rechnung-{inv.number or inv.id[:6]}.pdf",
+                             "contentType": inv.content_type or "application/pdf",
+                             "contentBytes": inv.data_base64}] if inv.data_base64 else None)
+            send_via_graph(org, to=to, subject=f"Neue Rechnung {inv.number or ''}".strip(),
+                           body=render_email_html(org, body), html=True, attachments=attachments)
+    except Exception:
+        pass
 
 
 @router.patch("/{invoice_id}", response_model=InvoiceOut)
