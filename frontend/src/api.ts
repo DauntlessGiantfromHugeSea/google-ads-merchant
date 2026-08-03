@@ -510,6 +510,12 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
   },
+  async downloadAllFiles(reqId: string, title: string) {
+    const res = await fetch(`/api/filerequests/${reqId}/download-all`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `${title || "dateien"}.zip`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
+  },
   publicUploadInfo: (token: string) => request<PublicUploadInfo>(`/upload/${token}`),
   publicUpload(token: string, files: File[], uploader: string, onProgress?: (pct: number) => void): Promise<{ ok: boolean; count: number }> {
     return new Promise((resolve, reject) => {

@@ -5,12 +5,15 @@ Große Dateien werden in Blöcken auf die Platte gestreamt – nicht in die DB u
 nicht komplett in den Speicher geladen."""
 import os
 import re
+import tempfile
 import uuid
+import zipfile
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
+from starlette.background import BackgroundTask
 
 from app.api.deps import get_scoped_client, require_agency
 from app.config import get_settings
@@ -135,6 +138,34 @@ def download_file(req_id: str, file_id: str, user: User = Depends(require_agency
     if not f or f.request_id != req_id or f.organization_id != user.organization_id or not os.path.isfile(f.storage_path):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Datei nicht gefunden")
     return FileResponse(f.storage_path, media_type=f.content_type or "application/octet-stream", filename=f.filename)
+
+
+@router.get("/{req_id}/download-all")
+def download_all(req_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Alle Dateien einer Anforderung als ZIP. Ohne Kompression (schnell), da
+    die Inhalte meist schon komprimiert sind."""
+    fr = _load(req_id, user, db)
+    files = [f for f in fr.files if f.storage_path and os.path.isfile(f.storage_path)]
+    if not files:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Keine Dateien vorhanden")
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip", dir=settings.upload_dir)
+    tmp.close()
+    used: set[str] = set()
+    with zipfile.ZipFile(tmp.name, "w", zipfile.ZIP_STORED, allowZip64=True) as z:
+        for f in files:
+            name = f.filename or "datei"
+            if name in used:
+                base, ext = os.path.splitext(name)
+                i = 1
+                while f"{base}_{i}{ext}" in used:
+                    i += 1
+                name = f"{base}_{i}{ext}"
+            used.add(name)
+            z.write(f.storage_path, arcname=name)
+    zip_name = f"{_safe(fr.title)}.zip"
+    return FileResponse(tmp.name, media_type="application/zip", filename=zip_name,
+                        background=BackgroundTask(lambda p=tmp.name: os.path.isfile(p) and os.remove(p)))
 
 
 # ---------- Öffentlich (ohne Login) ----------

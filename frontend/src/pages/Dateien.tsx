@@ -101,7 +101,14 @@ export default function Dateien() {
                 </div>
 
                 <div className="section">
-                  <h3 style={{ fontSize: 15, marginBottom: 8 }}>Hochgeladene Dateien</h3>
+                  <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                    <h3 style={{ fontSize: 15, margin: 0 }}>Hochgeladene Dateien</h3>
+                    {current.files.length > 0 && (
+                      <button className="btn btn-ghost btn-sm" onClick={() => api.downloadAllFiles(current.id, current.title).catch((e) => toast((e as Error).message, "err"))}>
+                        ⬇ Alle als ZIP
+                      </button>
+                    )}
+                  </div>
                   {current.files.length === 0 ? <div className="empty sm">Noch nichts hochgeladen. Du bekommst eine Mail, sobald etwas ankommt.</div> : (
                     <div style={{ overflowX: "auto" }}>
                       <table className="inv-table">
