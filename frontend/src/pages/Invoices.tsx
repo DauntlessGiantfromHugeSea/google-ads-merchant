@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Client, Invoice, api } from "../api";
+import { Client, Invoice, Payment, api } from "../api";
 import { useToast } from "../toast";
 
 const eur = (n: number, cur = "EUR") =>
@@ -18,7 +18,7 @@ export default function Invoices() {
   const toast = useToast();
   const [all, setAll] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
-  const [view, setView] = useState<"liste" | "kosten">("liste");
+  const [view, setView] = useState<"liste" | "kosten" | "zahlungen">("liste");
   const [filter, setFilter] = useState("");
   const [clientFilter, setClientFilter] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -101,9 +101,12 @@ export default function Invoices() {
       <div className="row-inline" style={{ gap: 8, marginBottom: 14 }}>
         <button className={`btn btn-sm ${view === "liste" ? "btn-primary" : "btn-ghost"}`} onClick={() => setView("liste")}>Rechnungen</button>
         <button className={`btn btn-sm ${view === "kosten" ? "btn-primary" : "btn-ghost"}`} onClick={() => setView("kosten")}>Kostenaufstellung</button>
+        <button className={`btn btn-sm ${view === "zahlungen" ? "btn-primary" : "btn-ghost"}`} onClick={() => setView("zahlungen")}>Zahlungen</button>
       </div>
 
-      {view === "kosten" ? (
+      {view === "zahlungen" ? (
+        <Zahlungen clients={clients} invoices={all} />
+      ) : view === "kosten" ? (
         <Kostenaufstellung invoices={all} clients={clients} />
       ) : (
         <>
@@ -308,6 +311,126 @@ function Kostenaufstellung({ invoices, clients }: { invoices: Invoice[]; clients
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+function Zahlungen({ clients, invoices }: { clients: Client[]; invoices: Invoice[] }) {
+  const toast = useToast();
+  const [rows, setRows] = useState<Payment[]>([]);
+  const [month, setMonth] = useState("");   // "" = alle, sonst YYYY-MM
+  const [form, setForm] = useState<Partial<Payment> | null>(null);
+
+  const load = () => api.payments().then(setRows).catch(() => {});
+  useEffect(() => { load(); }, []);
+
+  const months = useMemo(() => Array.from(new Set(rows.map((r) => (r.date || "").slice(0, 7)).filter(Boolean))).sort().reverse(), [rows]);
+  const shown = useMemo(() => rows.filter((r) => !month || (r.date || "").slice(0, 7) === month), [rows, month]);
+  const sums = useMemo(() => {
+    const ein = shown.filter((r) => r.direction === "in").reduce((a, r) => a + r.amount, 0);
+    const aus = shown.filter((r) => r.direction === "out").reduce((a, r) => a + r.amount, 0);
+    return { ein, aus, saldo: ein - aus };
+  }, [shown]);
+
+  const openNew = () => setForm({ date: new Date().toISOString().slice(0, 10), direction: "in", amount: 0, counterparty: "", iban: "", reference: "", client_id: null, invoice_id: null });
+  const save = async () => {
+    if (!form) return;
+    if (!form.amount || form.amount <= 0) { toast("Bitte einen Betrag > 0 eingeben.", "err"); return; }
+    try {
+      if (form.id) await api.updatePayment(form.id, form); else await api.createPayment(form);
+      setForm(null); load(); toast("Gespeichert.");
+    } catch (e) { toast((e as Error).message, "err"); }
+  };
+  const del = async (p: Payment) => { if (!confirm("Zahlung löschen?")) return; await api.deletePayment(p.id); load(); };
+
+  const openInvoices = (clientId?: string | null) => invoices.filter((i) => i.status === "offen" && (!clientId || i.client_id === clientId));
+
+  return (
+    <>
+      <div className="section">
+        <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <select className="select form-light" style={{ maxWidth: 200 }} value={month} onChange={(e) => setMonth(e.target.value)}>
+            <option value="">Alle Monate</option>
+            {months.map((m) => <option key={m} value={m}>{m}</option>)}
+          </select>
+          {!form && <button className="btn btn-primary btn-sm" onClick={openNew}>+ Zahlung eintragen</button>}
+        </div>
+      </div>
+
+      <div className="hero-stats" style={{ marginBottom: 18 }}>
+        <div className="hero-stat"><div className="v" style={{ color: "#6ee7b7" }}>+{eur(sums.ein)}</div><div className="l">Eingänge</div></div>
+        <div className="hero-stat"><div className="v" style={{ color: "#f87171" }}>−{eur(sums.aus)}</div><div className="l">Ausgänge</div></div>
+        <div className="hero-stat"><div className="v">{eur(sums.saldo)}</div><div className="l">Saldo</div></div>
+      </div>
+
+      {form && (
+        <div className="section form-light">
+          <h2>{form.id ? "Zahlung bearbeiten" : "Neue Zahlung"}</h2>
+          <div className="row-inline">
+            <div className="field" style={{ maxWidth: 150 }}><label>Datum</label>
+              <input className="input" type="date" value={form.date || ""} onChange={(e) => setForm({ ...form, date: e.target.value })} /></div>
+            <div className="field" style={{ maxWidth: 160 }}><label>Richtung</label>
+              <select className="select" value={form.direction} onChange={(e) => setForm({ ...form, direction: e.target.value })}>
+                <option value="in">+ Eingang</option><option value="out">− Ausgang</option>
+              </select></div>
+            <div className="field" style={{ maxWidth: 140 }}><label>Betrag (€)</label>
+              <input className="input" type="number" step="0.01" min="0" value={form.amount || ""} onChange={(e) => setForm({ ...form, amount: Number(e.target.value) })} /></div>
+          </div>
+          <div className="row-inline">
+            <div className="field" style={{ flex: 1 }}><label>Absender / Empfänger</label>
+              <input className="input" value={form.counterparty || ""} onChange={(e) => setForm({ ...form, counterparty: e.target.value })} placeholder="Name" /></div>
+            <div className="field" style={{ flex: 1 }}><label>IBAN</label>
+              <input className="input" value={form.iban || ""} onChange={(e) => setForm({ ...form, iban: e.target.value })} placeholder="DE.." /></div>
+          </div>
+          <div className="field"><label>Betreff / Verwendungszweck</label>
+            <input className="input" value={form.reference || ""} onChange={(e) => setForm({ ...form, reference: e.target.value })} /></div>
+          <div className="row-inline">
+            <div className="field" style={{ flex: 1 }}><label>Kunde (optional)</label>
+              <select className="select" value={form.client_id || ""} onChange={(e) => setForm({ ...form, client_id: e.target.value || null, invoice_id: null })}>
+                <option value="">— keiner —</option>
+                {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select></div>
+            {form.direction === "in" && (
+              <div className="field" style={{ flex: 1 }}><label>Rechnung (optional → als bezahlt markieren)</label>
+                <select className="select" value={form.invoice_id || ""} onChange={(e) => setForm({ ...form, invoice_id: e.target.value || null })}>
+                  <option value="">— keine —</option>
+                  {openInvoices(form.client_id).map((i) => <option key={i.id} value={i.id}>{i.number || "o. Nr."} · {eur(i.amount)}</option>)}
+                </select></div>
+            )}
+          </div>
+          <div className="field"><label>Notiz</label><input className="input" value={form.note || ""} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
+          <div className="row-inline" style={{ justifyContent: "flex-end", gap: 8 }}>
+            <button className="btn btn-ghost" onClick={() => setForm(null)}>Abbrechen</button>
+            <button className="btn btn-primary" onClick={save}>Speichern</button>
+          </div>
+        </div>
+      )}
+
+      {shown.length === 0 ? <div className="empty">Noch keine Zahlungen erfasst.</div> : (
+        <div className="section" style={{ padding: 0, overflowX: "auto" }}>
+          <table className="inv-table">
+            <thead><tr><th>Datum</th><th style={{ textAlign: "right" }}>Betrag</th><th>Absender/Empfänger</th><th>IBAN</th><th>Betreff</th><th>Kunde</th><th></th></tr></thead>
+            <tbody>
+              {shown.map((p) => (
+                <tr key={p.id}>
+                  <td className="muted">{p.date}</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap", fontWeight: 700, color: p.direction === "in" ? "#6ee7b7" : "#f87171" }}>
+                    {p.direction === "in" ? "+" : "−"}{eur(p.amount, p.currency)}
+                  </td>
+                  <td>{p.counterparty || "—"}</td>
+                  <td className="muted" style={{ fontFamily: "ui-monospace, monospace", fontSize: 12 }}>{p.iban || "—"}</td>
+                  <td className="muted">{p.reference || "—"}{p.invoice_number ? ` · RE ${p.invoice_number}` : ""}</td>
+                  <td className="muted">{p.client_name || "—"}</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setForm(p)}>bearbeiten</button>
+                    <button className="del" onClick={() => del(p)}>×</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

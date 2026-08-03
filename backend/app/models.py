@@ -437,6 +437,29 @@ class Onboarding(Base):
     client: Mapped[Client] = relationship()
 
 
+class Payment(Base):
+    """Zahlungsein-/-ausgang (einfaches Kassenbuch): Betrag mit Richtung (+/-),
+    Absender/Empfänger, IBAN, Betreff. Optional an Kunde/Rechnung gekoppelt."""
+
+    __tablename__ = "payments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    date: Mapped[str] = mapped_column(String(10), default="")          # YYYY-MM-DD
+    direction: Mapped[str] = mapped_column(String(4), default="in")    # in (+) / out (-)
+    amount: Mapped[float] = mapped_column(Float, default=0.0)          # immer positiv
+    currency: Mapped[str] = mapped_column(String(8), default="EUR")
+    counterparty: Mapped[str] = mapped_column(String(255), default="")  # Absender/Empfänger
+    iban: Mapped[str] = mapped_column(String(64), default="")
+    reference: Mapped[str] = mapped_column(Text, default="")           # Betreff/Verwendungszweck
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    invoice_id: Mapped[str | None] = mapped_column(ForeignKey("invoices.id"), nullable=True)
+
+
 class RichDoc(Base):
     """Frei zusammengestelltes Dokument (Report/Brief) aus Blöcken. Wird als
     PDF gerendert und kann per Mail verschickt werden."""

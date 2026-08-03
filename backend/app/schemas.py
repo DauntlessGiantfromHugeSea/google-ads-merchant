@@ -813,6 +813,39 @@ class VaultCredentialReveal(BaseModel):
     password: str = ""
 
 
+# --- Zahlungen (Kassenbuch: Ein-/Ausgänge) ---
+class PaymentIn(BaseModel):
+    date: str = ""
+    direction: str = "in"
+    amount: float = 0.0
+    currency: str = "EUR"
+    counterparty: str = ""
+    iban: str = ""
+    reference: str = ""
+    note: str = ""
+    client_id: str | None = None
+    invoice_id: str | None = None
+
+
+class PaymentOut(BaseModel):
+    id: str
+    date: str
+    direction: str
+    amount: float
+    currency: str
+    counterparty: str
+    iban: str
+    reference: str
+    note: str
+    client_id: str | None = None
+    client_name: str = ""
+    invoice_id: str | None = None
+    invoice_number: str = ""
+
+    class Config:
+        from_attributes = True
+
+
 # --- Report-/Brief-Builder (Blöcke -> PDF/Mail) ---
 class RichDocIn(BaseModel):
     title: str = ""

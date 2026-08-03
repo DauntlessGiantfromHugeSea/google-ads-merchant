@@ -170,6 +170,11 @@ export interface Dashboard {
   id: string; label: string; url: string; position: number;
   client_id: string; created_at: string;
 }
+export interface Payment {
+  id: string; date: string; direction: string; amount: number; currency: string;
+  counterparty: string; iban: string; reference: string; note: string;
+  client_id: string | null; client_name: string; invoice_id: string | null; invoice_number: string;
+}
 export interface DocBlock {
   id?: string; type: string; text?: string; title?: string; color?: string;
   rows?: any[]; columns?: string[];
@@ -522,6 +527,12 @@ export const api = {
     request<Credential>(`/clients/${clientId}/credentials/${id}`, { method: "PUT", body: JSON.stringify(d) }),
   revealCredential: (clientId: string, id: string) => request<{ password: string }>(`/clients/${clientId}/credentials/${id}/reveal`),
   deleteCredential: (clientId: string, id: string) => request<void>(`/clients/${clientId}/credentials/${id}`, { method: "DELETE" }),
+
+  // Zahlungen (Kassenbuch)
+  payments: () => request<Payment[]>("/payments"),
+  createPayment: (d: Partial<Payment>) => request<Payment>("/payments", { method: "POST", body: JSON.stringify(d) }),
+  updatePayment: (id: string, d: Partial<Payment>) => request<Payment>(`/payments/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deletePayment: (id: string) => request<void>(`/payments/${id}`, { method: "DELETE" }),
 
   // Report-/Brief-Builder
   richdocs: () => request<RichDocBrief[]>("/richdocs"),
