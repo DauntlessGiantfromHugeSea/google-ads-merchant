@@ -318,6 +318,25 @@ class Project(Base):
     client: Mapped[Client] = relationship()
 
 
+class ProjectFile(Base):
+    """Datei-Anhang zu einem Projekt. Für den Kunden im Portal herunterladbar.
+    In der DB gespeichert (wie Dokumente)."""
+
+    __tablename__ = "project_files"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    filename: Mapped[str] = mapped_column(String(512), default="datei")
+    content_type: Mapped[str] = mapped_column(String(128), default="application/octet-stream")
+    size: Mapped[int] = mapped_column(default=0)
+    data_base64: Mapped[str] = mapped_column(Text, default="")
+    uploaded_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    project_id: Mapped[str] = mapped_column(ForeignKey("projects.id"))
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))
+
+
 class Appointment(Base):
     """Termin je Kunde – mit Link, Teilnehmern (Mitarbeitern) und Protokoll."""
 

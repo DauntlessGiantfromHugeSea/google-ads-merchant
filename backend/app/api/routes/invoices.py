@@ -313,6 +313,33 @@ def client_invoices(client_id: str, user: User = Depends(get_current_user), db: 
     return [_out(i, db) for i in rows]
 
 
+@client_router.post("/send")
+def send_invoices(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Schickt dem Kunden eine freundliche Mail mit seinen Rechnungen (PDFs im
+    Anhang), Anrede per Du."""
+    client = get_scoped_client(client_id, user, db)
+    to = (client.billing_email or client.contact_email or "").strip()
+    if not to:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Für den Kunden ist keine E-Mail hinterlegt.")
+    rows = db.query(Invoice).filter(Invoice.organization_id == user.organization_id,
+                                    Invoice.client_id == client_id).order_by(Invoice.issue_date.desc()).all()
+    if not rows:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Keine Rechnungen für diesen Kunden.")
+    org = db.get(Organization, user.organization_id)
+    first = (client.contact_person or client.name or "").split(" ")[0]
+    lines = "\n".join(f"• {i.number or 'Rechnung'} · {i.amount:.2f} {i.currency}"
+                      f" ({'bezahlt' if i.status == 'bezahlt' else 'offen'})" for i in rows)
+    body = (f"Hallo{(' ' + first) if first else ''},\n\n"
+            f"hier sind deine Rechnungen. Die PDFs findest du im Anhang und jederzeit in deinem Portal.\n\n"
+            f"{lines}\n\nFreundliche Grüße")
+    attachments = [{"name": (i.filename or f"Rechnung-{i.number or i.id[:6]}.pdf"),
+                    "contentType": i.content_type or "application/pdf", "contentBytes": i.data_base64}
+                   for i in rows if i.data_base64]
+    send_via_graph(org, to=to, subject="Deine Rechnungen",
+                   body=render_email_html(org, body), html=True, attachments=attachments or None)
+    return {"ok": True, "to": to, "count": len(rows)}
+
+
 @client_router.get("/{invoice_id}/file")
 def client_invoice_file(client_id: str, invoice_id: str,
                         user: User = Depends(get_current_user), db: Session = Depends(get_db)):

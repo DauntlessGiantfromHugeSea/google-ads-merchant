@@ -1,7 +1,50 @@
 import { useEffect, useMemo, useState } from "react";
-import { Project, ProjectEvent, Todo, api } from "../api";
+import { Doc, Project, ProjectEvent, Todo, api } from "../api";
 import { useToast } from "../toast";
 import Kanban from "../components/Kanban";
+
+const fileSize = (b: number) => b >= 1024 ** 2 ? `${(b / 1024 ** 2).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
+
+function ProjectFilesModal({ clientId, project, isAgency, onClose }:
+  { clientId: string; project: Project; isAgency: boolean; onClose: () => void }) {
+  const toast = useToast();
+  const [files, setFiles] = useState<Doc[]>([]);
+  const [busy, setBusy] = useState(false);
+  const load = () => api.projectFiles(clientId, project.id).then(setFiles).catch(() => {});
+  useEffect(() => { load(); }, [project.id]);
+  const upload = async (f: File) => {
+    setBusy(true);
+    try { await api.uploadProjectFile(clientId, project.id, f); load(); toast("Datei angehängt."); }
+    catch (e) { toast((e as Error).message, "err"); } finally { setBusy(false); }
+  };
+  const del = async (fid: string) => { if (!confirm("Datei löschen?")) return; await api.deleteProjectFile(clientId, project.id, fid); load(); };
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+        <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>📎 {project.title}</h2>
+          {isAgency && (
+            <label className="btn btn-primary btn-sm" style={{ cursor: "pointer" }}>{busy ? "Lädt…" : "+ Datei"}
+              <input type="file" hidden disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.currentTarget.value = ""; }} /></label>
+          )}
+        </div>
+        <div className="muted" style={{ fontSize: 13, margin: "4px 0 12px" }}>Angehängte Dateien – für den Kunden herunterladbar.</div>
+        {files.length === 0 ? <div className="empty sm">Noch keine Dateien.</div> : files.map((f) => (
+          <div key={f.id} className="list-row">
+            <div style={{ minWidth: 0 }}>
+              <strong className="ellip">{f.filename}</strong>
+              <div className="muted" style={{ fontSize: 12 }}>{fileSize(f.size)} · {new Date(f.created_at).toLocaleDateString("de-DE")}</div>
+            </div>
+            <div className="row-inline" style={{ gap: 6 }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => api.downloadProjectFile(clientId, project.id, f.id, f.filename).catch((e) => toast((e as Error).message, "err"))}>laden</button>
+              {isAgency && <button className="del" onClick={() => del(f.id)}>×</button>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 const TYPES = ["design", "marketing", "web", "seo", "social", "sonstiges"];
 const num = (v: string) => parseFloat(v.replace(",", ".")) || 0;
@@ -58,6 +101,7 @@ export default function Projects({ clientId, isAgency, onCount }:
   const [budget, setBudget] = useState("");
   const [hours, setHours] = useState("");
   const [edit, setEdit] = useState<Project | null>(null);
+  const [filesFor, setFilesFor] = useState<Project | null>(null);
 
   const load = () => api.projects(clientId).then((p) => {
     setProjects(p);
@@ -166,7 +210,9 @@ export default function Projects({ clientId, isAgency, onCount }:
       {projects.length === 0
         ? <div className="empty">Noch keine Projekte.</div>
         : <Kanban projects={projects} canEdit={isAgency} onMove={move} onDelete={del}
-            onEdit={isAgency ? (p) => setEdit(p) : undefined} todoCounts={todoCounts} />}
+            onEdit={isAgency ? (p) => setEdit(p) : undefined} onFiles={(p) => setFilesFor(p)} todoCounts={todoCounts} />}
+
+      {filesFor && <ProjectFilesModal clientId={clientId} project={filesFor} isAgency={isAgency} onClose={() => setFilesFor(null)} />}
     </div>
   );
 }

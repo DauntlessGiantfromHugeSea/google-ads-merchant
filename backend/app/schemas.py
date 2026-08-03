@@ -813,6 +813,20 @@ class VaultCredentialReveal(BaseModel):
     password: str = ""
 
 
+# --- Projekt-Dateien (für Kunden herunterladbar) ---
+class ProjectFileOut(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    size: int
+    uploaded_by: str
+    created_at: datetime
+    project_id: str
+
+    class Config:
+        from_attributes = True
+
+
 # --- Zahlungen (Kassenbuch: Ein-/Ausgänge) ---
 class PaymentIn(BaseModel):
     date: str = ""

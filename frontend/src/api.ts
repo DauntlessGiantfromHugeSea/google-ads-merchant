@@ -310,6 +310,20 @@ export const api = {
   deleteProject: (cid: string, pid: string) =>
     request<void>(`/clients/${cid}/projects/${pid}`, { method: "DELETE" }),
   allProjects: () => request<Project[]>("/projects"),
+  // Projekt-Dateien (für Kunden herunterladbar)
+  projectFiles: (cid: string, pid: string) => request<Doc[]>(`/clients/${cid}/projects/${pid}/files`),
+  uploadProjectFile: (cid: string, pid: string, file: File) => {
+    const fd = new FormData(); fd.set("file", file);
+    return request<Doc>(`/clients/${cid}/projects/${pid}/files`, { method: "POST", body: fd });
+  },
+  deleteProjectFile: (cid: string, pid: string, fid: string) =>
+    request<void>(`/clients/${cid}/projects/${pid}/files/${fid}`, { method: "DELETE" }),
+  async downloadProjectFile(cid: string, pid: string, fid: string, filename: string) {
+    const res = await fetch(`/api/clients/${cid}/projects/${pid}/files/${fid}/download`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = filename || "datei"; a.click(); URL.revokeObjectURL(url);
+  },
   appointments: (cid: string) => request<Appointment[]>(`/clients/${cid}/appointments`),
   createAppointment: (cid: string, d: { title: string; starts_at: string; link?: string; note?: string; assignees?: string[] }) =>
     request<Appointment>(`/clients/${cid}/appointments`, { method: "POST", body: JSON.stringify(d) }),
@@ -630,6 +644,7 @@ export const api = {
 
   // Rechnungen im Kundenportal (Kunde sieht seine eigenen)
   clientInvoices: (clientId: string) => request<Invoice[]>(`/clients/${clientId}/invoices`),
+  sendClientInvoices: (clientId: string) => request<{ ok: boolean; to: string; count: number }>(`/clients/${clientId}/invoices/send`, { method: "POST" }),
   async downloadClientInvoiceFile(clientId: string, invId: string, filename: string) {
     const res = await fetch(`/api/clients/${clientId}/invoices/${invId}/file`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("Download fehlgeschlagen");

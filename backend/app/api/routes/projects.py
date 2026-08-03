@@ -1,14 +1,18 @@
 """Projekte/Kampagnen je Kunde (Kanban) + globales Board über alle Kunden."""
-from fastapi import APIRouter, Depends, HTTPException, status
+import base64
+
+from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
-from app.models import Client, Project, ProjectEvent, Todo, User
+from app.models import Client, Project, ProjectEvent, ProjectFile, Todo, User
 from app.schemas import (
-    ProjectCreate, ProjectEventCreate, ProjectEventOut, ProjectGlobalOut, ProjectOut, ProjectPatch,
+    ProjectCreate, ProjectEventCreate, ProjectEventOut, ProjectFileOut, ProjectGlobalOut, ProjectOut, ProjectPatch,
 )
 from app.services.notify import notify_client_users
+
+_MAX_BYTES = 15 * 1024 * 1024  # 15 MB je Datei
 
 client_router = APIRouter(prefix="/api/clients/{client_id}/projects", tags=["projects"])
 global_router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -109,7 +113,73 @@ def delete_project(client_id: str, project_id: str,
         db.query(Todo).filter(Todo.project_id == project_id).update(
             {Todo.project_id: None}, synchronize_session=False)
         db.query(ProjectEvent).filter(ProjectEvent.project_id == project_id).delete(synchronize_session=False)
+        db.query(ProjectFile).filter(ProjectFile.project_id == project_id).delete(synchronize_session=False)
         db.delete(proj)
+        db.commit()
+
+
+# --- Projekt-Dateien (Kunde kann sie herunterladen) ---
+def _load_project(client_id: str, project_id: str, user: User, db: Session) -> Project:
+    get_scoped_client(client_id, user, db)
+    proj = db.get(Project, project_id)
+    if not proj or proj.client_id != client_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Projekt nicht gefunden")
+    return proj
+
+
+@client_router.get("/{project_id}/files", response_model=list[ProjectFileOut])
+def list_project_files(client_id: str, project_id: str,
+                       user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _load_project(client_id, project_id, user, db)
+    return (db.query(ProjectFile).filter(ProjectFile.project_id == project_id)
+            .order_by(ProjectFile.created_at.desc()).all())
+
+
+@client_router.post("/{project_id}/files", response_model=ProjectFileOut, status_code=201)
+async def upload_project_file(client_id: str, project_id: str, file: UploadFile = File(...),
+                              user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    proj = _load_project(client_id, project_id, user, db)
+    data = await file.read()
+    if len(data) > _MAX_BYTES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Datei zu groß (max. 15 MB)")
+    pf = ProjectFile(organization_id=user.organization_id, project_id=proj.id, client_id=client_id,
+                     filename=file.filename or "datei", content_type=file.content_type or "application/octet-stream",
+                     size=len(data), data_base64=base64.b64encode(data).decode(),
+                     uploaded_by=user.full_name or user.email)
+    db.add(pf)
+    _log_event(db, proj, user, "file", f"Datei „{pf.filename}“ angehängt")
+    db.commit()
+    db.refresh(pf)
+    # Kunden über neue Datei informieren.
+    try:
+        notify_client_users(db, client_id, org_id=user.organization_id, type_="project_file",
+                             title="Neue Datei im Projekt", body=f"{proj.title}: {pf.filename}",
+                             link=f"/clients/{client_id}")
+        db.commit()
+    except Exception:
+        db.rollback()
+    return pf
+
+
+@client_router.get("/{project_id}/files/{file_id}/download")
+def download_project_file(client_id: str, project_id: str, file_id: str,
+                          user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _load_project(client_id, project_id, user, db)
+    pf = db.get(ProjectFile, file_id)
+    if not pf or pf.project_id != project_id or pf.organization_id != user.organization_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Datei nicht gefunden")
+    return Response(content=base64.b64decode(pf.data_base64),
+                    media_type=pf.content_type or "application/octet-stream",
+                    headers={"Content-Disposition": f'attachment; filename="{pf.filename}"'})
+
+
+@client_router.delete("/{project_id}/files/{file_id}", status_code=204)
+def delete_project_file(client_id: str, project_id: str, file_id: str,
+                        user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    _load_project(client_id, project_id, user, db)
+    pf = db.get(ProjectFile, file_id)
+    if pf and pf.project_id == project_id and pf.organization_id == user.organization_id:
+        db.delete(pf)
         db.commit()
 
 

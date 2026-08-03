@@ -44,7 +44,7 @@ export default function Documents({ clientId, isAgency, client }:
   return (
     <div className="section">
       <div className="row-inline" style={{ justifyContent: "space-between" }}>
-        <h2>Dokumente & Rechnungen</h2>
+        <h2>Dokumente</h2>
         {isAgency && (
           <label className="btn btn-primary btn-sm" style={{ cursor: "pointer" }}>
             {busy ? "Lädt…" : "+ Hochladen"}
