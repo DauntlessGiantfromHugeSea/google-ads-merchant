@@ -25,8 +25,9 @@ def _out(inv: Invoice, db: Session) -> InvoiceOut:
     client = db.get(Client, inv.client_id) if inv.client_id else None
     return InvoiceOut(
         id=inv.id, number=inv.number, amount=inv.amount, currency=inv.currency,
-        issue_date=inv.issue_date, due_date=inv.due_date, status=inv.status,
-        overdue=_is_overdue(inv), note=inv.note, source=inv.source,
+        issue_date=inv.issue_date, due_date=inv.due_date, service_period=inv.service_period or "",
+        status=inv.status, overdue=_is_overdue(inv), note=inv.note, source=inv.source,
+        paid_at=inv.paid_at.date().isoformat() if inv.paid_at else "",
         filename=inv.filename, has_file=bool(inv.data_base64),
         client_id=inv.client_id, client_name=client.name if client else "",
         created_at=inv.created_at,
@@ -55,7 +56,7 @@ async def upload_invoice(
     file: UploadFile | None = File(None),
     client_id: str = Form(""), number: str = Form(""), amount: float = Form(0.0),
     currency: str = Form("EUR"), issue_date: str = Form(""), due_date: str = Form(""),
-    note: str = Form(""),
+    service_period: str = Form(""), note: str = Form(""),
     user: User = Depends(require_agency), db: Session = Depends(get_db),
 ):
     """Rechnung anlegen. Optional mit Datei; bei E-Rechnung (XRechnung/ZUGFeRD)
@@ -86,7 +87,8 @@ async def upload_invoice(
     inv = Invoice(
         organization_id=user.organization_id, client_id=client_id or None,
         number=number, amount=amount, currency=currency or "EUR",
-        issue_date=issue_date, due_date=due_date, note=note, source=source,
+        issue_date=issue_date, due_date=due_date, service_period=(service_period or "")[:7],
+        note=note, source=source,
         filename=filename, content_type=content_type,
         data_base64=base64.b64encode(data).decode() if data else "",
         created_by=user.full_name or user.email,

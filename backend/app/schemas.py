@@ -756,6 +756,7 @@ class InvoiceUpdate(BaseModel):
     currency: str | None = None
     issue_date: str | None = None
     due_date: str | None = None
+    service_period: str | None = None
     status: str | None = None
     note: str | None = None
     client_id: str | None = None
@@ -768,8 +769,10 @@ class InvoiceOut(BaseModel):
     currency: str
     issue_date: str
     due_date: str
+    service_period: str = ""
     status: str          # offen/bezahlt/storniert (überfällig wird abgeleitet)
     overdue: bool = False
+    paid_at: str = ""
     note: str
     source: str
     filename: str

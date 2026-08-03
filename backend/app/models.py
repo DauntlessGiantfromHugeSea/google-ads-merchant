@@ -396,6 +396,7 @@ class Invoice(Base):
     currency: Mapped[str] = mapped_column(String(8), default="EUR")
     issue_date: Mapped[str] = mapped_column(String(10), default="")   # YYYY-MM-DD
     due_date: Mapped[str] = mapped_column(String(10), default="")     # YYYY-MM-DD
+    service_period: Mapped[str] = mapped_column(String(7), default="")  # Leistungszeitraum YYYY-MM
     status: Mapped[str] = mapped_column(String(16), default="offen")  # offen/bezahlt/storniert
     note: Mapped[str] = mapped_column(Text, default="")
     source: Mapped[str] = mapped_column(String(16), default="upload")  # upload/xrechnung

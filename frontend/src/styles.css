@@ -665,3 +665,13 @@ code { color: #e9eaf2; }
 .upload-drop { border: 2px dashed var(--glass-border); border-radius: var(--radius-sm); padding: 26px 16px; text-align: center;
   cursor: pointer; background: rgba(255,255,255,0.04); transition: border-color .15s, background .15s; display: flex; flex-direction: column; gap: 6px; align-items: center; }
 .upload-drop:hover { border-color: var(--coral); background: rgba(255,255,255,0.07); }
+
+/* Kostenaufstellung – Monatschart */
+.kosten-chart { display: flex; align-items: flex-end; gap: 6px; height: 160px; margin-top: 10px; }
+.kosten-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; height: 100%; }
+.kosten-col.on .kosten-mlabel { color: var(--coral); font-weight: 700; }
+.kosten-bar-wrap { position: relative; width: 100%; max-width: 34px; flex: 1; display: flex; align-items: flex-end; background: rgba(255,255,255,0.04); border-radius: 6px 6px 0 0; }
+.kosten-bar { position: absolute; bottom: 0; width: 100%; background: var(--coral); border-radius: 6px 6px 0 0; transition: height .2s; }
+.kosten-bar.paid { background: #34d399; }
+.kosten-col.on .kosten-bar { filter: brightness(1.15); }
+.kosten-mlabel { font-size: 11px; color: var(--muted); }

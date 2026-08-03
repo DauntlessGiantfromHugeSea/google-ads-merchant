@@ -91,6 +91,9 @@ _ONBOARDING_COLUMNS = {
 _TIME_COLUMNS = {
     "project_id": "VARCHAR(36)",
 }
+_INVOICE_COLUMNS = {
+    "service_period": "VARCHAR(7) DEFAULT ''",
+}
 
 
 def _ensure_schema() -> None:
@@ -98,6 +101,7 @@ def _ensure_schema() -> None:
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
     _ensure_columns(insp, "onboardings", _ONBOARDING_COLUMNS)
     _ensure_columns(insp, "time_entries", _TIME_COLUMNS)
+    _ensure_columns(insp, "invoices", _INVOICE_COLUMNS)
     _ensure_columns(insp, "offers", _OFFER_COLUMNS)
     _ensure_columns(insp, "contracts", _CONTRACT_COLUMNS)
     _ensure_columns(insp, "organizations", _ORG_COLUMNS)
