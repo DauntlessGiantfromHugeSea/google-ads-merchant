@@ -37,11 +37,14 @@ services:
       DATABASE_URL: postgresql+psycopg://reporting:${POSTGRES_PASSWORD}@db:5432/reporting
       REDIS_URL: redis://redis:6379/0
       BACKUP_DIR: /backups
+      UPLOAD_DIR: /data/uploads
     expose:
       - "8000"
     volumes:
       # Nur lesend: Admin kann die Sicherungen über Tailscale herunterladen.
       - ./backups:/backups:ro
+      # Hochgeladene Dateien (Datei-Anforderungen) – groß, daher auf der Platte.
+      - uploads:/data/uploads
     depends_on:
       db:
         condition: service_healthy
@@ -104,5 +107,6 @@ services:
 
 volumes:
   pgdata:
+  uploads:
   caddy_data:
   caddy_config:

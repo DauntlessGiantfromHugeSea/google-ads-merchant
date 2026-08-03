@@ -77,6 +77,7 @@ const CATS: Cat[] = [
     items: [
       { q: "Termine buchen", a: "Termin für einen Kunden anlegen (mit Link), Mitarbeiter als Empfänger wählen. Kunde, Mitarbeiter und Admin werden benachrichtigt; Termin erscheint im Kalender und in der Kunden-Timeline. Protokolle direkt am Termin schreiben." },
       { q: "E-Mail an Kunden", a: "Direkt aus dem Tool mailen (gebrandet), mit persönlichem Text und temporären Anhängen – die Anhänge werden mitgeschickt, aber nicht auf dem Server gespeichert." },
+      { q: "Dateien anfordern", a: "Unter „Dateien“ (Topbar) eine Anforderung anlegen und den öffentlichen Link teilen. Über den Link kann jeder ohne Login hochladen (bis 10 GB). Du bekommst sofort eine E-Mail. Dateien werden nach 7 Tagen automatisch gelöscht (oder wenn du sie löschst)." },
       { q: "Benachrichtigungen", a: "Automatische Mitteilung (in-App + E-Mail über dein Microsoft-Konto) bei wichtigen Ereignissen: Vertrag unterschrieben, Angebot angenommen, neue Aufgabe/Anfrage/Termin. Ein-/ausschaltbar in den Einstellungen." },
     ],
   },

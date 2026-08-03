@@ -45,6 +45,11 @@ class Settings(BaseSettings):
     # Verzeichnis mit den nächtlichen DB-Backups (vom backup-Container befüllt).
     backup_dir: str = "/backups"
 
+    # Datei-Anforderungen (öffentlicher Upload): Speicherort + Limits.
+    upload_dir: str = "/data/uploads"
+    max_upload_bytes: int = 10 * 1024 * 1024 * 1024   # 10 GB gesamt je Anforderung
+    upload_retention_days: int = 7                     # Auto-Löschung nach X Tagen
+
     # Briefpapier: Pfad zur eigenen Vorlage (PDF empfohlen, auch PNG/JPG/SVG).
     # Leer = automatische Suche nach templates/letterhead.{pdf,png,jpg,svg}.
     letterhead_path: str = ""

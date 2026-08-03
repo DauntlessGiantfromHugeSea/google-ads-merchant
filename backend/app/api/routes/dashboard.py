@@ -80,6 +80,12 @@ def dashboard(user: User = Depends(require_agency), db: Session = Depends(get_db
             })
 
     expiring = _check_expiring_contracts(db, clients, org)
+    # Abgelaufene Upload-Dateien (>Aufbewahrung) aufräumen.
+    try:
+        from app.api.routes.filerequests import cleanup_expired
+        cleanup_expired(db, org)
+    except Exception:
+        pass
 
     return {
         "clients_total": len(clients),

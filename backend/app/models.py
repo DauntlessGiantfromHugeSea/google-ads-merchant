@@ -432,6 +432,45 @@ class Onboarding(Base):
     client: Mapped[Client] = relationship()
 
 
+class FileRequest(Base):
+    """Öffentliche Datei-Anforderung: über den Link können (ohne Login) Dateien
+    hochgeladen werden. Dateien liegen auf der Platte (nicht in der DB)."""
+
+    __tablename__ = "file_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(255), default="")
+    message: Mapped[str] = mapped_column(Text, default="")   # Hinweis an den Uploader
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    files: Mapped[list[UploadedFile]] = relationship(back_populates="request", cascade="all, delete-orphan")
+
+
+class UploadedFile(Base):
+    """Eine hochgeladene Datei zu einer Anforderung. Wird nach Ablauf oder auf
+    Wunsch von der Platte und aus der DB entfernt."""
+
+    __tablename__ = "uploaded_files"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    filename: Mapped[str] = mapped_column(String(512), default="datei")
+    content_type: Mapped[str] = mapped_column(String(128), default="application/octet-stream")
+    size: Mapped[int] = mapped_column(default=0)
+    storage_path: Mapped[str] = mapped_column(Text, default="")
+    uploader: Mapped[str] = mapped_column(String(255), default="")   # optionaler Name
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    request_id: Mapped[str] = mapped_column(ForeignKey("file_requests.id"))
+    request: Mapped[FileRequest] = relationship(back_populates="files")
+
+
 class TimeEntry(Base):
     """Zeiterfassung je Nutzer (Stoppuhr oder manuell). Läuft, solange
     ended_at leer ist; duration_seconds wird beim Stoppen berechnet."""

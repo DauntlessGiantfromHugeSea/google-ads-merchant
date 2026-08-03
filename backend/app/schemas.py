@@ -808,6 +808,49 @@ class VaultCredentialReveal(BaseModel):
     password: str = ""
 
 
+# --- Datei-Anforderungen (öffentlicher Upload) ---
+class FileRequestCreate(BaseModel):
+    title: str = ""
+    message: str = ""
+    client_id: str | None = None
+
+
+class UploadedFileOut(BaseModel):
+    id: str
+    filename: str
+    content_type: str
+    size: int
+    uploader: str = ""
+    created_at: datetime
+    expires_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class FileRequestOut(BaseModel):
+    id: str
+    token: str
+    title: str
+    message: str
+    active: bool
+    client_id: str | None = None
+    client_name: str = ""
+    created_at: datetime
+    file_count: int = 0
+    total_size: int = 0
+    files: list[UploadedFileOut] = []
+
+
+class PublicUploadInfo(BaseModel):
+    title: str = ""
+    message: str = ""
+    agency_name: str = ""
+    active: bool = True
+    max_bytes: int = 0
+    retention_days: int = 7
+
+
 # --- Zeiterfassung (Stoppuhr) ---
 class TimeStart(BaseModel):
     client_id: str | None = None

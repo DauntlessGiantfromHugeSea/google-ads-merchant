@@ -660,3 +660,8 @@ code { color: #e9eaf2; }
 .help-card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
 .help-steps { margin: 10px 0 0; padding-left: 20px; color: var(--ink); font-size: 14px; }
 .help-steps li { margin: 4px 0; }
+
+/* Öffentlicher Upload */
+.upload-drop { border: 2px dashed var(--glass-border); border-radius: var(--radius-sm); padding: 26px 16px; text-align: center;
+  cursor: pointer; background: rgba(255,255,255,0.04); transition: border-color .15s, background .15s; display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.upload-drop:hover { border-color: var(--coral); background: rgba(255,255,255,0.07); }

@@ -169,6 +169,19 @@ export interface Dashboard {
   id: string; label: string; url: string; position: number;
   client_id: string; created_at: string;
 }
+export interface UploadedFile {
+  id: string; filename: string; content_type: string; size: number;
+  uploader: string; created_at: string; expires_at: string | null;
+}
+export interface FileRequest {
+  id: string; token: string; title: string; message: string; active: boolean;
+  client_id: string | null; client_name: string; created_at: string;
+  file_count: number; total_size: number; files: UploadedFile[];
+}
+export interface PublicUploadInfo {
+  title: string; message: string; agency_name: string; active: boolean;
+  max_bytes: number; retention_days: number;
+}
 export interface Credential {
   id: string; label: string; url: string; category: string;
   username: string; notes: string; has_password: boolean; created_by: string; updated_at: string | null;
@@ -480,6 +493,40 @@ export const api = {
     request<Credential>(`/clients/${clientId}/credentials/${id}`, { method: "PUT", body: JSON.stringify(d) }),
   revealCredential: (clientId: string, id: string) => request<{ password: string }>(`/clients/${clientId}/credentials/${id}/reveal`),
   deleteCredential: (clientId: string, id: string) => request<void>(`/clients/${clientId}/credentials/${id}`, { method: "DELETE" }),
+
+  // Datei-Anforderungen (öffentlicher Upload)
+  fileRequests: () => request<FileRequest[]>("/filerequests"),
+  fileRequest: (id: string) => request<FileRequest>(`/filerequests/${id}`),
+  createFileRequest: (d: { title: string; message?: string; client_id?: string | null }) =>
+    request<FileRequest>("/filerequests", { method: "POST", body: JSON.stringify(d) }),
+  toggleFileRequest: (id: string, active: boolean) =>
+    request<FileRequest>(`/filerequests/${id}?active=${active}`, { method: "PATCH" }),
+  deleteFileRequest: (id: string) => request<void>(`/filerequests/${id}`, { method: "DELETE" }),
+  deleteUploadedFile: (reqId: string, fileId: string) =>
+    request<void>(`/filerequests/${reqId}/files/${fileId}`, { method: "DELETE" }),
+  async downloadUploadedFile(reqId: string, fileId: string, filename: string) {
+    const res = await fetch(`/api/filerequests/${reqId}/files/${fileId}/download`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+  },
+  publicUploadInfo: (token: string) => request<PublicUploadInfo>(`/upload/${token}`),
+  publicUpload(token: string, files: File[], uploader: string, onProgress?: (pct: number) => void): Promise<{ ok: boolean; count: number }> {
+    return new Promise((resolve, reject) => {
+      const fd = new FormData();
+      files.forEach((f) => fd.append("files", f));
+      fd.append("uploader", uploader);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `/api/upload/${token}`);
+      xhr.upload.onprogress = (e) => { if (e.lengthComputable && onProgress) onProgress(Math.round((e.loaded / e.total) * 100)); };
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) { try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({ ok: true, count: files.length }); } }
+        else { try { reject(new Error(JSON.parse(xhr.responseText).detail || `Fehler ${xhr.status}`)); } catch { reject(new Error(`Fehler ${xhr.status}`)); } }
+      };
+      xhr.onerror = () => reject(new Error("Upload fehlgeschlagen (Netzwerk)."));
+      xhr.send(fd);
+    });
+  },
 
   // Zeiterfassung (Stoppuhr)
   timeEntries: () => request<TimeEntry[]>("/time"),
