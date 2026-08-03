@@ -27,6 +27,7 @@ const Sales = lazy(() => import("./pages/Sales"));
 const Invoices = lazy(() => import("./pages/Invoices"));
 const Zeit = lazy(() => import("./pages/Zeit"));
 const Dateien = lazy(() => import("./pages/Dateien"));
+const Briefe = lazy(() => import("./pages/Briefe"));
 const Upload = lazy(() => import("./pages/Upload"));
 
 function Splash() {
@@ -97,6 +98,8 @@ export default function App() {
         <Route path="/zeit" element={user && user.role !== "client_user" ? <Shell><Zeit /></Shell> : <Navigate to="/" />} />
         <Route path="/dateien" element={user && user.role !== "client_user" ? <Shell><Dateien /></Shell> : <Navigate to="/" />} />
         <Route path="/dateien/:id" element={user && user.role !== "client_user" ? <Shell><Dateien /></Shell> : <Navigate to="/" />} />
+        <Route path="/briefe" element={user && user.role !== "client_user" ? <Shell><Briefe /></Shell> : <Navigate to="/" />} />
+        <Route path="/briefe/:id" element={user && user.role !== "client_user" ? <Shell><Briefe /></Shell> : <Navigate to="/" />} />
         <Route path="/monitoring" element={user && user.role !== "client_user" ? <Shell><MonitoringPage /></Shell> : <Navigate to="/" />} />
         <Route path="/seo" element={user && user.role !== "client_user" ? <Shell><SeoPage /></Shell> : <Navigate to="/" />} />
         <Route path="/projects" element={<Navigate to="/planner" />} />
@@ -137,6 +140,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/planner")}>Planner</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/zeit")}>Zeit</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/dateien")}>Dateien</button>
+              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/briefe")}>Briefe</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/monitoring")}>Monitoring</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/seo")}>SEO</button>
               <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>

@@ -169,6 +169,15 @@ export interface Dashboard {
   id: string; label: string; url: string; position: number;
   client_id: string; created_at: string;
 }
+export interface DocBlock {
+  id?: string; type: string; text?: string; title?: string; color?: string;
+  rows?: any[]; columns?: string[];
+}
+export interface RichDoc {
+  id: string; title: string; theme: string; accent: string; footer: string;
+  blocks: DocBlock[]; client_id: string | null; client_name: string; updated_at: string | null;
+}
+export interface RichDocBrief { id: string; title: string; theme: string; client_name: string; updated_at: string | null; }
 export interface UploadedFile {
   id: string; filename: string; content_type: string; size: number;
   uploader: string; created_at: string; expires_at: string | null;
@@ -493,6 +502,21 @@ export const api = {
     request<Credential>(`/clients/${clientId}/credentials/${id}`, { method: "PUT", body: JSON.stringify(d) }),
   revealCredential: (clientId: string, id: string) => request<{ password: string }>(`/clients/${clientId}/credentials/${id}/reveal`),
   deleteCredential: (clientId: string, id: string) => request<void>(`/clients/${clientId}/credentials/${id}`, { method: "DELETE" }),
+
+  // Report-/Brief-Builder
+  richdocs: () => request<RichDocBrief[]>("/richdocs"),
+  richdoc: (id: string) => request<RichDoc>(`/richdocs/${id}`),
+  createRichdoc: (d: Partial<RichDoc>) => request<RichDoc>("/richdocs", { method: "POST", body: JSON.stringify(d) }),
+  updateRichdoc: (id: string, d: Partial<RichDoc>) => request<RichDoc>(`/richdocs/${id}`, { method: "PUT", body: JSON.stringify(d) }),
+  deleteRichdoc: (id: string) => request<void>(`/richdocs/${id}`, { method: "DELETE" }),
+  sendRichdoc: (id: string, d: { to?: string; subject?: string; message?: string }) =>
+    request<{ ok: boolean; to: string }>(`/richdocs/${id}/send`, { method: "POST", body: JSON.stringify(d) }),
+  async downloadRichdocPdf(id: string, title: string) {
+    const res = await fetch(`/api/richdocs/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `${title || "Dokument"}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
+  },
 
   // Datei-Anforderungen (öffentlicher Upload)
   fileRequests: () => request<FileRequest[]>("/filerequests"),

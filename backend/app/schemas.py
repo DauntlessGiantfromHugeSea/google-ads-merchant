@@ -811,6 +811,42 @@ class VaultCredentialReveal(BaseModel):
     password: str = ""
 
 
+# --- Report-/Brief-Builder (Blöcke -> PDF/Mail) ---
+class RichDocIn(BaseModel):
+    title: str = ""
+    theme: str = "editorial"
+    accent: str = "#4a7c2f"
+    footer: str = ""
+    blocks: list = []
+    client_id: str | None = None
+
+
+class RichDocOut(BaseModel):
+    id: str
+    title: str
+    theme: str
+    accent: str
+    footer: str
+    blocks: list
+    client_id: str | None = None
+    client_name: str = ""
+    updated_at: datetime | None = None
+
+
+class RichDocBrief(BaseModel):
+    id: str
+    title: str
+    theme: str
+    client_name: str = ""
+    updated_at: datetime | None = None
+
+
+class RichDocSend(BaseModel):
+    to: str = ""
+    subject: str = ""
+    message: str = ""
+
+
 # --- Datei-Anforderungen (öffentlicher Upload) ---
 class FileRequestCreate(BaseModel):
     title: str = ""

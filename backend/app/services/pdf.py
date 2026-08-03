@@ -132,6 +132,54 @@ def render_projectdoc_pdf(doc: dict, tz_name: str = timeutil.DEFAULT_TZ) -> byte
     return _pdf_from_html(html, letterhead)
 
 
+def _rich_fmt(text: str):
+    """Mini-Markdown: **fett** + Zeilenumbrüche, HTML-sicher."""
+    import html as _html  # noqa: PLC0415
+    import re as _re  # noqa: PLC0415
+    from markupsafe import Markup  # noqa: PLC0415
+    t = _html.escape(text or "")
+    t = _re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", t)
+    t = t.replace("\n", "<br>")
+    return Markup(t)
+
+
+def render_richdoc_pdf(doc: dict) -> bytes:
+    """Report/Brief aus Blöcken rendern. Theme 'letterhead' legt es aufs
+    Briefpapier, 'editorial' ist eine eigenständige, saubere Seite."""
+    theme = doc.get("theme", "editorial")
+    accent = doc.get("accent") or "#4a7c2f"
+    letterhead = _find_letterhead() if theme == "letterhead" else None
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+
+    rendered, num = [], 0
+    for b in (doc.get("blocks") or []):
+        t = b.get("type")
+        out = {"type": t}
+        if t in ("eyebrow", "title", "lead", "heading", "text", "badge", "quote"):
+            out["html"] = _rich_fmt(b.get("text", ""))
+            out["color"] = b.get("color", "green")
+        elif t == "callout":
+            out["html"] = _rich_fmt(b.get("text", ""))
+            out["title_html"] = _rich_fmt(b.get("title", "")) if b.get("title") else ""
+        elif t == "numbered":
+            num += 1
+            out["n"] = num
+            out["title_html"] = _rich_fmt(b.get("title", ""))
+            out["html"] = _rich_fmt(b.get("text", ""))
+        elif t == "meta":
+            out["rows"] = [{"k": r.get("k", ""), "v": _rich_fmt(r.get("v", ""))} for r in (b.get("rows") or [])]
+        elif t == "table":
+            out["columns"] = b.get("columns") or ["", ""]
+            out["rows"] = [[_rich_fmt(c) for c in row] for row in (b.get("rows") or [])]
+        rendered.append(out)
+
+    template = _env.get_template("richdoc.html")
+    footer_css = (doc.get("footer") or "").replace('"', "'")
+    html = template.render(blocks=rendered, accent=accent, letterhead_image=image_url,
+                           footer_css=footer_css, show_rule=(theme == "editorial"))
+    return _pdf_from_html(html, letterhead)
+
+
 def render_worklog_pdf(doc: dict, tz_name: str = timeutil.DEFAULT_TZ) -> bytes:
     letterhead = _find_letterhead()
     image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None

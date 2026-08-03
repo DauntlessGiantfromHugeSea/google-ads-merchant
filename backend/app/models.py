@@ -433,6 +433,26 @@ class Onboarding(Base):
     client: Mapped[Client] = relationship()
 
 
+class RichDoc(Base):
+    """Frei zusammengestelltes Dokument (Report/Brief) aus Blöcken. Wird als
+    PDF gerendert und kann per Mail verschickt werden."""
+
+    __tablename__ = "rich_docs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    title: Mapped[str] = mapped_column(String(255), default="")
+    theme: Mapped[str] = mapped_column(String(24), default="editorial")  # editorial/letterhead
+    accent: Mapped[str] = mapped_column(String(16), default="#4a7c2f")
+    footer: Mapped[str] = mapped_column(String(255), default="")
+    blocks: Mapped[list] = mapped_column(JSON, default=list)   # [{id,type,...}]
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+
+
 class FileRequest(Base):
     """Öffentliche Datei-Anforderung: über den Link können (ohne Login) Dateien
     hochgeladen werden. Dateien liegen auf der Platte (nicht in der DB)."""

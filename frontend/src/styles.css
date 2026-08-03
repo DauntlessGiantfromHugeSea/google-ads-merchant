@@ -675,3 +675,9 @@ code { color: #e9eaf2; }
 .kosten-bar.paid { background: #34d399; }
 .kosten-col.on .kosten-bar { filter: brightness(1.15); }
 .kosten-mlabel { font-size: 11px; color: var(--muted); }
+
+/* Report-/Brief-Builder */
+.doc-block { padding: 14px 16px; }
+.doc-block-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.doc-block-type { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.doc-add { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }

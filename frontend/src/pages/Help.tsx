@@ -53,6 +53,7 @@ const CATS: Cat[] = [
     id: "reporting", title: "Reporting, SEO & Analytics", icon: "📈",
     items: [
       { q: "Reports (PDF)", a: "Google Ads, Merchant Center & SEO als PDF auf deinem Briefpapier – Zeitstempel in deiner Zeitzone. Reports werden nur flüchtig erzeugt, nicht gespeichert." },
+      { q: "Briefe & Reports (Builder)", a: "Unter „Briefe“ (Topbar) beliebige Dokumente aus Blöcken bauen – Kennzeile, Titel, Info-Tabelle, Hervorhebungs-Box, Badges, nummerierte Punkte, Zitate, Tabellen. Stil „Editorial“ (eigenständig, Akzentfarbe wählbar) oder „Auf Briefpapier“. Ausgabe als PDF oder direkt per Mail. **Text zwischen Sternen** wird fett." },
       { q: "SEO-Check & PageSpeed", a: "Deterministischer Check (Score, Kategorien, Action-Plan) plus PageSpeed/Core-Web-Vitals. Mehrere Websites je Kunde möglich (Reporting → Verknüpfte Konten). Kunden sehen ihren Check und können selbst neu messen." },
       { q: "Analytics (native KPIs)", a: "Nutzer/Sitzungen, Conversions, Umsatz und Traffic-Quellen aus einem veröffentlichten Google-Sheet (CSV) – nativ als Karten & Trends, kein iframe.",
         steps: [

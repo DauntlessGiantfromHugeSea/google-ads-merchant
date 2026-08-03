@@ -9,7 +9,7 @@ from app.api.routes import (
     admin_backup, ads_activity, appointments, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
-    projects, reports, requests, secrets, seo, tasks, team, timetracking,
+    projects, reports, requests, richdocs, secrets, seo, tasks, team, timetracking,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -189,6 +189,7 @@ app.include_router(timetracking.router)
 app.include_router(timetracking.client_router)
 app.include_router(filerequests.router)
 app.include_router(filerequests.public_router)
+app.include_router(richdocs.router)
 
 
 @app.get("/api/health")
