@@ -25,6 +25,7 @@ import Onboarding from "../sections/Onboarding";
 import Credentials from "../sections/Credentials";
 import ProjectDoc from "../sections/ProjectDoc";
 import ClientTime from "../sections/ClientTime";
+import ClientInvoices from "../sections/ClientInvoices";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -167,6 +168,7 @@ export default function ClientDetail() {
               <Offers clientId={id} isAgency={isAgency} />
               <Contracts clientId={id} isAgency={isAgency} />
               <Contract client={client} isAgency={isAgency} onSaved={setClient} />
+              <ClientInvoices clientId={id} isAgency={isAgency} />
               {isAgency && <ClientTime client={client} />}
               <Documents clientId={id} isAgency={isAgency} client={client} />
             </>

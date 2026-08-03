@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, Upl
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_agency
+from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.api.routes.mail import render_email_html, send_via_graph
 from app.database import get_db
 from app.models import Client, Invoice, Organization, User
@@ -18,6 +18,7 @@ from app.schemas import InvoiceOut, InvoiceUpdate
 from app.services import einvoice, pdf, timeutil
 
 router = APIRouter(prefix="/api/invoices", tags=["invoices"])
+client_router = APIRouter(prefix="/api/clients/{client_id}/invoices", tags=["invoices"])  # Kundenportal
 _MAX_BYTES = 15 * 1024 * 1024  # 15 MB
 
 
@@ -299,3 +300,27 @@ def remind_invoice(invoice_id: str, user: User = Depends(require_agency), db: Se
     inv.reminded_at = datetime.now(timezone.utc)
     db.commit()
     return {"ok": True, "to": to}
+
+
+# ---------- Kundenportal (Agentur + der Kunde selbst) ----------
+@client_router.get("", response_model=list[InvoiceOut])
+def client_invoices(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """Rechnungen eines Kunden – auch für den Kunden selbst sichtbar."""
+    get_scoped_client(client_id, user, db)
+    rows = (db.query(Invoice)
+            .filter(Invoice.organization_id == user.organization_id, Invoice.client_id == client_id)
+            .order_by(Invoice.issue_date.desc(), Invoice.created_at.desc()).all())
+    return [_out(i, db) for i in rows]
+
+
+@client_router.get("/{invoice_id}/file")
+def client_invoice_file(client_id: str, invoice_id: str,
+                        user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    get_scoped_client(client_id, user, db)
+    inv = db.get(Invoice, invoice_id)
+    if (not inv or inv.client_id != client_id or inv.organization_id != user.organization_id
+            or not inv.data_base64):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Keine Datei vorhanden")
+    return Response(content=base64.b64decode(inv.data_base64),
+                    media_type=inv.content_type or "application/octet-stream",
+                    headers={"Content-Disposition": f'attachment; filename="{inv.filename or "rechnung"}"'})

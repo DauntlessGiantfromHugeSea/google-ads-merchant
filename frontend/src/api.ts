@@ -628,6 +628,15 @@ export const api = {
     request<KpiSource>(`/clients/${clientId}/kpis/source`, { method: "PUT", body: JSON.stringify({ url }) }),
   syncKpis: (clientId: string) => request<KpiSource>(`/clients/${clientId}/kpis/sync`, { method: "POST" }),
 
+  // Rechnungen im Kundenportal (Kunde sieht seine eigenen)
+  clientInvoices: (clientId: string) => request<Invoice[]>(`/clients/${clientId}/invoices`),
+  async downloadClientInvoiceFile(clientId: string, invId: string, filename: string) {
+    const res = await fetch(`/api/clients/${clientId}/invoices/${invId}/file`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = filename || "rechnung"; a.click(); URL.revokeObjectURL(url);
+  },
+
   // Analytics-Dashboards (Embed je Kunde)
   clientDashboards: (clientId: string) => request<Dashboard[]>(`/clients/${clientId}/dashboards`),
   createDashboard: (clientId: string, d: { label: string; url: string }) =>

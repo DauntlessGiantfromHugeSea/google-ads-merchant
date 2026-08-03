@@ -193,6 +193,7 @@ app.include_router(filerequests.router)
 app.include_router(filerequests.public_router)
 app.include_router(richdocs.router)
 app.include_router(payments.router)
+app.include_router(invoices.client_router)
 
 
 @app.get("/api/health")
