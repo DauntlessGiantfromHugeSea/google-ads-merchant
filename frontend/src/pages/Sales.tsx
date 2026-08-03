@@ -42,9 +42,11 @@ function matchArea(p: Package, areaKey: string): boolean {
 }
 
 type State = Record<string, { ist: number; soll: number; note: string }>;
+// Neutraler Start: Ist = Soll -> keine Lücke, also nichts vorausgewählt,
+// bis du die Bereiche im Gespräch bewertest.
 const initState = (): State => {
   const s: State = {};
-  AREAS.forEach((a) => (s[a.key] = { ist: 1, soll: 3, note: "" }));
+  AREAS.forEach((a) => (s[a.key] = { ist: 1, soll: 1, note: "" }));
   return s;
 };
 
@@ -56,7 +58,7 @@ export default function Sales() {
   const [packages, setPackages] = useState<Package[]>([]);
   const [clientId, setClientId] = useState(params.get("client") || "");
   const [state, setState] = useState<State>(initState);
-  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [manual, setManual] = useState<Record<string, boolean>>({});  // nur explizite Ein-/Ausschalter
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -73,22 +75,25 @@ export default function Sales() {
       .filter((a) => a.gap > 0).sort((x, y) => y.gap - x.gap),
   [state]);
 
-  // Empfohlene Pakete: passen zu einem Bereich mit Lücke
+  // Empfohlene Pakete: passen zu einem Bereich mit Lücke (größte Lücke zuerst).
   const recommended = useMemo(() => {
     const gapKeys = new Set(gaps.map((g) => g.key));
     return packages.filter((p) => AREAS.some((a) => gapKeys.has(a.key) && matchArea(p, a.key)));
   }, [packages, gaps]);
+  const recommendedIds = useMemo(() => new Set(recommended.map((p) => p.id)), [recommended]);
 
-  // Vorauswahl bei Änderung der Empfehlung
-  useEffect(() => {
-    setPicked((prev) => {
-      const next = { ...prev };
-      recommended.forEach((p) => { if (next[p.id] === undefined) next[p.id] = true; });
-      return next;
-    });
-  }, [recommended]);
+  // Auswahl folgt der Gap-Analyse: empfohlen = angehakt, außer du überschreibst
+  // es manuell. Ändert sich die Analyse, ändert sich auch die Vorauswahl.
+  const isPicked = (id: string) => (manual[id] !== undefined ? manual[id] : recommendedIds.has(id));
+  const toggle = (id: string, v: boolean) => setManual((m) => ({ ...m, [id]: v }));
+  const resetSelection = () => setManual({});
 
-  const chosen = packages.filter((p) => picked[p.id]);
+  // Empfohlene Pakete zuerst anzeigen.
+  const sortedPkgs = useMemo(() =>
+    [...packages].sort((a, b) => Number(recommendedIds.has(b.id)) - Number(recommendedIds.has(a.id))),
+  [packages, recommendedIds]);
+
+  const chosen = packages.filter((p) => isPicked(p.id));
   const total = chosen.reduce((a, p) => a + pkgPrice(p), 0);
 
   const summaryText = () => {
@@ -188,18 +193,28 @@ export default function Sales() {
       </div>
 
       <div className="section">
-        <h2>3 · Passende Leistungen</h2>
+        <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0 }}>3 · Passende Leistungen</h2>
+          {Object.keys(manual).length > 0 && (
+            <button className="btn btn-ghost btn-sm" onClick={resetSelection}>Auswahl zurücksetzen</button>
+          )}
+        </div>
+        <p className="muted" style={{ fontSize: 13, marginTop: 4 }}>
+          {gaps.length === 0
+            ? "Bewerte oben die Bereiche – passende Leistungen werden dann automatisch vorgeschlagen."
+            : `Vorgeschlagen anhand deiner Gap-Analyse (${gaps.map((g) => g.label).join(", ")}). Du kannst frei an-/abwählen.`}
+        </p>
         {packages.length === 0 ? (
           <div className="empty">Noch keine Pakete angelegt. Lege sie in den Einstellungen an.</div>
         ) : (
           <>
             <div className="gap-pkgs">
-              {packages.map((p) => {
-                const rec = recommended.some((r) => r.id === p.id);
+              {sortedPkgs.map((p) => {
+                const rec = recommendedIds.has(p.id);
                 return (
-                  <label key={p.id} className={`gap-pkg ${picked[p.id] ? "on" : ""}`}>
-                    <input type="checkbox" checked={!!picked[p.id]}
-                      onChange={(e) => setPicked((s) => ({ ...s, [p.id]: e.target.checked }))} />
+                  <label key={p.id} className={`gap-pkg ${isPicked(p.id) ? "on" : ""}`}>
+                    <input type="checkbox" checked={isPicked(p.id)}
+                      onChange={(e) => toggle(p.id, e.target.checked)} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="row-inline" style={{ gap: 8, alignItems: "center" }}>
                         <strong>{p.name}</strong>
