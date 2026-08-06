@@ -121,11 +121,11 @@ export default function ClientDetail() {
           <div className="client-name">{client.name}</div>
           {(isAdmin || (client.participants_enabled && user?.role !== "agency_member")
             ? [...NAV.slice(0, 5), TEILNEHMER_TAB, ...NAV.slice(5)] : NAV)
-            .filter((n) => !["onboarding", "doku"].includes(n.key) || isAgency)  // intern
+            .filter((n) => n.key !== "onboarding" || isAgency)  // Onboarding bleibt intern
             .map((n) => (
             <button key={n.key} className={`nav-item ${section === n.key ? "active" : ""}`}
               onClick={() => setSection(n.key)}>
-              {n.label}
+              {n.key === "doku" && !isAgency ? "Anleitung" : n.label}
               {n.key === "work" && openTodos ? <span className="badge-count">{openTodos}</span> : null}
             </button>
           ))}
@@ -139,8 +139,8 @@ export default function ClientDetail() {
           {section === "onboarding" && isAgency && (
             <Onboarding clientId={id} onStatus={(done) => setClient({ ...client, onboarding_completed: done })} />
           )}
-          {section === "doku" && isAgency && (
-            <ProjectDoc clientId={id} clientName={client.name} />
+          {section === "doku" && (
+            <ProjectDoc clientId={id} clientName={client.name} isAgency={isAgency} />
           )}
           {section === "work" && (
             <>

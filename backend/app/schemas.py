@@ -997,8 +997,12 @@ class TimeEntryOut(BaseModel):
 # --- Projekt-Dokumentation (feste Boxen + Arbeitsprotokoll) ---
 class ProjectDocIn(BaseModel):
     sections: dict = {}
-    log: list = []
+    log: list | None = None
     status: str = ""
+
+
+class ProjectDocChat(BaseModel):
+    text: str = ""
 
 
 class ProjectDocOut(BaseModel):

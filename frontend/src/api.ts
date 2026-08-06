@@ -207,8 +207,9 @@ export interface TimeEntry {
   project_id: string | null; project_title: string; user_name: string; description: string;
   started_at: string; ended_at: string | null; duration_seconds: number; billable_seconds: number; running: boolean;
 }
-export interface WorkLogEntry { id: string; date: string; title: string; text: string; author: string; }
-export interface ProjectDoc { sections: Record<string, string>; log: WorkLogEntry[]; status: string; updated_at: string | null; }
+export interface ChatMsg { id: string; author: string; text: string; created_at: string; }
+export interface ProjectDoc { sections: Record<string, string>; log: ChatMsg[]; status: string; updated_at: string | null; }
+export interface Anleitung { sections: Record<string, string>; status: string; updated_at: string | null; }
 export interface ChecklistEntry { id: string; text: string; done: boolean; note: string; group: string; }
 export interface Onboarding { data: Record<string, string>; checklist: ChecklistEntry[]; status: string; updated_at: string | null; }
 export interface Kpi { period: string; metrics: Record<string, number>; extras: Record<string, number>; }
@@ -638,17 +639,22 @@ export const api = {
     request<TimeEntry>(`/time/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteTime: (id: string) => request<void>(`/time/${id}`, { method: "DELETE" }),
 
-  // Projekt-Dokumentation (feste Boxen + Arbeitsprotokoll, PDF)
+  // Projekt-Doku: interner Verlauf-Chat + Kunden-Anleitung
   getProjectDoc: (clientId: string) => request<ProjectDoc>(`/clients/${clientId}/projectdoc`),
-  saveProjectDoc: (clientId: string, d: { sections: Record<string, string>; log: WorkLogEntry[]; status: string }) =>
+  saveProjectDoc: (clientId: string, d: { sections: Record<string, string>; status: string }) =>
     request<ProjectDoc>(`/clients/${clientId}/projectdoc`, { method: "PUT", body: JSON.stringify(d) }),
-  async downloadProjectDocPdf(clientId: string, name: string, kind: "doc" | "worklog") {
-    const path = kind === "worklog" ? "worklog.pdf" : "pdf";
+  addProjectDocChat: (clientId: string, text: string) =>
+    request<ProjectDoc>(`/clients/${clientId}/projectdoc/chat`, { method: "POST", body: JSON.stringify({ text }) }),
+  delProjectDocChat: (clientId: string, msgId: string) =>
+    request<ProjectDoc>(`/clients/${clientId}/projectdoc/chat/${msgId}`, { method: "DELETE" }),
+  clientAnleitung: (clientId: string) => request<Anleitung>(`/clients/${clientId}/projectdoc/anleitung`),
+  async downloadProjectDocPdf(clientId: string, name: string, kind: "doc" | "verlauf" | "anleitung") {
+    const path = kind === "verlauf" ? "verlauf.pdf" : kind === "anleitung" ? "anleitung.pdf" : "pdf";
     const res = await fetch(`/api/clients/${clientId}/projectdoc/${path}`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("PDF fehlgeschlagen");
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url;
-    a.download = `${kind === "worklog" ? "Arbeitsnachweis" : "Projekt-Doku"}-${name}.pdf`.replace(/\s+/g, "_");
+    a.download = `${kind === "verlauf" ? "Verlauf" : "Anleitung"}-${name}.pdf`.replace(/\s+/g, "_");
     a.click(); URL.revokeObjectURL(url);
   },
 
