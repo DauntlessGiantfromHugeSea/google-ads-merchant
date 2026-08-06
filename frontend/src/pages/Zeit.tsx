@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Client, Project, TimeEntry, api } from "../api";
+import { Asset, Client, Project, TimeEntry, api } from "../api";
 import { useToast } from "../toast";
 import { human } from "../lib/timeBilling";
 import BillingTable from "../sections/BillingTable";
@@ -28,6 +28,9 @@ export default function Zeit() {
   const [wsClient, setWsClient] = useState("");
   const [wsProject, setWsProject] = useState("");
   const [wsTitle, setWsTitle] = useState("");
+  const [wsAsset, setWsAsset] = useState("");
+  const [wsLetterhead, setWsLetterhead] = useState(false);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const tick = useRef<number | null>(null);
 
   const load = () => {
@@ -37,6 +40,7 @@ export default function Zeit() {
   useEffect(() => {
     api.clients().then((c) => setClients(c.filter((x) => !x.archived))).catch(() => {});
     api.allProjects().then(setProjects).catch(() => {});
+    api.assets().then(setAssets).catch(() => {});
     load();
   }, []);
   useEffect(() => {
@@ -113,9 +117,18 @@ export default function Zeit() {
                   {projectsFor(wsClient).map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
                 </select></div>
             </div>
+            <div className="field"><label>Logo</label>
+              <select className="select form-light" value={wsAsset} onChange={(e) => setWsAsset(e.target.value)} disabled={wsLetterhead}>
+                <option value="">Branding-Logo (Standard)</option>
+                {assets.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
+              </select></div>
+            <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, margin: "8px 0" }}>
+              <input type="checkbox" checked={wsLetterhead} onChange={(e) => setWsLetterhead(e.target.checked)} />
+              Direkt auf dem Briefpapier drucken (statt Logo im Kopf)
+            </label>
             <div className="row-inline" style={{ justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
               <button className="btn btn-ghost" onClick={() => setWs(false)}>Schließen</button>
-              <button className="btn btn-primary" onClick={() => api.downloadWorksheet({ client: wsClient, project: wsProject, title: wsTitle }).then(() => setWs(false)).catch((e) => toast((e as Error).message, "err"))}>PDF erzeugen</button>
+              <button className="btn btn-primary" onClick={() => api.downloadWorksheet({ client: wsClient, project: wsProject, title: wsTitle, asset: wsAsset, letterhead: wsLetterhead }).then(() => setWs(false)).catch((e) => toast((e as Error).message, "err"))}>PDF erzeugen</button>
             </div>
           </div>
         </div>

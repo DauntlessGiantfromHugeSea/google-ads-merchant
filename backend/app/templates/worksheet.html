@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <style>
   @page { size: A4; margin: 1.6cm 1.6cm 1.4cm; @bottom-right { content: "Seite " counter(page); font-size: 8px; color: #aaa; } }
+  {% if letterhead %}
+  @page { margin: 3.6cm 2.4cm 2.6cm; }
+  {% if letterhead_image %}.letterhead { position: fixed; top: -3.6cm; left: -2.4cm; width: 210mm; height: 297mm; z-index: -1; }{% endif %}
+  {% endif %}
+  html, body { background: transparent; }
   * { box-sizing: border-box; }
   body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 10.5px; }
   h1 { font-size: 20px; margin: 0 0 2px; color: #c4553f; }
@@ -26,6 +31,7 @@
 </style>
 </head>
 <body>
+  {% if letterhead and letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
   <div class="brand">
     <div>
       <h1>{{ doc.title }}</h1>

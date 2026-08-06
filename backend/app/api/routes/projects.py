@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
-from app.models import Client, Organization, Project, ProjectEvent, ProjectFile, Todo, User
+from app.models import Asset, Client, Organization, Project, ProjectEvent, ProjectFile, Todo, User
 from app.schemas import (
     ProjectCreate, ProjectEventCreate, ProjectEventOut, ProjectFileOut, ProjectGlobalOut, ProjectOut, ProjectPatch,
 )
@@ -188,17 +188,25 @@ def delete_project_file(client_id: str, project_id: str, file_id: str,
 
 @global_router.get("/worksheet.pdf")
 def worksheet_pdf(client_id: str = "", project_id: str = "", title: str = "",
+                  asset_id: str = "", letterhead: bool = False,
                   user: User = Depends(require_agency), db: Session = Depends(get_db)):
-    """Druckbares Web-Arbeitsprotokoll (leere Felder). Kunde/Projekt optional
-    vorausgefüllt."""
+    """Druckbares Web-Arbeitsprotokoll (leere Felder). Logo wahlweise aus einem
+    Asset oder dem Branding-Logo; alternativ direkt auf dem Briefpapier."""
     client = db.get(Client, client_id) if client_id else None
     if client and client.organization_id != user.organization_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kunde nicht gefunden")
     proj = db.get(Project, project_id) if project_id else None
     org = db.get(Organization, user.organization_id)
     tz = (org.timezone if org else None) or "Europe/Berlin"
-    logo = (f"data:{org.logo_content_type or 'image/png'};base64,{org.logo_base64}"
-            if org and org.logo_base64 else "")
+    # Logo: gewähltes Asset > Branding-Logo. Auf Briefpapier kein Kopf-Logo.
+    logo = ""
+    if not letterhead:
+        if asset_id:
+            a = db.get(Asset, asset_id)
+            if a and a.organization_id == user.organization_id:
+                logo = f"data:{a.content_type or 'image/png'};base64,{a.data_base64}"
+        if not logo and org and org.logo_base64:
+            logo = f"data:{org.logo_content_type or 'image/png'};base64,{org.logo_base64}"
     doc = {
         "title": title.strip() or "Web-Arbeitsprotokoll",
         "client_name": client.name if client else "",
@@ -208,7 +216,7 @@ def worksheet_pdf(client_id: str = "", project_id: str = "", title: str = "",
         "logo": logo,
         "color_rows": 8, "css_rows": 10,
     }
-    data = pdf.render_worksheet_pdf(doc)
+    data = pdf.render_worksheet_pdf(doc, use_letterhead=letterhead)
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
                              headers={"Content-Disposition": 'attachment; filename="Arbeitsprotokoll.pdf"'})
 

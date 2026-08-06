@@ -616,11 +616,13 @@ export const api = {
   // Zeiterfassung (Stoppuhr)
   timeEntries: () => request<TimeEntry[]>("/time"),
   clientTime: (clientId: string) => request<TimeEntry[]>(`/clients/${clientId}/time`),
-  async downloadWorksheet(p: { client?: string; project?: string; title?: string }) {
+  async downloadWorksheet(p: { client?: string; project?: string; title?: string; asset?: string; letterhead?: boolean }) {
     const q = new URLSearchParams();
     if (p.client) q.set("client_id", p.client);
     if (p.project) q.set("project_id", p.project);
     if (p.title) q.set("title", p.title);
+    if (p.asset) q.set("asset_id", p.asset);
+    if (p.letterhead) q.set("letterhead", "true");
     const res = await fetch(`/api/projects/worksheet.pdf?${q.toString()}`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("PDF fehlgeschlagen");
     const url = URL.createObjectURL(await res.blob());
