@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 1.6cm 1.6cm 1.4cm; @bottom-right { content: "Seite " counter(page); font-size: 8px; color: #aaa; } }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 10.5px; }
+  h1 { font-size: 20px; margin: 0 0 2px; color: #c4553f; }
+  .sub { color: #7a828b; font-size: 10px; margin-bottom: 12px; }
+  .head { display: flex; flex-wrap: wrap; gap: 8px 22px; margin: 8px 0 16px; }
+  .fld { flex: 1 1 40%; font-size: 11px; }
+  .fld .k { color: #7a828b; font-size: 9px; text-transform: uppercase; letter-spacing: .04em; }
+  .fld .v { border-bottom: 1px solid #c7ccd1; min-height: 16px; padding: 2px 0; font-weight: 600; }
+  h2 { font-size: 12px; margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 2px solid #c4553f; color: #c4553f; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 8px; text-transform: uppercase; letter-spacing: .04em; color: #7a828b; padding: 3px 6px; }
+  td { border: 1px solid #dfe3e7; height: 22px; padding: 2px 6px; }
+  td.sw { width: 26px; } .sw-box { width: 16px; height: 16px; border: 1px solid #c7ccd1; border-radius: 3px; }
+  .notes { border: 1px solid #dfe3e7; border-radius: 4px; height: 150px;
+    background-image: repeating-linear-gradient(#fff, #fff 21px, #eef1f3 22px); }
+  .chk { display: flex; align-items: center; gap: 8px; height: 22px; border-bottom: 1px solid #eef1f3; }
+  .chk .box { width: 13px; height: 13px; border: 1px solid #c7ccd1; border-radius: 3px; flex: none; }
+</style>
+</head>
+<body>
+  <h1>{{ doc.title }}</h1>
+  <div class="sub">Arbeitsprotokoll · {{ doc.date }}</div>
+
+  <div class="head">
+    <div class="fld"><div class="k">Kunde</div><div class="v">{{ doc.client_name }}</div></div>
+    <div class="fld"><div class="k">Projekt</div><div class="v">{{ doc.project_name }}</div></div>
+    <div class="fld"><div class="k">Datum</div><div class="v">{{ doc.date }}</div></div>
+    <div class="fld"><div class="k">Bearbeiter</div><div class="v">{{ doc.author }}</div></div>
+  </div>
+
+  <h2>Farbcodes</h2>
+  <table>
+    <thead><tr><th class="sw"></th><th>Bezeichnung</th><th>HEX / RGB</th><th>Verwendung</th></tr></thead>
+    <tbody>{% for _ in range(doc.color_rows) %}<tr><td class="sw"><div class="sw-box"></div></td><td></td><td></td><td></td></tr>{% endfor %}</tbody>
+  </table>
+
+  <h2>Schriften</h2>
+  <table>
+    <thead><tr><th>Font</th><th>Gewicht</th><th>Einsatz</th></tr></thead>
+    <tbody>{% for _ in range(3) %}<tr><td></td><td></td><td></td></tr>{% endfor %}</tbody>
+  </table>
+
+  <h2>CSS-Klassen / Komponenten</h2>
+  <table>
+    <thead><tr><th>Klasse / Selektor</th><th>Zweck / Notiz</th></tr></thead>
+    <tbody>{% for _ in range(doc.css_rows) %}<tr><td></td><td></td></tr>{% endfor %}</tbody>
+  </table>
+
+  <h2>Aufgaben</h2>
+  {% for _ in range(5) %}<div class="chk"><span class="box"></span></div>{% endfor %}
+
+  <h2>Dokumentation / Notizen</h2>
+  <div class="notes"></div>
+</body>
+</html>

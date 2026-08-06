@@ -1,15 +1,18 @@
 """Projekte/Kampagnen je Kunde (Kanban) + globales Board über alle Kunden."""
 import base64
+import io
 
 from fastapi import APIRouter, Depends, File, HTTPException, Response, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_scoped_client, require_agency
 from app.database import get_db
-from app.models import Client, Project, ProjectEvent, ProjectFile, Todo, User
+from app.models import Client, Organization, Project, ProjectEvent, ProjectFile, Todo, User
 from app.schemas import (
     ProjectCreate, ProjectEventCreate, ProjectEventOut, ProjectFileOut, ProjectGlobalOut, ProjectOut, ProjectPatch,
 )
+from app.services import pdf, timeutil
 from app.services.notify import notify_client_users
 
 _MAX_BYTES = 15 * 1024 * 1024  # 15 MB je Datei
@@ -181,6 +184,30 @@ def delete_project_file(client_id: str, project_id: str, file_id: str,
     if pf and pf.project_id == project_id and pf.organization_id == user.organization_id:
         db.delete(pf)
         db.commit()
+
+
+@global_router.get("/worksheet.pdf")
+def worksheet_pdf(client_id: str = "", project_id: str = "", title: str = "",
+                  user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Druckbares Web-Arbeitsprotokoll (leere Felder). Kunde/Projekt optional
+    vorausgefüllt."""
+    client = db.get(Client, client_id) if client_id else None
+    if client and client.organization_id != user.organization_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kunde nicht gefunden")
+    proj = db.get(Project, project_id) if project_id else None
+    org = db.get(Organization, user.organization_id)
+    tz = (org.timezone if org else None) or "Europe/Berlin"
+    doc = {
+        "title": title.strip() or "Web-Arbeitsprotokoll",
+        "client_name": client.name if client else "",
+        "project_name": proj.title if proj else "",
+        "date": timeutil.now_local_str("%d.%m.%Y", tz, with_tz=False),
+        "author": user.full_name or user.email,
+        "color_rows": 8, "css_rows": 10,
+    }
+    data = pdf.render_worksheet_pdf(doc)
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": 'attachment; filename="Arbeitsprotokoll.pdf"'})
 
 
 @global_router.get("", response_model=list[ProjectGlobalOut])

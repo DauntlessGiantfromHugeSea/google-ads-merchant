@@ -143,6 +143,12 @@ def _rich_fmt(text: str):
     return Markup(t)
 
 
+def render_worksheet_pdf(doc: dict) -> bytes:
+    """Druckbares Web-Arbeitsprotokoll (leere Felder zum Ausfüllen)."""
+    template = _env.get_template("worksheet.html")
+    return _pdf_from_html(template.render(doc=doc), None)
+
+
 def render_kostenaufstellung_pdf(doc: dict) -> bytes:
     letterhead = _find_letterhead()
     image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None

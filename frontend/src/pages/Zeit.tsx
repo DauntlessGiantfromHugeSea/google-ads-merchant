@@ -24,6 +24,10 @@ export default function Zeit() {
   const [mMin, setMMin] = useState("");
   const [view, setView] = useState<"verlauf" | "abrechnung">("verlauf");
   const [edit, setEdit] = useState<TimeEntry | null>(null);
+  const [ws, setWs] = useState(false);
+  const [wsClient, setWsClient] = useState("");
+  const [wsProject, setWsProject] = useState("");
+  const [wsTitle, setWsTitle] = useState("");
   const tick = useRef<number | null>(null);
 
   const load = () => {
@@ -84,8 +88,38 @@ export default function Zeit() {
     <>
       <div className="page-head">
         <h1>Zeiterfassung</h1>
-        <span className="muted" style={{ fontSize: 13 }}>Heute: <strong style={{ color: "var(--ink)" }}>{human(todayTotal)}</strong></span>
+        <div className="row-inline" style={{ alignItems: "center", gap: 12 }}>
+          <button className="btn btn-ghost btn-sm" onClick={() => setWs(true)}>🖨 Arbeitsprotokoll</button>
+          <span className="muted" style={{ fontSize: 13 }}>Heute: <strong style={{ color: "var(--ink)" }}>{human(todayTotal)}</strong></span>
+        </div>
       </div>
+
+      {ws && (
+        <div className="modal-backdrop" onClick={() => setWs(false)}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={(e) => e.stopPropagation()}>
+            <h2 style={{ marginTop: 0 }}>🖨 Web-Arbeitsprotokoll</h2>
+            <p className="muted" style={{ marginTop: -4, fontSize: 13 }}>Druckbares PDF mit Platz für Farbcodes, CSS-Klassen, Doku. Kunde/Projekt optional vorausfüllen.</p>
+            <div className="field"><label>Titel (optional)</label>
+              <input className="input form-light" value={wsTitle} onChange={(e) => setWsTitle(e.target.value)} placeholder="Web-Arbeitsprotokoll" /></div>
+            <div className="row-inline">
+              <div className="field" style={{ flex: 1 }}><label>Kunde</label>
+                <select className="select form-light" value={wsClient} onChange={(e) => { setWsClient(e.target.value); setWsProject(""); }}>
+                  <option value="">— leer —</option>
+                  {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select></div>
+              <div className="field" style={{ flex: 1 }}><label>Projekt</label>
+                <select className="select form-light" value={wsProject} onChange={(e) => setWsProject(e.target.value)} disabled={!wsClient}>
+                  <option value="">— leer —</option>
+                  {projectsFor(wsClient).map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select></div>
+            </div>
+            <div className="row-inline" style={{ justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
+              <button className="btn btn-ghost" onClick={() => setWs(false)}>Schließen</button>
+              <button className="btn btn-primary" onClick={() => api.downloadWorksheet({ client: wsClient, project: wsProject, title: wsTitle }).then(() => setWs(false)).catch((e) => toast((e as Error).message, "err"))}>PDF erzeugen</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="section timer-card">
         {running ? (

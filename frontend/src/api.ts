@@ -616,6 +616,16 @@ export const api = {
   // Zeiterfassung (Stoppuhr)
   timeEntries: () => request<TimeEntry[]>("/time"),
   clientTime: (clientId: string) => request<TimeEntry[]>(`/clients/${clientId}/time`),
+  async downloadWorksheet(p: { client?: string; project?: string; title?: string }) {
+    const q = new URLSearchParams();
+    if (p.client) q.set("client_id", p.client);
+    if (p.project) q.set("project_id", p.project);
+    if (p.title) q.set("title", p.title);
+    const res = await fetch(`/api/projects/worksheet.pdf?${q.toString()}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = "Arbeitsprotokoll.pdf"; a.click(); URL.revokeObjectURL(url);
+  },
   runningTime: () => request<TimeEntry | null>("/time/running"),
   startTimer: (d: { client_id?: string | null; project_id?: string | null; description?: string }) =>
     request<TimeEntry>("/time/start", { method: "POST", body: JSON.stringify(d) }),
