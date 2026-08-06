@@ -123,11 +123,43 @@ def render_monitoring_pdf(report: dict) -> bytes:
     return _pdf_from_html(html, letterhead)
 
 
+def _doc_fmt(text: str):
+    """Absätze (Leerzeile), Aufzählungen (- / * / •) und **fett** zu HTML."""
+    import html as _html  # noqa: PLC0415
+    import re as _re  # noqa: PLC0415
+    from markupsafe import Markup  # noqa: PLC0415
+
+    def inline(s: str) -> str:
+        s = _html.escape(s)
+        return _re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", s)
+
+    out: list[str] = []
+    para: list[str] = []
+    bul: list[str] = []
+    def flush_para():
+        if para:
+            out.append("<p>" + "<br>".join(para) + "</p>"); para.clear()
+    def flush_bul():
+        if bul:
+            out.append("<ul>" + "".join(f"<li>{b}</li>" for b in bul) + "</ul>"); bul.clear()
+    for raw in (text or "").split("\n"):
+        line = raw.strip()
+        if not line:
+            flush_bul(); flush_para(); continue
+        if line[:2] in ("- ", "* ") or line[:1] == "•":
+            flush_para(); bul.append(inline(line.lstrip("-*• ").strip()))
+        else:
+            flush_bul(); para.append(inline(line))
+    flush_bul(); flush_para()
+    return Markup("".join(out))
+
+
 def render_projectdoc_pdf(doc: dict, tz_name: str = timeutil.DEFAULT_TZ) -> bytes:
     letterhead = _find_letterhead()
     image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    secs = [{**s, "text": _doc_fmt(s.get("text", ""))} for s in (doc.get("sections") or [])]
     template = _env.get_template("projectdoc.html")
-    html = template.render(doc=doc, letterhead_image=image_url,
+    html = template.render(doc={**doc, "sections": secs}, letterhead_image=image_url,
                            generated_at=timeutil.now_local_str("%d.%m.%Y %H:%M", tz_name, with_tz=True))
     return _pdf_from_html(html, letterhead)
 

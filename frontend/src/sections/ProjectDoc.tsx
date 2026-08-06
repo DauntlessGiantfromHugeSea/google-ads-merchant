@@ -8,9 +8,13 @@ const GROUPS: { title: string; fields: { id: string; label: string; hint: string
     title: "Anleitung für den Kunden",
     fields: [
       { id: "ueberblick", label: "Überblick", hint: "Was ist die Website, worum geht’s?", big: true },
-      { id: "inhalte", label: "Inhalte selbst pflegen", hint: "Wie ändert man Texte/Bilder – konkret", big: true },
-      { id: "aufgaben", label: "Häufige Aufgaben – Schritt für Schritt", hint: "z. B. neuen Beitrag anlegen, Bild tauschen", big: true },
+      { id: "ziel", label: "Ziel & Zielgruppe", hint: "Wen soll die Seite erreichen, was ist das Ziel?" },
+      { id: "struktur", label: "Aufbau & Seitenstruktur", hint: "Welche Seiten/Bereiche gibt es?", big: true },
+      { id: "inhalte", label: "Inhalte selbst pflegen", hint: "Wie ändert man Texte/Bilder – konkret & ausführlich", big: true },
+      { id: "aufgaben", label: "Häufige Aufgaben – Schritt für Schritt", hint: "z. B. Beitrag anlegen, Bild tauschen (mit **fett** & Aufzählungen)", big: true },
+      { id: "medien", label: "Bilder & Medien", hint: "Formate, Größen, wo hochladen" },
       { id: "zugaenge", label: "Login & Zugänge", hint: "Wo einloggen (ohne Passwörter hier)" },
+      { id: "dos", label: "Do’s & Don’ts", hint: "Worauf achten, was vermeiden", big: true },
       { id: "support", label: "Support & Ansprechpartner", hint: "Wie erreicht man euch, Reaktionszeiten" },
     ],
   },
@@ -20,12 +24,32 @@ const GROUPS: { title: string; fields: { id: string; label: string; hint: string
       { id: "setup", label: "Setup & Hosting", hint: "Wo läuft die Seite, Serverumgebung", big: true },
       { id: "domain", label: "Domain, E-Mail & DNS", hint: "Domain, Mail, wichtige DNS-Einträge" },
       { id: "stack", label: "Verwendete Technik / Stack", hint: "CMS, Framework, Plugins, Libraries" },
-      { id: "einstellungen", label: "Wichtige Einstellungen", hint: "Caching, Backups, SEO, Tracking …", big: true },
-      { id: "uebergabe", label: "Übergabe & Wartung", hint: "Was ist zu tun, Wartungsintervalle" },
+      { id: "einstellungen", label: "Wichtige Einstellungen", hint: "Caching, SEO, Tracking …", big: true },
+      { id: "sicherheit", label: "Sicherheit & Backups", hint: "Backups, Updates, SSL, Zugriffsschutz" },
+      { id: "uebergabe", label: "Übergabe & Wartung", hint: "Was ist zu tun, Wartungsintervalle", big: true },
     ],
   },
 ];
 const ALL = GROUPS.flatMap((g) => g.fields);
+
+// Absätze (Leerzeile), Aufzählungen (- / * / •) und **fett** -> React-Elemente.
+function RichText({ text }: { text: string }) {
+  const inline = (s: string, k: number) =>
+    s.split(/(\*\*[^*]+\*\*)/g).map((p, i) =>
+      p.startsWith("**") && p.endsWith("**") ? <strong key={`${k}-${i}`}>{p.slice(2, -2)}</strong> : <span key={`${k}-${i}`}>{p}</span>);
+  const blocks: React.ReactNode[] = [];
+  let para: string[] = [], bul: string[] = [], key = 0;
+  const flushP = () => { if (para.length) { const p = para; blocks.push(<p key={key++} style={{ margin: "0 0 8px" }}>{p.map((l, i) => <span key={i}>{i > 0 && <br />}{inline(l, i)}</span>)}</p>); para = []; } };
+  const flushB = () => { if (bul.length) { const b = bul; blocks.push(<ul key={key++} style={{ margin: "4px 0 8px", paddingLeft: 18 }}>{b.map((x, i) => <li key={i}>{inline(x, i)}</li>)}</ul>); bul = []; } };
+  (text || "").split("\n").forEach((raw) => {
+    const line = raw.trim();
+    if (!line) { flushB(); flushP(); return; }
+    if (/^[-*•]\s?/.test(line)) { flushP(); bul.push(line.replace(/^[-*•]\s*/, "")); }
+    else { flushB(); para.push(line); }
+  });
+  flushB(); flushP();
+  return <>{blocks}</>;
+}
 
 // ---------- Kundenansicht (read-only Anleitung) ----------
 function ClientAnleitung({ clientId, clientName }: { clientId: string; clientName: string }) {
@@ -50,9 +74,9 @@ function ClientAnleitung({ clientId, clientName }: { clientId: string; clientNam
           <div key={g.title} className="section">
             <h3 style={{ fontSize: 16, marginBottom: 10 }}>{g.title}</h3>
             {fields.map((f) => (
-              <div key={f.id} style={{ marginBottom: 14 }}>
+              <div key={f.id} style={{ marginBottom: 16 }}>
                 <strong>{f.label}</strong>
-                <div className="muted" style={{ fontSize: 14, whiteSpace: "pre-wrap", marginTop: 2 }}>{sections[f.id]}</div>
+                <div style={{ fontSize: 14, marginTop: 4, lineHeight: 1.6 }}><RichText text={sections[f.id]} /></div>
               </div>
             ))}
           </div>
@@ -141,16 +165,19 @@ export default function ProjectDoc({ clientId, clientName, isAgency }: { clientI
             <button className="btn btn-ghost btn-sm" onClick={() => api.downloadProjectDocPdf(clientId, clientName, "doc")}>📄 Anleitung-PDF</button>
           </div>
         </div>
+        <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
+          Tipp: Leerzeile = neuer Absatz · Zeilen mit „- " werden zu Aufzählungen · <strong>**Text**</strong> wird fett. So wird’s auch im PDF &amp; Kundenportal dargestellt.
+        </div>
       </div>
 
       {GROUPS.map((g) => (
         <div key={g.title} className="section">
           <h3 style={{ fontSize: 16, marginBottom: 12 }}>{g.title}</h3>
-          <div className="ob-grid">
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             {g.fields.map((f) => (
-              <div key={f.id} className="field" style={f.big ? { gridColumn: "1 / -1" } : undefined}>
+              <div key={f.id} className="field">
                 <label>{f.label}<span className="muted" style={{ fontWeight: 400 }}> · {f.hint}</span></label>
-                <textarea className="input form-light" rows={f.big ? 3 : 2}
+                <textarea className="input form-light" rows={f.big ? 6 : 4} style={{ lineHeight: 1.6 }}
                   value={sections[f.id] || ""} onChange={(e) => updSec(f.id, e.target.value)} />
               </div>
             ))}

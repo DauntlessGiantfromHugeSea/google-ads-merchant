@@ -21,14 +21,19 @@ router = APIRouter(prefix="/api/clients/{client_id}/projectdoc", tags=["projectd
 # Anleitung für den Kunden – zwei Gruppen, bewusst tiefer.
 SECTIONS = [
     ("ueberblick", "Überblick", "Anleitung"),
+    ("ziel", "Ziel & Zielgruppe der Website", "Anleitung"),
+    ("struktur", "Aufbau & Seitenstruktur", "Anleitung"),
     ("inhalte", "Inhalte selbst pflegen", "Anleitung"),
     ("aufgaben", "Häufige Aufgaben – Schritt für Schritt", "Anleitung"),
+    ("medien", "Bilder & Medien", "Anleitung"),
     ("zugaenge", "Login & Zugänge", "Anleitung"),
+    ("dos", "Do’s & Don’ts", "Anleitung"),
     ("support", "Support & Ansprechpartner", "Anleitung"),
     ("setup", "Setup & Hosting", "Technische Doku"),
     ("domain", "Domain, E-Mail & DNS", "Technische Doku"),
     ("stack", "Verwendete Technik / Stack", "Technische Doku"),
     ("einstellungen", "Wichtige Einstellungen", "Technische Doku"),
+    ("sicherheit", "Sicherheit & Backups", "Technische Doku"),
     ("uebergabe", "Übergabe & Wartung", "Technische Doku"),
 ]
 
