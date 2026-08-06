@@ -336,11 +336,70 @@ export default function Settings() {
 
       <MailSettings />
       <MonitoringSettings />
+      <PublicAssets />
       <Packages />
       <AgencyContactForm />
       <Backups />
       <Team />
     </>
+  );
+}
+
+function PublicAssets() {
+  const toast = useToast();
+  const [items, setItems] = useState<import("../api").Asset[]>([]);
+  const [label, setLabel] = useState("");
+  const [busy, setBusy] = useState(false);
+  const fmtSize = (b: number) => b >= 1024 * 1024 ? `${(b / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`;
+  const load = () => api.assets().then(setItems).catch(() => {});
+  useEffect(() => { load(); }, []);
+  const upload = async (f: File) => {
+    setBusy(true);
+    try { await api.uploadAsset(label, f); setLabel(""); load(); toast("Hochgeladen."); }
+    catch (e) { toast((e as Error).message, "err"); } finally { setBusy(false); }
+  };
+  const del = async (id: string) => { if (!confirm("Asset löschen? Bestehende Einbindungen brechen dann.")) return; await api.deleteAsset(id); load(); };
+  const copy = (t: string, msg: string) => navigator.clipboard.writeText(t).then(() => toast(msg));
+
+  return (
+    <div className="section">
+      <h2>Öffentliche Logo-Dateien</h2>
+      <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+        Lade Logo-Varianten hoch und erhalte je eine <strong>offene URL</strong> zum Einbinden auf anderen Seiten
+        (z. B. <code>&lt;img src="…"&gt;</code>). Die Datei ist ohne Login abrufbar.
+      </p>
+      <div className="form-light row-inline" style={{ alignItems: "flex-end", gap: 10, flexWrap: "wrap" }}>
+        <div className="field" style={{ flex: 2, minWidth: 180 }}><label>Bezeichnung (optional)</label>
+          <input className="input" value={label} onChange={(e) => setLabel(e.target.value)} placeholder="z. B. Logo weiß, Logo quadratisch …" /></div>
+        <label className="btn btn-primary" style={{ cursor: "pointer" }}>{busy ? "Lädt…" : "+ Datei hochladen"}
+          <input type="file" hidden disabled={busy} onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.currentTarget.value = ""; }} /></label>
+      </div>
+
+      {items.length === 0 ? <div className="empty sm" style={{ marginTop: 12 }}>Noch keine Dateien.</div> : (
+        <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+          {items.map((a) => (
+            <div key={a.id} className="asset-row">
+              <div className="asset-preview">
+                {a.content_type.startsWith("image/")
+                  ? <img src={api.assetUrl(a.token)} alt={a.label} />
+                  : <span style={{ fontSize: 22 }}>📄</span>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <strong className="ellip">{a.label}</strong>
+                <div className="muted" style={{ fontSize: 12 }}>{a.filename} · {fmtSize(a.size)}</div>
+                <input className="input" readOnly value={api.assetUrl(a.token)} onFocus={(e) => e.currentTarget.select()} style={{ marginTop: 6, fontSize: 12 }} />
+              </div>
+              <div className="row-inline" style={{ gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => copy(api.assetUrl(a.token), "URL kopiert.")}>URL</button>
+                <button className="btn btn-ghost btn-sm" onClick={() => copy(`<img src="${api.assetUrl(a.token)}" alt="${a.label}">`, "Einbettungs-Code kopiert.")}>&lt;img&gt;</button>
+                <a className="btn btn-ghost btn-sm" href={api.assetUrl(a.token)} target="_blank" rel="noreferrer">öffnen</a>
+                <button className="del" onClick={() => del(a.id)}>×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

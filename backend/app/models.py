@@ -479,6 +479,25 @@ class Payment(Base):
     invoice_id: Mapped[str | None] = mapped_column(ForeignKey("invoices.id"), nullable=True)
 
 
+class Asset(Base):
+    """Öffentlich abrufbare Datei (z. B. Logo-Variante) zur Einbindung auf
+    anderen Seiten. Auslieferung ohne Login über einen unrat­baren Token."""
+
+    __tablename__ = "assets"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True, default=_uuid)
+    label: Mapped[str] = mapped_column(String(255), default="")
+    filename: Mapped[str] = mapped_column(String(512), default="datei")
+    content_type: Mapped[str] = mapped_column(String(128), default="application/octet-stream")
+    size: Mapped[int] = mapped_column(default=0)
+    data_base64: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+
+
 class RichDoc(Base):
     """Frei zusammengestelltes Dokument (Report/Brief) aus Blöcken. Wird als
     PDF gerendert und kann per Mail verschickt werden."""

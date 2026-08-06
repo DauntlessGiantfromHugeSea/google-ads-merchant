@@ -896,6 +896,20 @@ class RichDocSend(BaseModel):
     message: str = ""
 
 
+# --- Öffentliche Assets (Logo-Varianten zum Einbinden) ---
+class AssetOut(BaseModel):
+    id: str
+    token: str
+    label: str
+    filename: str
+    content_type: str
+    size: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 # --- Datei-Anforderungen (öffentlicher Upload) ---
 class FileRequestCreate(BaseModel):
     title: str = ""

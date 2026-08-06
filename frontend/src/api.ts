@@ -184,6 +184,7 @@ export interface RichDoc {
   blocks: DocBlock[]; client_id: string | null; client_name: string; updated_at: string | null;
 }
 export interface RichDocBrief { id: string; title: string; theme: string; client_name: string; updated_at: string | null; }
+export interface Asset { id: string; token: string; label: string; filename: string; content_type: string; size: number; created_at: string; }
 export interface UploadedFile {
   id: string; filename: string; content_type: string; size: number;
   uploader: string; created_at: string; expires_at: string | null;
@@ -562,6 +563,15 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = `${title || "Dokument"}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
   },
+
+  // Öffentliche Assets (Logo-Varianten)
+  assets: () => request<Asset[]>("/assets"),
+  uploadAsset: (label: string, file: File) => {
+    const fd = new FormData(); fd.set("file", file); fd.set("label", label);
+    return request<Asset>("/assets", { method: "POST", body: fd });
+  },
+  deleteAsset: (id: string) => request<void>(`/assets/${id}`, { method: "DELETE" }),
+  assetUrl: (token: string) => `${location.origin}/api/assets/${token}`,
 
   // Datei-Anforderungen (öffentlicher Upload)
   fileRequests: () => request<FileRequest[]>("/filerequests"),
