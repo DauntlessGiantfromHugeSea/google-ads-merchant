@@ -197,12 +197,15 @@ def worksheet_pdf(client_id: str = "", project_id: str = "", title: str = "",
     proj = db.get(Project, project_id) if project_id else None
     org = db.get(Organization, user.organization_id)
     tz = (org.timezone if org else None) or "Europe/Berlin"
+    logo = (f"data:{org.logo_content_type or 'image/png'};base64,{org.logo_base64}"
+            if org and org.logo_base64 else "")
     doc = {
         "title": title.strip() or "Web-Arbeitsprotokoll",
         "client_name": client.name if client else "",
         "project_name": proj.title if proj else "",
         "date": timeutil.now_local_str("%d.%m.%Y", tz, with_tz=False),
         "author": user.full_name or user.email,
+        "logo": logo,
         "color_rows": 8, "css_rows": 10,
     }
     data = pdf.render_worksheet_pdf(doc)
