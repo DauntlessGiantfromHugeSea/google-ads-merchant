@@ -26,6 +26,7 @@ import Credentials from "../sections/Credentials";
 import ProjectDoc from "../sections/ProjectDoc";
 import ClientTime from "../sections/ClientTime";
 import ClientInvoices from "../sections/ClientInvoices";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 const NAV = [
   { key: "overview", label: "Übersicht" },
@@ -131,6 +132,7 @@ export default function ClientDetail() {
         </nav>
 
         <div className="client-content">
+          <ErrorBoundary label="Dieser Bereich">
           {section === "overview" && (
             <Overview client={client} isAgency={isAgency} onGo={setSection} onSaved={setClient} />
           )}
@@ -151,10 +153,10 @@ export default function ClientDetail() {
           )}
           {section === "reporting" && (
             <>
-              <Reportings clientId={id} clientName={client.name} isAgency={isAgency} />
-              <Kpis clientId={id} isAgency={isAgency} />
-              <Dashboards clientId={id} isAgency={isAgency} />
-              <Seo clientId={id} isAgency={isAgency} />
+              <ErrorBoundary label="Reports"><Reportings clientId={id} clientName={client.name} isAgency={isAgency} /></ErrorBoundary>
+              <ErrorBoundary label="Analytics"><Kpis clientId={id} isAgency={isAgency} /></ErrorBoundary>
+              <ErrorBoundary label="Live-Auswertung"><Dashboards clientId={id} isAgency={isAgency} /></ErrorBoundary>
+              <ErrorBoundary label="SEO"><Seo clientId={id} isAgency={isAgency} /></ErrorBoundary>
             </>
           )}
           {section === "monitoring" && (
@@ -223,6 +225,7 @@ export default function ClientDetail() {
               )}
             </>
           )}
+          </ErrorBoundary>
         </div>
       </div>
     </>
