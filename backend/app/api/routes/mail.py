@@ -20,7 +20,14 @@ from app.schemas import MailSend, MailStatus
 settings = get_settings()
 router = APIRouter(prefix="/api/mail", tags=["mail"])
 
-SCOPE = "offline_access openid email profile User.Read Mail.Send Mail.Read"
+# Scopes getrennt halten: Beim Verbinden (Zustimmung) fragen wir ALLES an,
+# beim Token-Refresh nur so viel, wie für die jeweilige Aktion nötig ist.
+# So bricht der Versand NICHT, wenn ein bestehendes Konto Mail.Read noch nicht
+# zugestimmt hat (dann funktioniert nur der Posteingang-Abgleich noch nicht).
+_SCOPE_BASE = "offline_access openid email profile User.Read"
+SCOPE_SEND = f"{_SCOPE_BASE} Mail.Send"
+SCOPE_FULL = f"{_SCOPE_BASE} Mail.Send Mail.Read"
+SCOPE = SCOPE_FULL  # für Authorize/Callback (Zustimmung zu Senden + Lesen)
 
 
 def _cfg() -> bool:
@@ -35,16 +42,28 @@ def _token_url() -> str:
     return f"https://login.microsoftonline.com/{settings.microsoft_tenant}/oauth2/v2.0/token"
 
 
-def _access_token(refresh_token: str) -> str:
-    r = httpx.post(_token_url(), data={
-        "client_id": settings.microsoft_client_id,
-        "client_secret": settings.microsoft_client_secret,
-        "grant_type": "refresh_token",
-        "refresh_token": refresh_token,
-        "scope": SCOPE,
-    }, timeout=20)
-    r.raise_for_status()
-    return r.json()["access_token"]
+def _access_token(refresh_token: str, scope: str = SCOPE_SEND) -> str:
+    """Holt frisch einen Access-Token per Refresh-Token. Fehler werden als
+    saubere HTTPException gemeldet (kein 500). `scope` bestimmt, welche
+    Berechtigung angefragt wird – Versand braucht nur Mail.Send."""
+    try:
+        r = httpx.post(_token_url(), data={
+            "client_id": settings.microsoft_client_id,
+            "client_secret": settings.microsoft_client_secret,
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token,
+            "scope": scope,
+        }, timeout=20)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
+                            f"Microsoft nicht erreichbar: {exc}") from exc
+    if r.status_code >= 300:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
+                            f"Microsoft-Anmeldung abgelaufen – bitte Konto neu verbinden. ({r.text[:150]})")
+    token = r.json().get("access_token")
+    if not token:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Kein Access-Token von Microsoft erhalten.")
+    return token
 
 
 def render_email_html(org, body_text: str) -> str:
@@ -102,7 +121,13 @@ def read_inbox(org, top: int = 50) -> list[dict]:
     Benötigt den Scope Mail.Read (nach Scope-Erweiterung neu verbinden)."""
     if not org or not org.ms_refresh_token:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
-    access = _access_token(decrypt(org.ms_refresh_token))
+    try:
+        access = _access_token(decrypt(org.ms_refresh_token), SCOPE_FULL)
+    except HTTPException as exc:
+        # Bestehendes Konto hat Mail.Read evtl. noch nicht zugestimmt.
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Für den Posteingang-Abgleich fehlt die Leseberechtigung. Bitte das "
+                            "Microsoft-Konto in den Einstellungen einmal neu verbinden (Mail.Read).") from exc
     url = ("https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages"
            f"?$top={min(top, 100)}&$orderby=receivedDateTime desc"
            "&$select=id,subject,from,receivedDateTime,body,bodyPreview,conversationId")
