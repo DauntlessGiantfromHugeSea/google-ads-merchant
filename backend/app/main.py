@@ -113,11 +113,36 @@ def _ensure_schema() -> None:
     _ensure_columns(insp, "service_packages", _PACKAGE_COLUMNS)
 
 
+async def _mail_sync_loop(interval_seconds: int) -> None:
+    """Gleicht periodisch alle verbundenen Postfächer ab (E-Mail-Konversationen).
+    Blockierende Arbeit läuft in einem Thread, damit der Event-Loop frei bleibt.
+    Fehler werden geschluckt – der Loop läuft weiter."""
+    import asyncio  # noqa: PLC0415
+
+    from app.api.routes.mail_threads import sync_all_orgs  # noqa: PLC0415
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            await asyncio.to_thread(sync_all_orgs)
+        except Exception:
+            pass
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    import asyncio  # noqa: PLC0415
+
     Base.metadata.create_all(bind=engine)
     _ensure_schema()
-    yield
+    task = None
+    minutes = getattr(_settings, "mail_sync_interval_minutes", 0) or 0
+    if minutes > 0:
+        task = asyncio.create_task(_mail_sync_loop(minutes * 60))
+    try:
+        yield
+    finally:
+        if task:
+            task.cancel()
 
 
 # Docs/OpenAPI in Produktion abschalten (keine Schema-Preisgabe).

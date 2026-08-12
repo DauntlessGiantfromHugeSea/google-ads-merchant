@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     microsoft_client_secret: str = ""
     microsoft_tenant: str = "common"
 
+    # E-Mail-Konversationen: Postfach automatisch alle X Minuten abgleichen
+    # (0 = aus, dann nur der Button). Standard: alle 5 Minuten.
+    mail_sync_interval_minutes: int = 5
+
     # Wenn true: Rechnungs-/RE-Funktionen nur aus dem Tailscale-Netz (100.64.0.0/10)
     tailscale_guard: bool = False
 

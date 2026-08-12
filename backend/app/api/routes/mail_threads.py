@@ -26,10 +26,10 @@ from .mail import read_inbox, render_email_html, send_via_graph
 
 router = APIRouter(prefix="/api/mail/threads", tags=["mail-threads"])
 
-REF_PREFIX = "NF"
+REF_PREFIX = "NL"
 _ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # ohne 0/O/1/I – gut vorlesbar
-# Muster im Betreff, z. B. [NF-7QK4T-9ZM2P] – tolerant gegenüber Klein-/Sonderzeichen.
-REF_RE = re.compile(r"NF-[A-Z0-9]{4,6}-[A-Z0-9]{4,6}", re.IGNORECASE)
+# Muster im Betreff, z. B. [NL-7QK4T-9ZM2P] – NF bleibt für Alt-Referenzen gültig.
+REF_RE = re.compile(r"N[LF]-[A-Z0-9]{4,6}-[A-Z0-9]{4,6}", re.IGNORECASE)
 _MAX_ATT = 18_000_000  # ~13 MB nach Base64-Dekodierung
 
 
@@ -208,9 +208,12 @@ def set_status(thread_id: str, body: dict, user: User = Depends(require_agency),
 
 
 # ---------- Posteingang abgleichen ----------
-@router.post("/sync")
-def sync_inbox(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
-    org = db.get(Organization, user.organization_id)
+def sync_org_inbox(db: Session, org: Organization) -> int:
+    """Gleicht das Postfach einer Organisation ab, ordnet Antworten über die
+    Referenz zu und benachrichtigt das Team. Gibt die Anzahl neuer Nachrichten
+    zurück. Wird vom Button UND vom Hintergrund-Job genutzt."""
+    if not org or not org.ms_refresh_token:
+        return 0
     messages = read_inbox(org, top=50)
     # Referenz -> Thread (nur dieser Organisation).
     threads = {t.reference: t for t in db.query(MailThread).filter(
@@ -257,7 +260,33 @@ def sync_inbox(user: User = Depends(require_agency), db: Session = Depends(get_d
                 body=f"{thread.contact_name or thread.contact_email} hat geantwortet.",
                 link=(f"/clients/{thread.client_id}" if thread.client_id else "/inbox"))
         db.commit()
-    return {"new": new_count}
+    return new_count
+
+
+@router.post("/sync")
+def sync_inbox(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    org = db.get(Organization, user.organization_id)
+    return {"new": sync_org_inbox(db, org)}
+
+
+def sync_all_orgs() -> int:
+    """Gleicht den Posteingang ALLER Organisationen mit verbundenem Postfach ab.
+    Läuft im Hintergrund-Job (eigene Session, fehlertolerant je Organisation)."""
+    from app.database import SessionLocal  # noqa: PLC0415
+    db = SessionLocal()
+    total = 0
+    try:
+        orgs = db.query(Organization).filter(
+            Organization.ms_refresh_token.isnot(None),
+            Organization.ms_refresh_token != "").all()
+        for org in orgs:
+            try:
+                total += sync_org_inbox(db, org)
+            except Exception:  # eine Organisation darf den Job nicht stoppen
+                db.rollback()
+    finally:
+        db.close()
+    return total
 
 
 def _parse_dt(iso: str | None) -> datetime:

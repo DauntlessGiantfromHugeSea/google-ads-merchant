@@ -148,8 +148,8 @@ function Composer({ client, onCreated }: { client: Client; onCreated: (t: MailTh
         <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>Abbrechen</button>
       </div>
       <div className="muted" style={{ fontSize: 12, marginTop: 8 }}>
-        Es wird automatisch eine Referenznummer angehängt (z. B. <code>[NF-7QK4T-9ZM2P]</code>). Antwortet der Kunde,
-        landet die Antwort über „Posteingang abrufen“ direkt hier in der Konversation.
+        Es wird automatisch eine Referenznummer angehängt (z. B. <code>[NL-7QK4T-9ZM2P]</code>). Antwortet der Kunde,
+        landet die Antwort automatisch (alle paar Minuten) oder per „Posteingang abrufen“ hier in der Konversation.
       </div>
     </form>
   );
@@ -167,7 +167,10 @@ export default function Conversations({ client }: { client: Client }) {
   useEffect(() => {
     api.mailStatus().then((s) => setConnected(s.connected)).catch(() => setConnected(false));
     load();
-  }, [client.id]);
+    // Liste leise aktualisieren, damit im Hintergrund abgeglichene Antworten auftauchen.
+    const t = setInterval(() => { if (!document.hidden && !openId) load(); }, 60_000);
+    return () => clearInterval(t);
+  }, [client.id, openId]);
 
   const sync = async () => {
     setSyncing(true);
