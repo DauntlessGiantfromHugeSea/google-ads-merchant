@@ -696,3 +696,18 @@ code { color: #e9eaf2; }
 .chat-del { background: none; border: none; color: var(--muted-light); cursor: pointer; font-size: 15px; line-height: 1; padding: 0 2px; opacity: 0; }
 .chat-msg:hover .chat-del { opacity: 1; }
 .chat-del:hover { color: #f87171; }
+
+/* KI-Transparenz-Generator */
+.ki-layout { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 18px; align-items: start; }
+@media (max-width: 860px) { .ki-layout { grid-template-columns: 1fr; } }
+.ki-check { display: flex; gap: 9px; align-items: flex-start; padding: 6px 0; cursor: pointer; font-size: 14px; }
+.ki-check input { margin-top: 3px; flex: none; }
+.ki-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { padding: 5px 11px; border-radius: 999px; font-size: 13px; cursor: pointer;
+  background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); color: var(--muted); }
+.chip.on { background: var(--coral); color: var(--coral-ink); border-color: transparent; font-weight: 600; }
+.ki-preview { margin-top: 12px; padding: 4px 2px; }
+.ki-preview h1 { color: var(--coral); }
+.ki-preview ul { padding-left: 20px; }
+.ki-preview li { margin: 4px 0; }
+.ki-preview a { color: var(--coral); }

@@ -29,6 +29,7 @@ const Zeit = lazy(() => import("./pages/Zeit"));
 const Dateien = lazy(() => import("./pages/Dateien"));
 const Briefe = lazy(() => import("./pages/Briefe"));
 const Upload = lazy(() => import("./pages/Upload"));
+const AiTransparency = lazy(() => import("./pages/AiTransparency"));
 
 function Splash() {
   return <div className="boot-splash"><div className="boot-spinner" /></div>;
@@ -118,6 +119,7 @@ export default function App() {
         <Route path="/tasks" element={<Navigate to="/planner" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
         <Route path="/hilfe" element={user ? <Shell><Help /></Shell> : <Navigate to="/login" />} />
+        <Route path="/ki-transparenz" element={user && user.role !== "client_user" ? <Shell><AiTransparency /></Shell> : <Navigate to="/" />} />
         <Route path="/konto" element={user ? <Shell><Account /></Shell> : <Navigate to="/login" />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
@@ -173,6 +175,9 @@ function Shell({ children }: { children: React.ReactNode }) {
                   <button onClick={() => go("/konto")}>👤 Mein Konto &amp; 2FA</button>
                   <button onClick={() => go("/vault")}>🔑 Passwort-Safe</button>
                   <button onClick={() => go("/hilfe")}>❓ Hilfe</button>
+                  {user?.role !== "client_user" && (
+                    <button onClick={() => go("/ki-transparenz")}>🧾 KI-Transparenz</button>
+                  )}
                   {user?.role === "agency_admin" && (
                     <button onClick={() => go("/settings")}>⚙️ Einstellungen</button>
                   )}
