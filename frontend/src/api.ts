@@ -640,6 +640,15 @@ export const api = {
   // Zeiterfassung (Stoppuhr)
   timeEntries: () => request<TimeEntry[]>("/time"),
   clientTime: (clientId: string) => request<TimeEntry[]>(`/clients/${clientId}/time`),
+  projectTime: (clientId: string, projectId: string) =>
+    request<TimeEntry[]>(`/clients/${clientId}/time?project_id=${projectId}`),
+  async downloadNachweis(clientId: string, projectId: string | null, name: string) {
+    const q = projectId ? `?project_id=${projectId}` : "";
+    const res = await fetch(`/api/clients/${clientId}/time/nachweis.pdf${q}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `Leistungsnachweis-${name}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
+  },
   async downloadWorksheet(p: { client?: string; project?: string; title?: string; asset?: string; letterhead?: boolean }) {
     const q = new URLSearchParams();
     if (p.client) q.set("client_id", p.client);

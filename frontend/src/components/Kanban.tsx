@@ -11,13 +11,14 @@ const TYPES: Record<string, string> = {
   design: "Design", marketing: "Marketing", web: "Web", seo: "SEO", social: "Social", sonstiges: "Sonstiges",
 };
 
-export default function Kanban({ projects, onMove, onDelete, onEdit, onOpenClient, onFiles, canEdit, todoCounts }: {
+export default function Kanban({ projects, onMove, onDelete, onEdit, onOpenClient, onFiles, onLog, canEdit, todoCounts }: {
   projects: Project[];
   onMove?: (p: Project, status: string) => void;
   onDelete?: (p: Project) => void;
   onEdit?: (p: Project) => void;
   onOpenClient?: (clientId: string) => void;
   onFiles?: (p: Project) => void;
+  onLog?: (p: Project) => void;
   canEdit: boolean;
   todoCounts?: Record<string, number>;
 }) {
@@ -66,6 +67,7 @@ export default function Kanban({ projects, onMove, onDelete, onEdit, onOpenClien
                         onClick={() => onMove(p, COLS[ci + 1].key)}>▶</button>
                     </>
                   )}
+                  {onLog && <button className="kmove" title="Zeiten / Leistungsnachweis" onClick={() => onLog(p)}>⏱</button>}
                   {onFiles && <button className="kmove" title="Dateien" onClick={() => onFiles(p)}>📎</button>}
                   {canEdit && onEdit && <button className="kmove" title="Bearbeiten" onClick={() => onEdit(p)}>✎</button>}
                   {canEdit && onDelete && <button className="del" onClick={() => onDelete(p)}>löschen</button>}

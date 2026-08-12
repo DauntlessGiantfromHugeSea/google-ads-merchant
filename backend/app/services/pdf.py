@@ -230,6 +230,15 @@ def render_richdoc_pdf(doc: dict) -> bytes:
     return _pdf_from_html(html, letterhead)
 
 
+def render_leistungsnachweis_pdf(doc: dict) -> bytes:
+    """Leistungsnachweis (Datum, Tätigkeit, Zeit + Summe) auf dem Briefpapier."""
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    template = _env.get_template("leistungsnachweis.html")
+    html = template.render(doc=doc, letterhead_image=image_url)
+    return _pdf_from_html(html, letterhead)
+
+
 def render_worklog_pdf(doc: dict, tz_name: str = timeutil.DEFAULT_TZ) -> bytes:
     letterhead = _find_letterhead()
     image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None

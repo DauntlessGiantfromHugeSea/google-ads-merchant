@@ -2,15 +2,18 @@
 
 Ein Eintrag "läuft", solange ended_at leer ist. Es kann pro Nutzer nur eine
 Stoppuhr gleichzeitig laufen; beim Start wird eine noch laufende beendet."""
+import io
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_scoped_client, require_agency
 from app.database import get_db
-from app.models import Client, Project, TimeEntry, User
+from app.models import Client, Organization, Project, TimeEntry, User
 from app.schemas import TimeEntryOut, TimeManual, TimePatch, TimeStart
+from app.services import pdf, timeutil
 
 router = APIRouter(prefix="/api/time", tags=["time"])
 client_router = APIRouter(prefix="/api/clients/{client_id}/time", tags=["time"])
@@ -177,12 +180,64 @@ def delete_entry(entry_id: str, user: User = Depends(require_agency), db: Sessio
 
 
 @client_router.get("", response_model=list[TimeEntryOut])
-def client_time(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
-    """Alle erfassten Zeiten eines Kunden (ganzes Team) – für die Abrechnung
-    im Kundenprofil."""
+def client_time(client_id: str, project_id: str | None = None,
+                user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Erfasste Zeiten eines Kunden (ganzes Team) – für die Abrechnung im
+    Kundenprofil. Mit project_id auf ein Projekt gefiltert (Arbeitslog)."""
     get_scoped_client(client_id, user, db)
-    rows = (db.query(TimeEntry)
-            .filter(TimeEntry.organization_id == user.organization_id,
-                    TimeEntry.client_id == client_id, TimeEntry.ended_at.isnot(None))
-            .order_by(TimeEntry.started_at.desc()).all())
+    q = (db.query(TimeEntry)
+         .filter(TimeEntry.organization_id == user.organization_id,
+                 TimeEntry.client_id == client_id, TimeEntry.ended_at.isnot(None)))
+    if project_id:
+        q = q.filter(TimeEntry.project_id == project_id)
+    rows = q.order_by(TimeEntry.started_at.desc()).all()
     return [_out(e, db) for e in rows]
+
+
+def _rate_for(client: Client, project: Project | None) -> float:
+    """Projekt-Stundensatz gewinnt, sonst Kunden-Stundensatz."""
+    if project and getattr(project, "hourly_rate", 0):
+        return float(project.hourly_rate)
+    return float(getattr(client, "hourly_rate", 0) or 0)
+
+
+@client_router.get("/nachweis.pdf")
+def leistungsnachweis(client_id: str, project_id: str | None = None,
+                      user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Leistungsnachweis als PDF: Datum, was gemacht, abgerechnete Zeit + Summe.
+    Optional auf ein Projekt gefiltert – als Nachweis für den Kunden."""
+    client = get_scoped_client(client_id, user, db)
+    project = db.get(Project, project_id) if project_id else None
+    org = db.get(Organization, user.organization_id)
+    tz = (org.timezone if org else None) or timeutil.DEFAULT_TZ
+    q = (db.query(TimeEntry)
+         .filter(TimeEntry.organization_id == user.organization_id,
+                 TimeEntry.client_id == client_id, TimeEntry.ended_at.isnot(None)))
+    if project_id:
+        q = q.filter(TimeEntry.project_id == project_id)
+    rows = q.order_by(TimeEntry.started_at.asc()).all()
+
+    entries, total_min = [], 0
+    for e in rows:
+        bill = _billable(e.duration_seconds)
+        total_min += bill // 60
+        entries.append({
+            "date": timeutil.fmt_local(_aware(e.started_at), "%d.%m.%Y", tz),
+            "description": e.description or "—",
+            "hours": f"{bill / 3600:.2f}".replace(".", ","),
+        })
+    rate = _rate_for(client, project)
+    total_hours = total_min / 60
+    doc = {
+        "client_name": client.name,
+        "project_title": project.title if project else "",
+        "entries": entries,
+        "total_hours": f"{total_hours:.2f}".replace(".", ","),
+        "rate": f"{rate:.2f}".replace(".", ",") if rate else "",
+        "total_eur": f"{total_hours * rate:.2f}".replace(".", ",") if rate else "",
+        "generated_at": timeutil.now_local_str("%d.%m.%Y", tz),
+    }
+    data = pdf.render_leistungsnachweis_pdf(doc)
+    fn = f"Leistungsnachweis-{(project.title if project else client.name)}.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})

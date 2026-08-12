@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Doc, Project, ProjectEvent, Todo, api } from "../api";
+import { Doc, Project, ProjectEvent, TimeEntry, Todo, api } from "../api";
 import { useToast } from "../toast";
 import Kanban from "../components/Kanban";
 
@@ -48,6 +48,83 @@ function ProjectFilesModal({ clientId, project, isAgency, onClose }:
 
 const TYPES = ["design", "marketing", "web", "seo", "social", "sonstiges"];
 const num = (v: string) => parseFloat(v.replace(",", ".")) || 0;
+const hrs = (sec: number) => (sec / 3600).toFixed(2).replace(".", ",");
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+// Arbeitslog je Projekt: festhalten, wann was gemacht wurde – für Abrechnung
+// (15-Min-Takt) und als Leistungsnachweis-PDF für den Kunden.
+function ProjectLogModal({ clientId, project, onClose }:
+  { clientId: string; project: Project; onClose: () => void }) {
+  const toast = useToast();
+  const [rows, setRows] = useState<TimeEntry[]>([]);
+  const [date, setDate] = useState(todayISO());
+  const [desc, setDesc] = useState("");
+  const [mins, setMins] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = () => api.projectTime(clientId, project.id).then(setRows).catch(() => {});
+  useEffect(() => { load(); }, [project.id]);
+
+  const add = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const m = Math.round(num(mins));
+    if (!desc.trim() || m <= 0) { toast("Bitte Tätigkeit und Minuten angeben.", "err"); return; }
+    setBusy(true);
+    try {
+      await api.addManualTime({ client_id: clientId, project_id: project.id, description: desc.trim(), date, minutes: m });
+      setDesc(""); setMins(""); load(); toast("Eintrag gespeichert.");
+    } catch (err) { toast((err as Error).message, "err"); } finally { setBusy(false); }
+  };
+  const del = async (id: string) => { if (!confirm("Eintrag löschen?")) return; await api.deleteTime(id); load(); };
+
+  const billSec = rows.reduce((s, r) => s + r.billable_seconds, 0);
+  const rate = project.hourly_rate || 0;
+  const eur = rate ? ((billSec / 3600) * rate).toFixed(2).replace(".", ",") : "";
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
+        <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+          <h2 style={{ margin: 0, fontSize: 18 }}>⏱ {project.title}</h2>
+          <button className="btn btn-ghost btn-sm" onClick={() => api.downloadNachweis(clientId, project.id, project.title).catch((e) => toast((e as Error).message, "err"))}>📄 Nachweis-PDF</button>
+        </div>
+        <div className="muted" style={{ fontSize: 13, margin: "4px 0 12px" }}>
+          Halte fest, wann du was gemacht hast. Abgerechnet wird im 15-Min-Takt.
+        </div>
+
+        <form className="row-inline form-light" style={{ gap: 8, alignItems: "flex-end", flexWrap: "wrap" }} onSubmit={add}>
+          <div className="field" style={{ width: 150 }}><label>Datum</label>
+            <input className="input" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="field" style={{ flex: 1, minWidth: 180 }}><label>Was gemacht?</label>
+            <input className="input" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="z. B. Startseite umgebaut" /></div>
+          <div className="field" style={{ width: 100 }}><label>Minuten</label>
+            <input className="input" value={mins} onChange={(e) => setMins(e.target.value)} placeholder="30" /></div>
+          <button className="btn btn-primary" disabled={busy}>{busy ? "…" : "+ Eintrag"}</button>
+        </form>
+
+        <div style={{ marginTop: 14 }}>
+          {rows.length === 0 ? <div className="empty sm">Noch keine Einträge.</div> : rows.map((r) => (
+            <div key={r.id} className="list-row">
+              <div style={{ minWidth: 0 }}>
+                <strong>{new Date(r.started_at).toLocaleDateString("de-DE")}</strong>
+                <span className="muted"> · {r.user_name}</span>
+                <div style={{ fontSize: 14 }}>{r.description || "—"}</div>
+              </div>
+              <div className="row-inline" style={{ gap: 10, alignItems: "center" }}>
+                <span title="abgerechnet (15-Min-Takt)"><strong>{hrs(r.billable_seconds)} h</strong></span>
+                <button className="del" onClick={() => del(r.id)}>×</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="row-inline" style={{ justifyContent: "space-between", marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 10 }}>
+          <strong>Summe: {hrs(billSec)} h</strong>
+          <span className="muted">{rate ? `${eur} € (Satz ${rate} €/h)` : "Kein Projekt-Stundensatz gesetzt"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 const EV_ICON: Record<string, string> = { created: "✨", status: "🔄", edit: "✏️", note: "🗒️", decision: "✅" };
 
 function ProjectChronik({ clientId, projectId, isAgency }: { clientId: string; projectId: string; isAgency: boolean }) {
@@ -102,6 +179,7 @@ export default function Projects({ clientId, isAgency, onCount }:
   const [hours, setHours] = useState("");
   const [edit, setEdit] = useState<Project | null>(null);
   const [filesFor, setFilesFor] = useState<Project | null>(null);
+  const [logFor, setLogFor] = useState<Project | null>(null);
 
   const load = () => api.projects(clientId).then((p) => {
     setProjects(p);
@@ -210,9 +288,11 @@ export default function Projects({ clientId, isAgency, onCount }:
       {projects.length === 0
         ? <div className="empty">Noch keine Projekte.</div>
         : <Kanban projects={projects} canEdit={isAgency} onMove={move} onDelete={del}
-            onEdit={isAgency ? (p) => setEdit(p) : undefined} onFiles={(p) => setFilesFor(p)} todoCounts={todoCounts} />}
+            onEdit={isAgency ? (p) => setEdit(p) : undefined} onFiles={(p) => setFilesFor(p)}
+            onLog={isAgency ? (p) => setLogFor(p) : undefined} todoCounts={todoCounts} />}
 
       {filesFor && <ProjectFilesModal clientId={clientId} project={filesFor} isAgency={isAgency} onClose={() => setFilesFor(null)} />}
+      {logFor && <ProjectLogModal clientId={clientId} project={logFor} onClose={() => setLogFor(null)} />}
     </div>
   );
 }

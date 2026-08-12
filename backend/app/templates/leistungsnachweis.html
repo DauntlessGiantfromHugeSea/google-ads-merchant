@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 4cm 2.4cm 3cm 2.4cm; }
+  html, body { background: transparent; }
+  .letterhead { position: fixed; top: -4cm; left: -2.4cm; width: 210mm; height: 297mm; z-index: -1; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
+  h1 { font-size: 22px; margin: 0 0 4px; color: #c4553f; }
+  .sub { color: #687481; font-size: 11px; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .04em;
+       color: #687481; border-bottom: 2px solid #c4553f; padding: 6px 8px; }
+  td { padding: 6px 8px; border-bottom: 1px solid #e4e7eb; vertical-align: top; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .total { margin-top: 14px; border-top: 2px solid #1f2933; padding-top: 8px; font-size: 13px; }
+  .total .row { display: flex; justify-content: space-between; padding: 2px 8px; }
+  .total .grand { font-weight: bold; color: #c4553f; }
+  .empty { color: #97a1ab; padding: 14px 8px; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
+  <h1>Leistungsnachweis</h1>
+  <div class="sub">
+    {{ doc.client_name }}{% if doc.project_title %} · Projekt: {{ doc.project_title }}{% endif %}
+    · Stand: {{ doc.generated_at }}
+  </div>
+
+  <table>
+    <thead>
+      <tr><th style="width:90px;">Datum</th><th>Tätigkeit</th><th class="num" style="width:80px;">Stunden</th></tr>
+    </thead>
+    <tbody>
+      {% for e in doc.entries %}
+      <tr><td>{{ e.date }}</td><td>{{ e.description }}</td><td class="num">{{ e.hours }}</td></tr>
+      {% else %}
+      <tr><td colspan="3" class="empty">Keine erfassten Zeiten im Zeitraum.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="total">
+    <div class="row"><span>Summe abgerechnete Stunden (15-Min-Takt)</span><span>{{ doc.total_hours }} h</span></div>
+    {% if doc.rate %}<div class="row"><span>Stundensatz</span><span>{{ doc.rate }} €</span></div>
+    <div class="row grand"><span>Gesamt (netto)</span><span>{{ doc.total_eur }} €</span></div>{% endif %}
+  </div>
+</body>
+</html>
