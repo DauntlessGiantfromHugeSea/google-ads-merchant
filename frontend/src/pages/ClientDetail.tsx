@@ -31,10 +31,8 @@ import ErrorBoundary from "../components/ErrorBoundary";
 const NAV = [
   { key: "overview", label: "Übersicht" },
   { key: "onboarding", label: "Onboarding" },
-  { key: "work", label: "Projekte & Aufgaben" },
-  { key: "doku", label: "Doku" },
+  { key: "work", label: "Projekte & Doku" },
   { key: "reporting", label: "Reporting" },
-  { key: "monitoring", label: "Monitoring" },
   { key: "business", label: "Angebote & Vertrag" },
   { key: "contact", label: "Kontakt & Verlauf" },
 ];
@@ -125,7 +123,7 @@ export default function ClientDetail() {
             .map((n) => (
             <button key={n.key} className={`nav-item ${section === n.key ? "active" : ""}`}
               onClick={() => setSection(n.key)}>
-              {n.key === "doku" && !isAgency ? "Anleitung" : n.label}
+              {n.key === "work" && !isAgency ? "Projekt & Anleitung" : n.label}
               {n.key === "work" && openTodos ? <span className="badge-count">{openTodos}</span> : null}
             </button>
           ))}
@@ -139,9 +137,6 @@ export default function ClientDetail() {
           {section === "onboarding" && isAgency && (
             <Onboarding clientId={id} onStatus={(done) => setClient({ ...client, onboarding_completed: done })} />
           )}
-          {section === "doku" && (
-            <ProjectDoc clientId={id} clientName={client.name} isAgency={isAgency} />
-          )}
           {section === "work" && (
             <>
               <Launch clientId={id} isAgency={isAgency} />
@@ -149,6 +144,7 @@ export default function ClientDetail() {
               <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />
               <Appointments clientId={id} isAgency={isAgency} />
               <WorkCalendar clientId={id} clientName={client.name} />
+              <ErrorBoundary label="Doku"><ProjectDoc clientId={id} clientName={client.name} isAgency={isAgency} /></ErrorBoundary>
             </>
           )}
           {section === "reporting" && (
@@ -157,10 +153,8 @@ export default function ClientDetail() {
               <ErrorBoundary label="Analytics"><Kpis clientId={id} isAgency={isAgency} /></ErrorBoundary>
               <ErrorBoundary label="Live-Auswertung"><Dashboards clientId={id} isAgency={isAgency} /></ErrorBoundary>
               <ErrorBoundary label="SEO"><Seo clientId={id} isAgency={isAgency} /></ErrorBoundary>
+              <ErrorBoundary label="Monitoring"><Monitoring clientId={id} clientName={client.name} isAgency={isAgency} /></ErrorBoundary>
             </>
-          )}
-          {section === "monitoring" && (
-            <Monitoring clientId={id} clientName={client.name} isAgency={isAgency} />
           )}
           {section === "participants" && user?.role !== "agency_member" && (
             <Participants clientId={id} clientName={client.name} isAgency={isAgency} />
