@@ -711,3 +711,7 @@ code { color: #e9eaf2; }
 .ki-preview ul { padding-left: 20px; }
 .ki-preview li { margin: 4px 0; }
 .ki-preview a { color: var(--coral); }
+
+/* Topbar-Gruppen-Dropdowns: linksbündig statt rechts (wie das Konto-Menü) */
+.nav-dropdown { left: 0; right: auto; min-width: 190px; }
+@media (max-width: 720px) { .nav-dropdown { left: auto; right: 0; } }

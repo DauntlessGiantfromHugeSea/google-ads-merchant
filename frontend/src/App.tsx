@@ -128,6 +128,27 @@ export default function App() {
   );
 }
 
+// Gruppen-Dropdown in der Topbar – bündelt verwandte Bereiche, damit die
+// Leiste schlank bleibt.
+function NavGroup({ label, items, go }: { label: string; items: { label: string; path: string }[]; go: (p: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="user-menu">
+      <button className="btn btn-ghost on-dark btn-sm" onClick={() => setOpen((v) => !v)}>{label} ▾</button>
+      {open && (
+        <>
+          <div className="user-backdrop" onClick={() => setOpen(false)} />
+          <div className="user-dropdown nav-dropdown">
+            {items.map((it) => (
+              <button key={it.path} onClick={() => { setOpen(false); go(it.path); }}>{it.label}</button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout, impersonating, stopImpersonate } = useAuth();
   const navigate = useNavigate();
@@ -148,16 +169,24 @@ function Shell({ children }: { children: React.ReactNode }) {
           <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/")}>Kunden</button>
           {isAgency && (
             <>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/crm")}>CRM</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/sales")}>Sales</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/rechnungen")}>Rechnungen</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/planner")}>Planner</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/zeit")}>Zeit</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/dateien")}>Dateien</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/briefe")}>Briefe</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/monitoring")}>Monitoring</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/seo")}>SEO</button>
-              <button className="btn btn-ghost on-dark btn-sm" onClick={() => go("/forms")}>Formulare</button>
+              <NavGroup label="Vertrieb" go={go} items={[
+                { label: "CRM / Pipeline", path: "/crm" },
+                { label: "Sales / Gap-Analyse", path: "/sales" },
+                { label: "Rechnungen", path: "/rechnungen" },
+              ]} />
+              <NavGroup label="Arbeit" go={go} items={[
+                { label: "Planner", path: "/planner" },
+                { label: "Zeiterfassung", path: "/zeit" },
+              ]} />
+              <NavGroup label="Inhalte" go={go} items={[
+                { label: "Dateien", path: "/dateien" },
+                { label: "Briefe & Reports", path: "/briefe" },
+                { label: "Formulare", path: "/forms" },
+              ]} />
+              <NavGroup label="Analyse" go={go} items={[
+                { label: "Monitoring", path: "/monitoring" },
+                { label: "SEO", path: "/seo" },
+              ]} />
             </>
           )}
           <NotificationBell />
