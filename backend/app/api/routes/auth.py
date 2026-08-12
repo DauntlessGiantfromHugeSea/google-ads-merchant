@@ -1,5 +1,6 @@
 """Registrierung (Agentur + Admin), Login und Zwei-Faktor-Authentifizierung."""
-from datetime import datetime, timezone
+import math
+from datetime import datetime, timedelta, timezone
 
 import pyotp
 import segno
@@ -18,6 +19,28 @@ from app.schemas import (
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 _ISSUER = "North Flow"
+
+# Brute-Force-Schutz: nach so vielen Fehlversuchen wird das Konto zeitweise gesperrt.
+_MAX_FAILED_LOGINS = 5
+_LOCK_MINUTES = 15
+# Fester Dummy-Hash, um die Antwortzeit bei unbekannter E-Mail anzugleichen
+# (erschwert das Erraten gültiger Adressen über Timing).
+_DUMMY_HASH = "$2b$12$" + "z" * 53
+
+
+def _aware(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+
+def _register_failure(user: User, db: Session) -> None:
+    """Zählt einen Fehlversuch; sperrt das Konto ab der Grenze für eine Weile."""
+    user.failed_logins = (user.failed_logins or 0) + 1
+    if user.failed_logins >= _MAX_FAILED_LOGINS:
+        user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=_LOCK_MINUTES)
+        user.failed_logins = 0
+    db.commit()
 
 
 def _verify_totp(user: User, code: str) -> bool:
@@ -101,15 +124,40 @@ def login(
     otp: str | None = Form(None),
     db: Session = Depends(get_db),
 ) -> Token:
+    now = datetime.now(timezone.utc)
     user = db.query(User).filter(User.email == form.username).first()
+
+    # Konto zeitweise gesperrt? (Anmelde-Timeout nach zu vielen Fehlversuchen)
+    if user:
+        locked = _aware(user.locked_until)
+        if locked and locked > now:
+            mins = max(1, math.ceil((locked - now).total_seconds() / 60))
+            raise HTTPException(
+                status.HTTP_429_TOO_MANY_REQUESTS,
+                f"Zu viele Fehlversuche. Konto für {mins} Minute(n) gesperrt – bitte später erneut.")
+
+    # Passwort prüfen (bei unbekannter E-Mail Dummy-Prüfung gegen Timing-Angriffe)
     if not user or not verify_password(form.password, user.hashed_password):
+        if not user:
+            verify_password(form.password, _DUMMY_HASH)
+        else:
+            _register_failure(user, db)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Falsche Zugangsdaten")
+
     if user.totp_enabled:
         if not otp:
+            # Passwort war korrekt – nur der zweite Faktor fehlt (kein Fehlversuch).
             # Frontend erkennt diesen Code und blendet das 2FA-Feld ein.
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "2FA_REQUIRED")
         if not _verify_totp(user, otp):
+            _register_failure(user, db)  # falsche Codes zählen zum Brute-Force-Schutz
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "2FA_INVALID")
+
+    # Erfolg: Fehlversuche/Sperre zurücksetzen.
+    if user.failed_logins or user.locked_until:
+        user.failed_logins = 0
+        user.locked_until = None
+        db.commit()
     token = create_access_token(user.id, {"role": user.role.value, "org": user.organization_id})
     return Token(access_token=token)
 

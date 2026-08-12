@@ -64,6 +64,7 @@ _PROJECT_COLUMNS = {
 _USER_COLUMNS = {
     "invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP",
     "totp_secret": "TEXT DEFAULT ''", "totp_enabled": "BOOLEAN DEFAULT FALSE",
+    "failed_logins": "INTEGER DEFAULT 0", "locked_until": "TIMESTAMP",
 }
 _PACKAGE_COLUMNS = {
     "unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0",
@@ -128,10 +129,38 @@ async def _mail_sync_loop(interval_seconds: int) -> None:
             pass
 
 
+_DEFAULT_SECRET = "dev-insecure-secret-change-me-please-0123456789"
+
+
+def _check_production_secrets() -> None:
+    """Verhindert den Start in Produktion mit unsicheren Standard-Schlüsseln.
+    Ein bekannter/zu kurzer SECRET_KEY erlaubt das Fälschen von Login-Tokens
+    (vollständige Kontoübernahme) – daher hart abbrechen."""
+    if _settings.app_env != "production":
+        return
+    problems = []
+    sk = _settings.secret_key or ""
+    if sk == _DEFAULT_SECRET or len(sk) < 32:
+        problems.append(
+            "SECRET_KEY fehlt/zu schwach – mind. 32 Zeichen, nicht der Standardwert. "
+            'Erzeugen: python -c "import secrets; print(secrets.token_urlsafe(48))"')
+    if problems:
+        raise RuntimeError(
+            "Unsichere Produktions-Konfiguration – Start abgebrochen:\n- " + "\n- ".join(problems))
+    if not _settings.credential_encryption_key:
+        # Kein harter Abbruch: es wird ein Schlüssel aus dem (starken) SECRET_KEY
+        # abgeleitet. Ein eigener Fernet-Key ist trotzdem empfohlen.
+        import logging  # noqa: PLC0415
+        logging.getLogger("uvicorn.error").warning(
+            "CREDENTIAL_ENCRYPTION_KEY nicht gesetzt – Schlüssel wird aus SECRET_KEY abgeleitet. "
+            "Für saubere Schlüsseltrennung einen eigenen Fernet-Key setzen.")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     import asyncio  # noqa: PLC0415
 
+    _check_production_secrets()
     Base.metadata.create_all(bind=engine)
     _ensure_schema()
     task = None
@@ -171,6 +200,9 @@ async def _security_headers(request, call_next):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "SAMEORIGIN"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    # Sensible API-Antworten (Kundendaten, Zugangsdaten, Bankdaten) nie zwischenspeichern.
+    if request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-store"
     if "server" in response.headers:
         del response.headers["server"]
     return response

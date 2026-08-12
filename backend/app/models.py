@@ -123,6 +123,10 @@ class User(Base):
     totp_secret: Mapped[str] = mapped_column(Text, default="")
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # Brute-Force-Schutz: Fehlversuche zählen, Konto nach Grenze zeitweise sperren.
+    failed_logins: Mapped[int] = mapped_column(default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
 
 class Client(Base):
     __tablename__ = "clients"

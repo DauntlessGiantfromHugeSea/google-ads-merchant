@@ -10,7 +10,7 @@ kann direkt daraus antworten.
 import html as htmllib
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func
@@ -22,7 +22,7 @@ from app.models import MailMessage, MailThread, Organization, User
 from app.schemas import ThreadReply, ThreadStart
 from app.services import notify
 
-from .mail import read_inbox, render_email_html, send_via_graph
+from .mail import read_inbox, read_sent, render_email_html, send_via_graph
 
 router = APIRouter(prefix="/api/mail/threads", tags=["mail-threads"])
 
@@ -267,6 +267,8 @@ def sync_org_inbox(db: Session, org: Organization) -> int:
         touched[thread.id] = thread
         new_count += 1
 
+    # Eingehende Nachrichten zuerst persistieren (+ Team benachrichtigen), damit ein
+    # späterer Fehler beim Sent-Abgleich sie NICHT zurückrollt.
     if new_count:
         agency_ids = notify._agency_user_ids(db, org.id)  # noqa: SLF001
         for thread in touched.values():
@@ -275,8 +277,70 @@ def sync_org_inbox(db: Session, org: Organization) -> int:
                 type_="mail_reply", title=f"Neue Antwort: {thread.subject or thread.reference}",
                 body=f"{thread.contact_name or thread.contact_email} hat geantwortet.",
                 link=(f"/clients/{thread.client_id}" if thread.client_id else "/inbox"))
+    db.commit()
+
+    # Gesendete Nachrichten mitlesen – auch die, die direkt in Outlook geschrieben
+    # wurden. Aus dem Tool gesendete Mails sind schon in der DB (ohne Graph-ID) und
+    # werden über ihre Graph-ID zurückgeschrieben, damit nichts doppelt erscheint.
+    try:
+        _sync_sent(db, org, threads)
         db.commit()
+    except Exception:  # Postfach ohne Sent-Zugriff darf den Abgleich nicht stoppen
+        db.rollback()
+
     return new_count
+
+
+def _sync_sent(db: Session, org: Organization, threads: dict) -> None:
+    """Ordnet gesendete Mails (auch aus Outlook) den Konversationen zu.
+    Tool-Mails bekommen ihre Graph-ID nachgetragen (Dedupe), unbekannte
+    Outlook-Mails werden als ausgehende Nachricht ergänzt."""
+    for m in read_sent(org, top=50):
+        subject = m.get("subject") or ""
+        body_obj = m.get("body") or {}
+        raw_content = body_obj.get("content", "") or m.get("bodyPreview", "")
+        found = REF_RE.search(subject) or REF_RE.search(raw_content)
+        if not found:
+            continue
+        thread = threads.get(found.group(0).upper())
+        if not thread:
+            continue
+        gid = m.get("id") or ""
+        if gid and db.query(MailMessage.id).filter(MailMessage.graph_message_id == gid).first():
+            continue  # schon bekannt
+        sent_at = _parse_dt(m.get("sentDateTime"))
+        # Tool-Mail ohne Graph-ID, zeitnah? -> dann ist das ihre Sent-Kopie: ID nachtragen.
+        window = timedelta(minutes=15)
+        cand = (db.query(MailMessage)
+                .filter(MailMessage.thread_id == thread.id, MailMessage.direction == "out",
+                        MailMessage.graph_message_id == "")
+                .order_by(MailMessage.created_at.desc()).all())
+        match = None
+        for c in cand:
+            created = c.created_at if c.created_at and c.created_at.tzinfo else (
+                c.created_at.replace(tzinfo=timezone.utc) if c.created_at else None)
+            if created and abs((created - sent_at).total_seconds()) <= window.total_seconds():
+                match = c
+                break
+        if match is not None:
+            match.graph_message_id = gid
+            continue
+        # Unbekannte, direkt in Outlook gesendete Mail -> als ausgehende Nachricht ergänzen.
+        recips = m.get("toRecipients") or []
+        to_email = (((recips[0] or {}).get("emailAddress") or {}).get("address", "")
+                    if recips else thread.contact_email)
+        is_html = (body_obj.get("contentType", "") or "").lower() == "html"
+        db.add(MailMessage(
+            thread_id=thread.id, organization_id=org.id, direction="out",
+            from_email=org.ms_email or "", to_email=to_email, subject=subject,
+            body=_clean_body(raw_content, is_html), author="(direkt aus Outlook)",
+            graph_message_id=gid, created_at=sent_at))
+        last = thread.last_message_at
+        if last is not None and last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        if last is None or sent_at > last:
+            thread.last_message_at = sent_at
+            thread.last_direction = "out"
 
 
 @router.post("/sync")

@@ -125,21 +125,19 @@ def send_via_graph(org, to: str, subject: str, body: str, html: bool = False,
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Versand fehlgeschlagen: {resp.text[:200]}")
 
 
-def read_inbox(org, top: int = 50) -> list[dict]:
-    """Liest die letzten Posteingangs-Nachrichten des verbundenen Kontos.
-    Benötigt den Scope Mail.Read (nach Scope-Erweiterung neu verbinden)."""
+def _read_folder(org, folder: str, order_field: str, select: str, top: int) -> list[dict]:
+    """Liest Nachrichten eines Postfach-Ordners (inbox/sentitems) via Graph.
+    Benötigt Mail.Read (nach Scope-Erweiterung ggf. neu verbinden)."""
     if not org or not org.ms_refresh_token:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
     try:
         access = _access_token(decrypt(org.ms_refresh_token), SCOPE_FULL)
     except HTTPException as exc:
-        # Bestehendes Konto hat Mail.Read evtl. noch nicht zugestimmt.
         raise HTTPException(status.HTTP_403_FORBIDDEN,
                             "Für den Posteingang-Abgleich fehlt die Leseberechtigung. Bitte das "
                             "Microsoft-Konto in den Einstellungen einmal neu verbinden (Mail.Read).") from exc
-    url = ("https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages"
-           f"?$top={min(top, 100)}&$orderby=receivedDateTime desc"
-           "&$select=id,subject,from,receivedDateTime,body,bodyPreview,conversationId")
+    url = (f"https://graph.microsoft.com/v1.0/me/mailFolders/{folder}/messages"
+           f"?$top={min(top, 100)}&$orderby={order_field} desc&$select={select}")
     resp = httpx.get(url, headers={"Authorization": f"Bearer {access}"}, timeout=30)
     if resp.status_code == 403:
         raise HTTPException(status.HTTP_403_FORBIDDEN,
@@ -148,6 +146,18 @@ def read_inbox(org, top: int = 50) -> list[dict]:
     if resp.status_code >= 300:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Abruf fehlgeschlagen: {resp.text[:200]}")
     return resp.json().get("value", [])
+
+
+def read_inbox(org, top: int = 50) -> list[dict]:
+    """Eingehende Nachrichten (Posteingang)."""
+    return _read_folder(org, "inbox", "receivedDateTime",
+                        "id,subject,from,receivedDateTime,body,bodyPreview,conversationId", top)
+
+
+def read_sent(org, top: int = 50) -> list[dict]:
+    """Gesendete Nachrichten (auch die direkt in Outlook geschriebenen)."""
+    return _read_folder(org, "sentitems", "sentDateTime",
+                        "id,subject,toRecipients,sentDateTime,body,bodyPreview,conversationId", top)
 
 
 @router.get("/status", response_model=MailStatus)

@@ -60,6 +60,18 @@ export default function App() {
 
   const logout = () => { auth.clear(); setUser(null); setImpersonating(false); };
 
+  // Sicherheits-Timeout: nach 30 Min ohne Aktivität automatisch abmelden.
+  useEffect(() => {
+    if (!user) return;
+    const IDLE_MS = 30 * 60 * 1000;
+    let timer: number;
+    const reset = () => { window.clearTimeout(timer); timer = window.setTimeout(logout, IDLE_MS); };
+    const evts = ["mousedown", "keydown", "touchstart", "scroll"];
+    evts.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => { window.clearTimeout(timer); evts.forEach((e) => window.removeEventListener(e, reset)); };
+  }, [user]);
+
   const startImpersonate = async (token: string) => {
     auth.startImpersonation(token);
     setImpersonating(true);
