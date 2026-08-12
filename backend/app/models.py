@@ -976,3 +976,48 @@ class Notification(Base):
     link: Mapped[str] = mapped_column(String(255), default="")  # Frontend-Pfad, z.B. /clients/<id>
     read: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class MailThread(Base):
+    """E-Mail-Konversation mit einem Kontakt/Kunden. Jede Konversation trägt
+    eine eindeutige Referenz (z. B. NF-7QK4-9ZM2P), die im Betreff mitgeschickt
+    wird. Antworten des Kunden werden über diese Referenz automatisch der
+    richtigen Konversation zugeordnet, sobald der Posteingang abgeglichen wird."""
+
+    __tablename__ = "mail_threads"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    reference: Mapped[str] = mapped_column(String(32), index=True)   # z.B. NF-7QK4-9ZM2P
+    subject: Mapped[str] = mapped_column(String(400), default="")    # Betreff ohne Referenz
+    contact_email: Mapped[str] = mapped_column(String(255), default="")
+    contact_name: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(16), default="open")  # open / closed
+    unread: Mapped[bool] = mapped_column(Boolean, default=False)     # ungelesene Kundenantwort
+    last_message_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    last_direction: Mapped[str] = mapped_column(String(4), default="out")  # out / in
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True)
+    client: Mapped[Client | None] = relationship()
+
+
+class MailMessage(Base):
+    """Einzelne Nachricht innerhalb einer Konversation – ausgehend (Agentur ->
+    Kunde) oder eingehend (Kunde -> Agentur, per Posteingang-Abgleich)."""
+
+    __tablename__ = "mail_messages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    thread_id: Mapped[str] = mapped_column(ForeignKey("mail_threads.id"), index=True)
+    direction: Mapped[str] = mapped_column(String(4), default="out")  # out / in
+    from_email: Mapped[str] = mapped_column(String(255), default="")
+    to_email: Mapped[str] = mapped_column(String(255), default="")
+    subject: Mapped[str] = mapped_column(String(400), default="")
+    body: Mapped[str] = mapped_column(Text, default="")
+    author: Mapped[str] = mapped_column(String(255), default="")     # Name des Absenders (Agentur)
+    graph_message_id: Mapped[str] = mapped_column(String(255), default="", index=True)  # Dedupe eingehend
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))

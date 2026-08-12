@@ -92,6 +92,17 @@ export interface AdsActivity {
   title: string; body: string; author: string; created_at: string;
 }
 export interface MailStatus { connected: boolean; email: string; configured: boolean; }
+export interface MailThread {
+  id: string; reference: string; subject: string; contact_email: string; contact_name: string;
+  status: string; unread: boolean; last_direction: string; last_message_at: string;
+  client_id: string | null; message_count: number | null;
+}
+export interface MailMessage {
+  id: string; direction: string; from_email: string; to_email: string; subject: string;
+  body: string; author: string; created_at: string;
+}
+export interface MailThreadDetail extends MailThread { messages: MailMessage[]; }
+type MailAtt = { name: string; content_type: string; content_bytes: string };
 export interface Monitor {
   id: string; name: string; url: string; status: string; message: string;
   client_id: string | null; client_name: string; changed_at: string;
@@ -396,6 +407,17 @@ export const api = {
   mailPreview: () => request<{ html: string }>("/mail/preview"),
   mailSend: (d: { to: string; subject: string; body: string; html?: boolean; attachments?: { name: string; content_type: string; content_bytes: string }[] }) =>
     request<{ ok: boolean }>("/mail/send", { method: "POST", body: JSON.stringify(d) }),
+
+  mailThreads: (clientId?: string) =>
+    request<MailThread[]>(`/mail/threads${clientId ? `?client_id=${clientId}` : ""}`),
+  mailThread: (id: string) => request<MailThreadDetail>(`/mail/threads/${id}`),
+  startThread: (d: { to: string; contact_name?: string; subject: string; body: string; client_id?: string; attachments?: MailAtt[] }) =>
+    request<MailThread>("/mail/threads", { method: "POST", body: JSON.stringify(d) }),
+  replyThread: (id: string, d: { body: string; attachments?: MailAtt[] }) =>
+    request<MailThreadDetail>(`/mail/threads/${id}/reply`, { method: "POST", body: JSON.stringify(d) }),
+  setThreadStatus: (id: string, status: string) =>
+    request<MailThread>(`/mail/threads/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+  syncThreads: () => request<{ new: number }>("/mail/threads/sync", { method: "POST" }),
 
   milestones: (cid: string) => request<Milestone[]>(`/clients/${cid}/milestones`),
   createMilestone: (cid: string, d: { title: string; description?: string; status?: string; date?: string }) =>

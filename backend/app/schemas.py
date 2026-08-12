@@ -735,6 +735,21 @@ class MailSend(BaseModel):
     attachments: list[MailAttachment] = []
 
 
+# --- E-Mail-Konversationen (Threads mit Referenznummer) ---
+class ThreadStart(BaseModel):
+    to: str
+    contact_name: str = ""
+    subject: str = ""
+    body: str = ""
+    client_id: str | None = None
+    attachments: list[MailAttachment] = []
+
+
+class ThreadReply(BaseModel):
+    body: str = ""
+    attachments: list[MailAttachment] = []
+
+
 # --- Dokumente ---
 class DocumentOut(BaseModel):
     id: str

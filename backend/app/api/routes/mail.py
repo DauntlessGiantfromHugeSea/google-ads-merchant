@@ -20,7 +20,7 @@ from app.schemas import MailSend, MailStatus
 settings = get_settings()
 router = APIRouter(prefix="/api/mail", tags=["mail"])
 
-SCOPE = "offline_access openid email profile User.Read Mail.Send"
+SCOPE = "offline_access openid email profile User.Read Mail.Send Mail.Read"
 
 
 def _cfg() -> bool:
@@ -95,6 +95,25 @@ def send_via_graph(org, to: str, subject: str, body: str, html: bool = False,
                       headers={"Authorization": f"Bearer {access}"}, json=message, timeout=30)
     if resp.status_code >= 300:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Versand fehlgeschlagen: {resp.text[:200]}")
+
+
+def read_inbox(org, top: int = 50) -> list[dict]:
+    """Liest die letzten Posteingangs-Nachrichten des verbundenen Kontos.
+    Benötigt den Scope Mail.Read (nach Scope-Erweiterung neu verbinden)."""
+    if not org or not org.ms_refresh_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
+    access = _access_token(decrypt(org.ms_refresh_token))
+    url = ("https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages"
+           f"?$top={min(top, 100)}&$orderby=receivedDateTime desc"
+           "&$select=id,subject,from,receivedDateTime,body,bodyPreview,conversationId")
+    resp = httpx.get(url, headers={"Authorization": f"Bearer {access}"}, timeout=30)
+    if resp.status_code == 403:
+        raise HTTPException(status.HTTP_403_FORBIDDEN,
+                            "Kein Lesezugriff auf das Postfach. Bitte Microsoft-Konto in den "
+                            "Einstellungen neu verbinden (Berechtigung Mail.Read).")
+    if resp.status_code >= 300:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Abruf fehlgeschlagen: {resp.text[:200]}")
+    return resp.json().get("value", [])
 
 
 @router.get("/status", response_model=MailStatus)

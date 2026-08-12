@@ -77,7 +77,13 @@ const CATS: Cat[] = [
     id: "termine", title: "Termine & Kommunikation", icon: "📅",
     items: [
       { q: "Termine buchen", a: "Termin für einen Kunden anlegen (mit Link), Mitarbeiter als Empfänger wählen. Kunde, Mitarbeiter und Admin werden benachrichtigt; Termin erscheint im Kalender und in der Kunden-Timeline. Protokolle direkt am Termin schreiben." },
-      { q: "E-Mail an Kunden", a: "Direkt aus dem Tool mailen (gebrandet), mit persönlichem Text und temporären Anhängen – die Anhänge werden mitgeschickt, aber nicht auf dem Server gespeichert." },
+      { q: "E-Mail-Konversationen (mit Referenznummer)", a: "Im Kundenprofil unter „Kontakt & Verlauf → E-Mail-Konversationen“ startest du eine gebrandete Mail. Jede Konversation bekommt automatisch eine eindeutige Referenznummer (z. B. [NF-7QK4T-9ZM2P]) im Betreff. Antwortet der Kunde, ordnet das Tool die Antwort über diese Nummer wieder der richtigen Konversation zu – du siehst den ganzen Verlauf und antwortest direkt daraus.",
+        steps: [
+          "Kundenprofil → „Kontakt & Verlauf“ → „＋ Neue Nachricht“.",
+          "Betreff und Text schreiben, optional Anhänge – „Senden & Konversation starten“.",
+          "Bei einer Antwort auf „⟳ Posteingang abrufen“ klicken – neue Antworten erscheinen als „neu“.",
+          "Konversation öffnen, im Chat-Verlauf lesen und direkt antworten. „Als erledigt schließen“, wenn erledigt.",
+        ] },
       { q: "Dateien anfordern", a: "Unter „Dateien“ (Topbar) eine Anforderung anlegen und den öffentlichen Link teilen. Über den Link kann jeder ohne Login hochladen (bis 10 GB). Du bekommst sofort eine E-Mail. Dateien werden nach 7 Tagen automatisch gelöscht (oder wenn du sie löschst)." },
       { q: "Benachrichtigungen", a: "Automatische Mitteilung (in-App + E-Mail über dein Microsoft-Konto) bei wichtigen Ereignissen: Vertrag unterschrieben, Angebot angenommen, neue Aufgabe/Anfrage/Termin. Ein-/ausschaltbar in den Einstellungen." },
     ],

@@ -8,7 +8,7 @@ from sqlalchemy import inspect, text
 from app.api.routes import (
     admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
-    monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
+    mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
     payments, projects, reports, requests, richdocs, secrets, seo, tasks, team, timetracking,
 )
 from app.config import get_settings
@@ -167,6 +167,7 @@ app.include_router(tasks.router)
 app.include_router(intake.router)
 app.include_router(ads_activity.router)
 app.include_router(mail.router)
+app.include_router(mail_threads.router)
 app.include_router(launch.router)
 app.include_router(monitoring.router)
 app.include_router(offers.client_router)

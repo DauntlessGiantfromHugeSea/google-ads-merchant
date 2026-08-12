@@ -10,7 +10,7 @@ import Todos from "../sections/Todos";
 import Updates from "../sections/Updates";
 import Documents from "../sections/Documents";
 import Projects from "../sections/Projects";
-import MailCompose from "../sections/MailCompose";
+import Conversations from "../sections/Conversations";
 import Launch from "../sections/Launch";
 import Monitoring from "../sections/Monitoring";
 import Offers from "../sections/Offers";
@@ -180,7 +180,7 @@ export default function ClientDetail() {
               <Contact client={client} isAgency={isAgency} onSaved={setClient} />
               {isAgency && <Credentials clientId={id} />}
               <Updates clientId={id} isAgency={isAgency} />
-              {isAgency && <MailCompose client={client} />}
+              {isAgency && <Conversations client={client} />}
               {isAgency && (
                 <div className="section form-light">
                   <h2>Kunden-Zugang</h2>
