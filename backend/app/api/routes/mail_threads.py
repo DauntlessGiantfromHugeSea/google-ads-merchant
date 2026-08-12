@@ -150,7 +150,7 @@ def start_thread(data: ThreadStart, user: User = Depends(require_agency),
 
     ref = _new_reference(db)
     subject = _subject_with_ref(data.subject, ref)
-    send_via_graph(org, data.to, subject, render_email_html(org, data.body), html=True,
+    send_via_graph(org, data.to, subject, render_email_html(org, data.body, reference=ref), html=True,
                    attachments=attachments or None)
 
     now = datetime.now(timezone.utc)
@@ -180,8 +180,8 @@ def reply_thread(thread_id: str, data: ThreadReply, user: User = Depends(require
     org = db.get(Organization, user.organization_id)
     attachments = _attachments(data.attachments)
     subject = _subject_with_ref(t.subject, t.reference, reply=True)
-    send_via_graph(org, t.contact_email, subject, render_email_html(org, data.body), html=True,
-                   attachments=attachments or None)
+    send_via_graph(org, t.contact_email, subject, render_email_html(org, data.body, reference=t.reference),
+                   html=True, attachments=attachments or None)
 
     now = datetime.now(timezone.utc)
     db.add(MailMessage(
@@ -222,7 +222,10 @@ def sync_org_inbox(db: Session, org: Organization) -> int:
     touched: dict[str, MailThread] = {}
     for m in messages:
         subject = m.get("subject") or ""
-        found = REF_RE.search(subject)
+        body_obj = m.get("body") or {}
+        raw_content = body_obj.get("content", "") or m.get("bodyPreview", "")
+        # Referenz zuerst im Betreff, sonst im (zitierten) Text – der Footer trägt sie.
+        found = REF_RE.search(subject) or REF_RE.search(raw_content)
         if not found:
             continue
         ref = found.group(0).upper()
@@ -235,9 +238,8 @@ def sync_org_inbox(db: Session, org: Organization) -> int:
             continue  # schon importiert
         addr = ((m.get("from") or {}).get("emailAddress") or {})
         from_email = addr.get("address", "")
-        body_obj = m.get("body") or {}
         is_html = (body_obj.get("contentType", "") or "").lower() == "html"
-        text = _clean_body(body_obj.get("content", "") or m.get("bodyPreview", ""), is_html)
+        text = _clean_body(raw_content, is_html)
         received = _parse_dt(m.get("receivedDateTime"))
         db.add(MailMessage(
             thread_id=thread.id, organization_id=org.id, direction="in",

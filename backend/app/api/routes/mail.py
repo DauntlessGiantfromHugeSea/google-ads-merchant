@@ -66,8 +66,10 @@ def _access_token(refresh_token: str, scope: str = SCOPE_SEND) -> str:
     return token
 
 
-def render_email_html(org, body_text: str) -> str:
-    """Verpackt Text in eine gebrandete HTML-Mail (Logo, Farben, Footer)."""
+def render_email_html(org, body_text: str, reference: str = "") -> str:
+    """Verpackt Text in eine gebrandete HTML-Mail (Logo, Farben, Footer).
+    reference: optionale Konversations-Referenz – wird sichtbar in den Footer
+    gesetzt, damit sie beim Antworten erhalten bleibt (Zuordnung)."""
     logo = f"{settings.public_base_url.rstrip('/')}/api/branding/logo"
     body_html = htmllib.escape(body_text).replace("\n", "<br>")
     name = getattr(org, "agency_contact_name", "") or getattr(org, "name", "") or ""
@@ -75,6 +77,13 @@ def render_email_html(org, body_text: str) -> str:
     phone = getattr(org, "agency_contact_phone", "") or ""
     footer_parts = [p for p in [name, email, phone] if p]
     footer = " · ".join(footer_parts)
+    ref_block = ""
+    if reference:
+        ref_block = (
+            f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;'
+            f'color:#9aa0a6;font-size:11px;">Referenz <strong>{htmllib.escape(reference)}</strong>'
+            f' · Bitte lass diese Nummer beim Antworten stehen, damit wir deine Antwort'
+            f' automatisch zuordnen können.</div>')
     return f"""\
 <div style="background:#f1f2f6;padding:24px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e8e8ee;">
@@ -83,7 +92,7 @@ def render_email_html(org, body_text: str) -> str:
     </div>
     <div style="padding:26px 24px;color:#15161a;font-size:15px;line-height:1.65;">{body_html}</div>
     <div style="padding:16px 24px;background:#fafafb;color:#6b6b72;font-size:12px;border-top:1px solid #eee;">
-      {htmllib.escape(footer)}
+      {htmllib.escape(footer)}{ref_block}
     </div>
   </div>
 </div>"""
