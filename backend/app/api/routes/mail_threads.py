@@ -207,6 +207,20 @@ def set_status(thread_id: str, body: dict, user: User = Depends(require_agency),
     return _thread_dict(t)
 
 
+@router.delete("/{thread_id}", status_code=204)
+def delete_thread(thread_id: str, user: User = Depends(require_agency),
+                  db: Session = Depends(get_db)) -> None:
+    """Löscht eine Konversation samt Nachrichten. Nur wenn sie geschlossen ist –
+    schützt vor versehentlichem Löschen laufender Konversationen."""
+    t = _thread_or_404(thread_id, user, db)
+    if t.status != "closed":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "Bitte die Konversation zuerst als erledigt schließen, dann löschen.")
+    db.query(MailMessage).filter(MailMessage.thread_id == t.id).delete()
+    db.delete(t)
+    db.commit()
+
+
 # ---------- Posteingang abgleichen ----------
 def sync_org_inbox(db: Session, org: Organization) -> int:
     """Gleicht das Postfach einer Organisation ab, ordnet Antworten über die

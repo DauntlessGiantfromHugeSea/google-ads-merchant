@@ -417,6 +417,7 @@ export const api = {
     request<MailThreadDetail>(`/mail/threads/${id}/reply`, { method: "POST", body: JSON.stringify(d) }),
   setThreadStatus: (id: string, status: string) =>
     request<MailThread>(`/mail/threads/${id}/status`, { method: "POST", body: JSON.stringify({ status }) }),
+  deleteThread: (id: string) => request<void>(`/mail/threads/${id}`, { method: "DELETE" }),
   syncThreads: () => request<{ new: number }>("/mail/threads/sync", { method: "POST" }),
 
   milestones: (cid: string) => request<Milestone[]>(`/clients/${cid}/milestones`),

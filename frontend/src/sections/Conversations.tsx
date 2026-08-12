@@ -62,6 +62,11 @@ function ThreadView({ id, onBack, onChanged }: { id: string; onBack: () => void;
     } catch (e) { toast((e as Error).message, "err"); } finally { setBusy(false); }
   };
   const toggleStatus = async () => { await api.setThreadStatus(id, t.status === "closed" ? "open" : "closed"); load(); onChanged(); };
+  const del = async () => {
+    if (!confirm(`Konversation „${t.subject || t.reference}" endgültig löschen? Der gesamte Verlauf geht verloren.`)) return;
+    try { await api.deleteThread(id); onChanged(); onBack(); }
+    catch (e) { toast((e as Error).message, "err"); }
+  };
 
   return (
     <div className="section form-light">
@@ -73,7 +78,10 @@ function ThreadView({ id, onBack, onChanged }: { id: string; onBack: () => void;
             {t.contact_name ? `${t.contact_name} · ` : ""}{t.contact_email} · Ref. <code>{t.reference}</code>
           </div>
         </div>
-        <button className="btn btn-ghost btn-sm" onClick={toggleStatus}>{t.status === "closed" ? "Wieder öffnen" : "Als erledigt schließen"}</button>
+        <div className="row-inline" style={{ gap: 6 }}>
+          <button className="btn btn-ghost btn-sm" onClick={toggleStatus}>{t.status === "closed" ? "Wieder öffnen" : "Als erledigt schließen"}</button>
+          {t.status === "closed" && <button className="del" onClick={del}>Löschen</button>}
+        </div>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10, margin: "16px 0" }}>
