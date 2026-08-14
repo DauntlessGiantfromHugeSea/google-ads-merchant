@@ -92,14 +92,21 @@ def _attachments(items) -> list[dict]:
              "contentBytes": a.content_bytes} for a in items if a.content_bytes]
 
 
-def _thread_dict(t: MailThread, message_count: int | None = None) -> dict:
+def _thread_dict(t: MailThread, message_count: int | None = None, created_by_name: str = "") -> dict:
     return {
         "id": t.id, "reference": t.reference, "subject": t.subject,
         "contact_email": t.contact_email, "contact_name": t.contact_name,
         "status": t.status, "unread": t.unread, "last_direction": t.last_direction,
         "last_message_at": t.last_message_at, "client_id": t.client_id,
-        "message_count": message_count,
+        "message_count": message_count, "created_by_name": created_by_name,
     }
+
+
+def _creator_name(t: MailThread, db: Session) -> str:
+    if not t.created_by:
+        return ""
+    u = db.get(User, t.created_by)
+    return (u.full_name or u.email) if u else ""
 
 
 def _msg_dict(m: MailMessage) -> dict:
@@ -120,7 +127,10 @@ def list_threads(client_id: str | None = None, user: User = Depends(require_agen
     counts = dict(db.query(MailMessage.thread_id, func.count(MailMessage.id)).filter(
         MailMessage.thread_id.in_([t.id for t in threads])).group_by(MailMessage.thread_id).all()) \
         if threads else {}
-    return [_thread_dict(t, counts.get(t.id, 0)) for t in threads]
+    creator_ids = [t.created_by for t in threads if t.created_by]
+    names = {u.id: (u.full_name or u.email) for u in db.query(User).filter(User.id.in_(creator_ids)).all()} \
+        if creator_ids else {}
+    return [_thread_dict(t, counts.get(t.id, 0), names.get(t.created_by, "")) for t in threads]
 
 
 @router.get("/{thread_id}")
@@ -132,7 +142,7 @@ def get_thread(thread_id: str, user: User = Depends(require_agency),
         db.commit()
     msgs = db.query(MailMessage).filter(MailMessage.thread_id == t.id) \
         .order_by(MailMessage.created_at.asc()).all()
-    return {**_thread_dict(t, len(msgs)), "messages": [_msg_dict(m) for m in msgs]}
+    return {**_thread_dict(t, len(msgs), _creator_name(t, db)), "messages": [_msg_dict(m) for m in msgs]}
 
 
 # ---------- Neue Konversation starten ----------
@@ -167,7 +177,7 @@ def start_thread(data: ThreadStart, user: User = Depends(require_agency),
         body=(data.body or "").strip(), author=user.full_name or user.email, created_at=now))
     db.commit()
     db.refresh(thread)
-    return _thread_dict(thread, 1)
+    return _thread_dict(thread, 1, user.full_name or user.email)
 
 
 # ---------- Antworten ----------
@@ -204,7 +214,7 @@ def set_status(thread_id: str, body: dict, user: User = Depends(require_agency),
     if st in ("open", "closed"):
         t.status = st
         db.commit()
-    return _thread_dict(t)
+    return _thread_dict(t, created_by_name=_creator_name(t, db))
 
 
 @router.delete("/{thread_id}", status_code=204)

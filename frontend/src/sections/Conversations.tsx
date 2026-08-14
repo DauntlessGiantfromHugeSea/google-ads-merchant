@@ -217,6 +217,7 @@ export default function Conversations({ client }: { client: Client }) {
                     {t.unread && <span className="badge-count" style={{ marginLeft: 6 }}>neu</span>}
                     <div className="muted" style={{ fontSize: 12 }}>
                       {t.contact_name || t.contact_email} · {t.last_direction === "in" ? "↩ Antwort" : "→ gesendet"} · {when(t.last_message_at)} · <code>{t.reference}</code>
+                      {t.created_by_name ? ` · von ${t.created_by_name}` : ""}
                     </div>
                   </div>
                   <span className={`status-badge ${t.status === "closed" ? "st-pausiert" : "st-aktiv"}`}>

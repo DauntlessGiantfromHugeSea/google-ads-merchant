@@ -95,7 +95,7 @@ export interface MailStatus { connected: boolean; email: string; configured: boo
 export interface MailThread {
   id: string; reference: string; subject: string; contact_email: string; contact_name: string;
   status: string; unread: boolean; last_direction: string; last_message_at: string;
-  client_id: string | null; message_count: number | null;
+  client_id: string | null; message_count: number | null; created_by_name?: string;
 }
 export interface MailMessage {
   id: string; direction: string; from_email: string; to_email: string; subject: string;
