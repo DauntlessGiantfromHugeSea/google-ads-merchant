@@ -7,14 +7,16 @@ export default function Contact({ client, isAgency, onSaved }:
   const toast = useToast();
   const [edit, setEdit] = useState(false);
   const [f, setF] = useState({
+    name: client.name, company: client.company,
     contact_person: client.contact_person, contact_email: client.contact_email,
     phone: client.phone, website: client.website, address: client.address,
   });
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
+    if (!f.name.trim()) { toast("Kundenname darf nicht leer sein.", "err"); return; }
     setSaving(true);
-    try { onSaved(await api.updateClient(client.id, f)); setEdit(false); toast("Kontakt gespeichert."); }
+    try { onSaved(await api.updateClient(client.id, { ...f, name: f.name.trim() })); setEdit(false); toast("Gespeichert."); }
     catch (err) { toast((err as Error).message, "err"); }
     finally { setSaving(false); }
   };
@@ -29,6 +31,8 @@ export default function Contact({ client, isAgency, onSaved }:
           {isAgency && <button className="btn btn-ghost btn-sm" onClick={() => setEdit(true)}>Bearbeiten</button>}
         </div>
         <dl className="kv">
+          <dt>Kunde</dt><dd>{client.name || "–"}</dd>
+          {client.company && <><dt>Firma</dt><dd>{client.company}</dd></>}
           <dt>Ansprechpartner</dt><dd>{client.contact_person || "–"}</dd>
           <dt>E-Mail</dt><dd>{client.contact_email || "–"}</dd>
           <dt>Telefon</dt><dd>{client.phone || "–"}</dd>
@@ -42,6 +46,10 @@ export default function Contact({ client, isAgency, onSaved }:
   return (
     <div className="section form-light">
       <h2>Kontakt bearbeiten</h2>
+      <div className="row-inline">
+        <div className="field" style={{ flex: 1 }}><label>Kundenname</label><input className="input" value={f.name} onChange={upd("name")} placeholder="Anzeigename des Kunden" /></div>
+        <div className="field" style={{ flex: 1 }}><label>Firma</label><input className="input" value={f.company} onChange={upd("company")} /></div>
+      </div>
       <div className="row-inline">
         <div className="field" style={{ flex: 1 }}><label>Ansprechpartner</label><input className="input" value={f.contact_person} onChange={upd("contact_person")} /></div>
         <div className="field" style={{ flex: 1 }}><label>E-Mail</label><input className="input" value={f.contact_email} onChange={upd("contact_email")} /></div>
