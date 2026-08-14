@@ -539,7 +539,7 @@ code { color: #e9eaf2; }
 }
 
 /* Dashboard-Cockpit */
-.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ellip { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty.sm { padding: 12px 0; font-size: 13px; }
 .list-row.clickable { cursor: pointer; }
 .list-row.clickable:hover strong { color: var(--coral-soft); }

@@ -198,7 +198,7 @@ export default function Dashboard() {
                 const di = dueInfo(t.due_date);
                 return (
                   <div key={t.id} className="list-row clickable" onClick={() => navigate(`/clients/${t.client_id}`)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
                       <span className={`due-dot ${di.cls}`} />
                       <div style={{ minWidth: 0 }}>
                         <strong>{t.title}</strong>
@@ -223,7 +223,7 @@ export default function Dashboard() {
                 const f = fmtAppt(a.starts_at);
                 return (
                   <div key={a.id} className="list-row clickable" onClick={() => navigate(`/clients/${a.client_id}`)}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
                       <span className={`appt-badge ${f.overdueToday ? "today" : ""}`}>{f.day}<b>{f.time}</b></span>
                       <div style={{ minWidth: 0 }}>
                         <strong className="ellip">{a.title}</strong>
