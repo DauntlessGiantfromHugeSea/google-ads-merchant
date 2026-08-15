@@ -66,11 +66,12 @@ def _access_token(refresh_token: str, scope: str = SCOPE_SEND) -> str:
     return token
 
 
-def render_email_html(org, body_text: str, reference: str = "") -> str:
+def render_email_html(org, body_text: str, reference: str = "", logo_url: str = "") -> str:
     """Verpackt Text in eine gebrandete HTML-Mail (Logo, Farben, Footer).
     reference: optionale Konversations-Referenz – wird sichtbar in den Footer
-    gesetzt, damit sie beim Antworten erhalten bleibt (Zuordnung)."""
-    logo = f"{settings.public_base_url.rstrip('/')}/api/branding/logo"
+    gesetzt, damit sie beim Antworten erhalten bleibt (Zuordnung).
+    logo_url: überschreibt das Standard-Logo (z. B. Kundenlogo der Bestätigung)."""
+    logo = logo_url or f"{settings.public_base_url.rstrip('/')}/api/branding/logo"
     body_html = htmllib.escape(body_text).replace("\n", "<br>")
     name = getattr(org, "agency_contact_name", "") or getattr(org, "name", "") or ""
     email = getattr(org, "agency_contact_email", "") or getattr(org, "ms_email", "") or ""
@@ -99,28 +100,33 @@ def render_email_html(org, body_text: str, reference: str = "") -> str:
 
 
 def send_via_graph(org, to: str, subject: str, body: str, html: bool = False,
-                   attachments: list[dict] | None = None) -> None:
+                   attachments: list[dict] | None = None,
+                   from_addr: str = "", reply_to: str = "") -> None:
     """Sendet eine Mail über das verbundene Microsoft-Konto der Organisation.
-    attachments: Liste von {name, contentType, contentBytes(base64)}."""
+    attachments: Liste von {name, contentType, contentBytes(base64)}.
+    from_addr: abweichende Absenderadresse (nur mit „Senden als"-Recht in M365,
+    sonst lehnt Exchange ab). reply_to: Antwortadresse (immer erlaubt)."""
     if not org or not org.ms_refresh_token:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
     access = _access_token(decrypt(org.ms_refresh_token))
-    message: dict = {
-        "message": {
-            "subject": subject,
-            "body": {"contentType": "HTML" if html else "Text", "content": body},
-            "toRecipients": [{"emailAddress": {"address": to}}],
-        },
-        "saveToSentItems": True,
+    msg: dict = {
+        "subject": subject,
+        "body": {"contentType": "HTML" if html else "Text", "content": body},
+        "toRecipients": [{"emailAddress": {"address": to}}],
     }
+    if from_addr:
+        msg["from"] = {"emailAddress": {"address": from_addr}}
+    if reply_to:
+        msg["replyTo"] = [{"emailAddress": {"address": reply_to}}]
     if attachments:
-        message["message"]["attachments"] = [{
+        msg["attachments"] = [{
             "@odata.type": "#microsoft.graph.fileAttachment",
             "name": a["name"], "contentType": a.get("contentType", "application/octet-stream"),
             "contentBytes": a["contentBytes"],
         } for a in attachments]
     resp = httpx.post("https://graph.microsoft.com/v1.0/me/sendMail",
-                      headers={"Authorization": f"Bearer {access}"}, json=message, timeout=30)
+                      headers={"Authorization": f"Bearer {access}"},
+                      json={"message": msg, "saveToSentItems": True}, timeout=30)
     if resp.status_code >= 300:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Versand fehlgeschlagen: {resp.text[:200]}")
 

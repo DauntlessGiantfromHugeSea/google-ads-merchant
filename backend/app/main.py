@@ -37,6 +37,9 @@ _CLIENT_COLUMNS = {
     "hourly_rate": "DOUBLE PRECISION DEFAULT 0",
     "webhook_notify_enabled": "BOOLEAN DEFAULT TRUE",
     "webhook_notify_client": "BOOLEAN DEFAULT FALSE", "webhook_notify_email": "VARCHAR(255) DEFAULT ''",
+    "webhook_confirm_enabled": "BOOLEAN DEFAULT FALSE", "webhook_confirm_subject": "VARCHAR(255) DEFAULT ''",
+    "webhook_confirm_text": "TEXT DEFAULT ''", "webhook_from": "VARCHAR(255) DEFAULT ''",
+    "webhook_logo_base64": "TEXT DEFAULT ''", "webhook_logo_content_type": "VARCHAR(64) DEFAULT ''",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",

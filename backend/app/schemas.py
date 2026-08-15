@@ -609,6 +609,11 @@ class ParticipantsStatus(BaseModel):
     notify_enabled: bool = True
     notify_client: bool = False
     notify_email: str = ""
+    confirm_enabled: bool = False
+    confirm_subject: str = ""
+    confirm_text: str = ""
+    from_addr: str = ""
+    has_logo: bool = False
 
 
 # --- Google-Ads-Aktivitätsprotokoll ---

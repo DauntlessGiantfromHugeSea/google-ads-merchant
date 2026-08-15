@@ -67,7 +67,7 @@ export interface Participant {
   id: string; form_name: string; name: string; email: string; status: string;
   data: Record<string, unknown>; created_at: string;
 }
-export interface ParticipantsStatus { enabled: boolean; webhook_url: string; count: number; notify_enabled: boolean; notify_client: boolean; notify_email: string; }
+export interface ParticipantsStatus { enabled: boolean; webhook_url: string; count: number; notify_enabled: boolean; notify_client: boolean; notify_email: string; confirm_enabled: boolean; confirm_subject: string; confirm_text: string; from_addr: string; has_logo: boolean; }
 export interface IntakeForm {
   id: string; label: string; client_id: string | null; created_by: string;
   created_at: string; expires_at: string | null; submission_count: number;
@@ -386,6 +386,14 @@ export const api = {
     request<ParticipantsStatus>(`/clients/${cid}/participants/notify`, { method: "POST", body: JSON.stringify(d) }),
   emailMeParticipants: (cid: string) =>
     request<{ ok: boolean; to: string; count: number }>(`/clients/${cid}/participants/email-me`, { method: "POST" }),
+  setWebhookConfirm: (cid: string, d: { confirm_enabled: boolean; confirm_subject: string; confirm_text: string; from_addr: string }) =>
+    request<ParticipantsStatus>(`/clients/${cid}/participants/confirm`, { method: "POST", body: JSON.stringify(d) }),
+  uploadConfirmLogo: (cid: string, file: File) => {
+    const fd = new FormData(); fd.set("file", file);
+    return request<ParticipantsStatus>(`/clients/${cid}/participants/confirm-logo`, { method: "POST", body: fd });
+  },
+  deleteConfirmLogo: (cid: string) => request<ParticipantsStatus>(`/clients/${cid}/participants/confirm-logo`, { method: "DELETE" }),
+  confirmLogoUrl: (cid: string) => `/api/participants/confirm-logo/${cid}`,
   participants: (cid: string) => request<Participant[]>(`/clients/${cid}/participants`),
   updateParticipant: (cid: string, pid: string, d: { status?: string; name?: string; email?: string }) =>
     request<Participant>(`/clients/${cid}/participants/${pid}`, { method: "PATCH", body: JSON.stringify(d) }),

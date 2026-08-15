@@ -22,6 +22,11 @@ export default function Participants({ clientId, clientName, isAgency }:
   const [nEnabled, setNEnabled] = useState(true);
   const [nClient, setNClient] = useState(false);
   const [nEmail, setNEmail] = useState("");
+  const [cEnabled, setCEnabled] = useState(false);
+  const [cSubject, setCSubject] = useState("");
+  const [cText, setCText] = useState("");
+  const [cFrom, setCFrom] = useState("");
+  const [logoV, setLogoV] = useState(0);
 
   const load = () => {
     api.participantsStatus(clientId).then(setStatus).catch(() => {});
@@ -29,9 +34,13 @@ export default function Participants({ clientId, clientName, isAgency }:
   };
   useEffect(() => { load(); }, [clientId]);
   useEffect(() => { if (status) { setNEnabled(status.notify_enabled); setNClient(status.notify_client); setNEmail(status.notify_email); } }, [status?.notify_enabled, status?.notify_client, status?.notify_email]);
+  useEffect(() => { if (status) { setCEnabled(status.confirm_enabled); setCSubject(status.confirm_subject); setCText(status.confirm_text); setCFrom(status.from_addr); } }, [status?.confirm_enabled, status?.confirm_subject, status?.confirm_text, status?.from_addr]);
 
   const enable = async (on: boolean) => { setStatus(await api.enableParticipants(clientId, on)); toast(on ? "Webhook aktiv." : "Deaktiviert."); };
   const saveNotify = async () => { setStatus(await api.setWebhookNotify(clientId, { notify_enabled: nEnabled, notify_client: nClient, notify_email: nEmail.trim() })); toast("Benachrichtigung gespeichert."); };
+  const saveConfirm = async () => { setStatus(await api.setWebhookConfirm(clientId, { confirm_enabled: cEnabled, confirm_subject: cSubject.trim(), confirm_text: cText, from_addr: cFrom.trim() })); toast("Bestätigung gespeichert."); };
+  const uploadLogo = async (file: File) => { try { setStatus(await api.uploadConfirmLogo(clientId, file)); setLogoV((v) => v + 1); toast("Logo hochgeladen."); } catch (e) { toast((e as Error).message, "err"); } };
+  const removeLogo = async () => { setStatus(await api.deleteConfirmLogo(clientId)); toast("Logo entfernt."); };
   const emailMe = async () => { try { const r = await api.emailMeParticipants(clientId); toast(`Übersicht an ${r.to} gesendet (${r.count}).`); } catch (e) { toast((e as Error).message, "err"); } };
   const rotate = async () => { if (!confirm("Neue Webhook-URL erzeugen? Die alte wird ungültig.")) return; setStatus(await api.rotateParticipantToken(clientId)); toast("Neue URL erzeugt."); };
   const setStat = async (p: Participant, s: string) => { await api.updateParticipant(clientId, p.id, { status: s }); setList((x) => x.map((y) => (y.id === p.id ? { ...y, status: s } : y))); };
@@ -96,6 +105,38 @@ export default function Participants({ clientId, clientName, isAgency }:
                   </div>
                 )}
                 <button className="btn btn-primary btn-sm" style={{ marginTop: 6 }} onClick={saveNotify}>Benachrichtigung speichern</button>
+              </div>
+
+              <div className="card" style={{ marginTop: 14, boxShadow: "none" }}>
+                <strong style={{ fontSize: 14 }}>Buchungsbestätigung an den Anmelder</strong>
+                <label className="ki-check" style={{ marginTop: 8 }}>
+                  <input type="checkbox" checked={cEnabled} onChange={(e) => setCEnabled(e.target.checked)} />
+                  <span>Automatisch bestätigen <span className="muted" style={{ fontWeight: 400 }}>· sobald eine Anmeldung mit E-Mail eingeht</span></span>
+                </label>
+                {cEnabled && (
+                  <div style={{ marginLeft: 26, marginTop: 6 }}>
+                    <div className="field"><label>Betreff</label>
+                      <input className="input form-light" value={cSubject} onChange={(e) => setCSubject(e.target.value)} placeholder="Bestätigung deiner Anmeldung" /></div>
+                    <div className="field"><label>Nachricht</label>
+                      <textarea className="input form-light" rows={4} value={cText} onChange={(e) => setCText(e.target.value)} placeholder="Hallo, vielen Dank für deine Anmeldung …" /></div>
+                    <div className="field"><label>Absender-Adresse (From)</label>
+                      <input className="input form-light" type="email" value={cFrom} onChange={(e) => setCFrom(e.target.value)} placeholder="z. B. noreply@north-lab.de" />
+                      <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                        Funktioniert nur, wenn diese Adresse in Microsoft 365 als Alias/Postfach mit „Senden als"-Recht eingerichtet ist – sonst wird ersatzweise über das verbundene Postfach gesendet (Antwort geht trotzdem an diese Adresse).
+                      </div>
+                    </div>
+                    <div className="field">
+                      <label>Logo für die Bestätigung</label>
+                      <div className="row-inline" style={{ alignItems: "center", gap: 10 }}>
+                        {status.has_logo && <img src={`${api.confirmLogoUrl(clientId)}?v=${logoV}`} alt="Logo" style={{ maxHeight: 40, maxWidth: 160, background: "#fff", borderRadius: 8, padding: 4 }} />}
+                        <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>{status.has_logo ? "Ersetzen" : "+ Logo"}
+                          <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.currentTarget.value = ""; }} /></label>
+                        {status.has_logo && <button className="del" onClick={removeLogo}>entfernen</button>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <button className="btn btn-primary btn-sm" style={{ marginTop: 6 }} onClick={saveConfirm}>Bestätigung speichern</button>
               </div>
             </>
           ) : (

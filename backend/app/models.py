@@ -183,6 +183,13 @@ class Client(Base):
     webhook_notify_enabled: Mapped[bool] = mapped_column(Boolean, default=True)   # überhaupt mailen?
     webhook_notify_client: Mapped[bool] = mapped_column(Boolean, default=False)   # auch an Kunden
     webhook_notify_email: Mapped[str] = mapped_column(String(255), default="")    # feste Zusatzadresse
+    # Webhook: automatische Bestätigungsmail an den Anmelder (eigenes Logo/Absender).
+    webhook_confirm_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    webhook_confirm_subject: Mapped[str] = mapped_column(String(255), default="")
+    webhook_confirm_text: Mapped[str] = mapped_column(Text, default="")
+    webhook_from: Mapped[str] = mapped_column(String(255), default="")            # z.B. noreply@north-lab.de
+    webhook_logo_base64: Mapped[str] = mapped_column(Text, default="")
+    webhook_logo_content_type: Mapped[str] = mapped_column(String(64), default="")
 
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     organization: Mapped[Organization] = relationship(back_populates="clients")

@@ -96,7 +96,11 @@ def _status(client: Client, request: Request, db: Session) -> ParticipantsStatus
     return ParticipantsStatus(
         enabled=client.participants_enabled, webhook_url=url, count=_count(db, client.id),
         notify_enabled=bool(client.webhook_notify_enabled),
-        notify_client=bool(client.webhook_notify_client), notify_email=client.webhook_notify_email or "")
+        notify_client=bool(client.webhook_notify_client), notify_email=client.webhook_notify_email or "",
+        confirm_enabled=bool(client.webhook_confirm_enabled),
+        confirm_subject=client.webhook_confirm_subject or "",
+        confirm_text=client.webhook_confirm_text or "",
+        from_addr=client.webhook_from or "", has_logo=bool(client.webhook_logo_base64))
 
 
 @router.get("/status", response_model=ParticipantsStatus)
@@ -130,6 +134,65 @@ def set_notify(client_id: str, request: Request, data: dict,
     db.commit()
     db.refresh(client)
     return _status(client, request, db)
+
+
+@router.post("/confirm", response_model=ParticipantsStatus)
+def set_confirm(client_id: str, request: Request, data: dict,
+                user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Automatische Bestätigungsmail an den Anmelder konfigurieren."""
+    client = get_scoped_client(client_id, user, db)
+    client.webhook_confirm_enabled = bool(data.get("confirm_enabled", False))
+    client.webhook_confirm_subject = (data.get("confirm_subject") or "").strip()[:255]
+    client.webhook_confirm_text = (data.get("confirm_text") or "").strip()
+    client.webhook_from = (data.get("from_addr") or "").strip()[:255]
+    db.commit()
+    db.refresh(client)
+    return _status(client, request, db)
+
+
+@router.post("/confirm-logo", response_model=ParticipantsStatus)
+async def upload_confirm_logo(client_id: str, request: Request,
+                              user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Logo für die Bestätigungsmail dieses Kunden hochladen (Bilddatei)."""
+    from base64 import b64encode  # noqa: PLC0415
+    client = get_scoped_client(client_id, user, db)
+    form = await request.form()
+    up = form.get("file")
+    if up is None or not hasattr(up, "read"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Keine Datei erhalten.")
+    raw = await up.read()
+    if len(raw) > 2_000_000:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Logo zu groß (max. 2 MB).")
+    ct = getattr(up, "content_type", "") or "image/png"
+    if not ct.startswith("image/"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte eine Bilddatei hochladen.")
+    client.webhook_logo_base64 = b64encode(raw).decode()
+    client.webhook_logo_content_type = ct[:64]
+    db.commit()
+    db.refresh(client)
+    return _status(client, request, db)
+
+
+@router.delete("/confirm-logo", response_model=ParticipantsStatus)
+def delete_confirm_logo(client_id: str, request: Request,
+                        user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    client = get_scoped_client(client_id, user, db)
+    client.webhook_logo_base64 = ""
+    client.webhook_logo_content_type = ""
+    db.commit()
+    db.refresh(client)
+    return _status(client, request, db)
+
+
+@public_router.get("/confirm-logo/{client_id}")
+def public_confirm_logo(client_id: str, db: Session = Depends(get_db)):
+    """Öffentlich abrufbares Bestätigungs-Logo (für die Einbettung in E-Mails)."""
+    from base64 import b64decode  # noqa: PLC0415
+    client = db.get(Client, client_id)
+    if not client or not client.webhook_logo_base64:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kein Logo")
+    return StreamingResponse(io.BytesIO(b64decode(client.webhook_logo_base64)),
+                             media_type=client.webhook_logo_content_type or "image/png")
 
 
 @router.post("/rotate", response_model=ParticipantsStatus)
@@ -265,7 +328,45 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
         threading.Thread(target=_mail_new_signup,
                          args=(client.organization_id, client.name, form_name, name, email, extra),
                          daemon=True).start()
+    # Automatische Bestätigung an den Anmelder (eigenes Logo/Absender).
+    if client.webhook_confirm_enabled and email and _looks_email(email):
+        threading.Thread(target=_send_confirmation, args=(
+            client.organization_id, client.id, client.name, email, name,
+            client.webhook_confirm_subject, client.webhook_confirm_text,
+            client.webhook_from, bool(client.webhook_logo_base64)), daemon=True).start()
     return {"ok": True}
+
+
+def _send_confirmation(org_id: str, client_id: str, client_name: str, to_email: str, name: str,
+                       subject: str, text: str, from_addr: str, has_logo: bool) -> None:
+    """Bestätigungsmail an den Anmelder – mit Kundenlogo und Wunschabsender.
+    Fällt bei fehlender „Senden als"-Berechtigung auf das verbundene Postfach
+    zurück (Reply-To bleibt erhalten)."""
+    from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+    from app.config import get_settings  # noqa: PLC0415
+    from app.database import SessionLocal  # noqa: PLC0415
+    from app.models import Organization  # noqa: PLC0415
+    db = SessionLocal()
+    try:
+        org = db.get(Organization, org_id)
+        if not org or not org.ms_refresh_token:
+            return
+        base = get_settings().public_base_url.rstrip("/")
+        logo_url = f"{base}/api/participants/confirm-logo/{client_id}" if has_logo else ""
+        subj = subject or f"Bestätigung deiner Anmeldung – {client_name}"
+        hi = f"Hallo{(' ' + name) if name else ''},"
+        body = text or (f"{hi}\n\nvielen Dank für deine Anmeldung bei {client_name}. "
+                        f"Wir haben sie erhalten und melden uns.\n\nBeste Grüße")
+        html = render_email_html(org, body, logo_url=logo_url)
+        try:
+            send_via_graph(org, to_email, subj, html, html=True, from_addr=from_addr, reply_to=from_addr)
+        except Exception:
+            try:
+                send_via_graph(org, to_email, subj, html, html=True, reply_to=from_addr)
+            except Exception:
+                pass
+    finally:
+        db.close()
 
 
 def _mail_new_signup(org_id: str, client_name: str, form_name: str, name: str,
