@@ -95,6 +95,7 @@ def _status(client: Client, request: Request, db: Session) -> ParticipantsStatus
     url = _webhook_url(request, client.participant_token) if client.participants_enabled and client.participant_token else ""
     return ParticipantsStatus(
         enabled=client.participants_enabled, webhook_url=url, count=_count(db, client.id),
+        notify_enabled=bool(client.webhook_notify_enabled),
         notify_client=bool(client.webhook_notify_client), notify_email=client.webhook_notify_email or "")
 
 
@@ -119,8 +120,11 @@ def enable(client_id: str, request: Request, data: dict, user: User = Depends(re
 @router.post("/notify", response_model=ParticipantsStatus)
 def set_notify(client_id: str, request: Request, data: dict,
                user: User = Depends(require_admin), db: Session = Depends(get_db)):
-    """Bei neuer Webhook-Anmeldung Mail zusätzlich an den Kunden / eine feste Adresse."""
+    """Mail-Benachrichtigung bei neuer Webhook-Anmeldung: ob überhaupt, und
+    zusätzlich an den Kunden / eine feste Adresse."""
     client = get_scoped_client(client_id, user, db)
+    if "notify_enabled" in data:
+        client.webhook_notify_enabled = bool(data.get("notify_enabled"))
     client.webhook_notify_client = bool(data.get("notify_client", False))
     client.webhook_notify_email = (data.get("notify_email") or "").strip()[:255]
     db.commit()
@@ -170,13 +174,9 @@ def delete_participant(client_id: str, pid: str, user: User = Depends(require_ad
         db.commit()
 
 
-@router.get("/export.csv")
-def export_csv(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    _forbid_member(user)
-    client = get_scoped_client(client_id, user, db)
+def _csv_bytes(client_id: str, db: Session) -> tuple[bytes, int]:
     rows = (db.query(Participant).filter(Participant.client_id == client_id)
             .order_by(Participant.created_at.desc()).all())
-    # Spalten: Basis + alle vorkommenden Datenfelder (ohne interne _-Felder)
     extra: list[str] = []
     for r in rows:
         for k in (r.data or {}):
@@ -189,10 +189,40 @@ def export_csv(client_id: str, user: User = Depends(get_current_user), db: Sessi
         d = r.data or {}
         w.writerow([r.created_at.strftime("%d.%m.%Y %H:%M"), r.form_name, r.name, r.email, r.status,
                     *[_flatten(d.get(k, "")) for k in extra]])
-    data = buf.getvalue().encode("utf-8-sig")
-    fn = f"Teilnehmer-{client.name}.csv".replace(" ", "_")
+    return buf.getvalue().encode("utf-8-sig"), len(rows)
+
+
+@router.get("/export.csv")
+def export_csv(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _forbid_member(user)
+    client = get_scoped_client(client_id, user, db)
+    data, _ = _csv_bytes(client_id, db)
+    fn = f"Anmeldungen-{client.name}.csv".replace(" ", "_")
     return StreamingResponse(io.BytesIO(data), media_type="text/csv",
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
+@router.post("/email-me")
+def email_me(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+    """Schickt dem angemeldeten Nutzer (Agentur ODER Kunde) die Übersicht der
+    bisherigen Webhook-Anmeldungen als CSV per Mail zu."""
+    _forbid_member(user)
+    client = get_scoped_client(client_id, user, db)
+    if not user.email:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Keine E-Mail-Adresse für dein Konto hinterlegt.")
+    from base64 import b64encode  # noqa: PLC0415
+
+    from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+    from app.models import Organization  # noqa: PLC0415
+    org = db.get(Organization, client.organization_id)
+    data, count = _csv_bytes(client_id, db)
+    body = (f"Hallo,\n\nanbei die Übersicht der bisherigen Anmeldungen für {client.name} "
+            f"({count} Einträge) als CSV-Datei.\n\nBeste Grüße")
+    fn = f"Anmeldungen-{client.name}.csv".replace(" ", "_")
+    send_via_graph(org, user.email, f"Anmeldungen: {client.name}", render_email_html(org, body), html=True,
+                   attachments=[{"name": fn, "contentType": "text/csv",
+                                 "contentBytes": b64encode(data).decode()}])
+    return {"ok": True, "to": user.email, "count": count}
 
 
 # --- Öffentlich: CF7-Webhook ---
@@ -217,16 +247,19 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
     p = Participant(organization_id=client.organization_id, client_id=client.id,
                     form_name=form_name, name=name, email=email, data=data)
     db.add(p)
+    mail_on = bool(client.webhook_notify_enabled)
+    # In-App-Hinweis bleibt immer; E-Mail nur wenn aktiviert.
     notify_users(db, _agency_admin_ids(db, client.organization_id),
                  org_id=client.organization_id, client_id=client.id,
                  type_="participant_new", title=f"Neue Anmeldung: {client.name}",
-                 body=(name or email or "Anmeldung")[:140], link=f"/clients/{client.id}")
+                 body=(name or email or "Anmeldung")[:140], link=f"/clients/{client.id}",
+                 suppress_email=not mail_on)
     db.commit()
     # Optional zusätzlich an Kunde / feste Adresse mailen (im Hintergrund).
     extra = []
-    if client.webhook_notify_client and client.contact_email:
+    if mail_on and client.webhook_notify_client and client.contact_email:
         extra.append(client.contact_email)
-    if client.webhook_notify_email:
+    if mail_on and client.webhook_notify_email:
         extra.append(client.webhook_notify_email)
     if extra:
         threading.Thread(target=_mail_new_signup,

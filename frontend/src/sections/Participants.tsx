@@ -19,6 +19,7 @@ export default function Participants({ clientId, clientName, isAgency }:
   const [form, setForm] = useState("");
   const [showGuide, setShowGuide] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [nEnabled, setNEnabled] = useState(true);
   const [nClient, setNClient] = useState(false);
   const [nEmail, setNEmail] = useState("");
 
@@ -27,10 +28,11 @@ export default function Participants({ clientId, clientName, isAgency }:
     api.participants(clientId).then(setList).catch(() => {});
   };
   useEffect(() => { load(); }, [clientId]);
-  useEffect(() => { if (status) { setNClient(status.notify_client); setNEmail(status.notify_email); } }, [status?.notify_client, status?.notify_email]);
+  useEffect(() => { if (status) { setNEnabled(status.notify_enabled); setNClient(status.notify_client); setNEmail(status.notify_email); } }, [status?.notify_enabled, status?.notify_client, status?.notify_email]);
 
   const enable = async (on: boolean) => { setStatus(await api.enableParticipants(clientId, on)); toast(on ? "Webhook aktiv." : "Deaktiviert."); };
-  const saveNotify = async () => { setStatus(await api.setWebhookNotify(clientId, { notify_client: nClient, notify_email: nEmail.trim() })); toast("Benachrichtigung gespeichert."); };
+  const saveNotify = async () => { setStatus(await api.setWebhookNotify(clientId, { notify_enabled: nEnabled, notify_client: nClient, notify_email: nEmail.trim() })); toast("Benachrichtigung gespeichert."); };
+  const emailMe = async () => { try { const r = await api.emailMeParticipants(clientId); toast(`Übersicht an ${r.to} gesendet (${r.count}).`); } catch (e) { toast((e as Error).message, "err"); } };
   const rotate = async () => { if (!confirm("Neue Webhook-URL erzeugen? Die alte wird ungültig.")) return; setStatus(await api.rotateParticipantToken(clientId)); toast("Neue URL erzeugt."); };
   const setStat = async (p: Participant, s: string) => { await api.updateParticipant(clientId, p.id, { status: s }); setList((x) => x.map((y) => (y.id === p.id ? { ...y, status: s } : y))); };
   const del = async (p: Participant) => { if (!confirm("Anmeldung löschen?")) return; await api.deleteParticipant(clientId, p.id); setList((x) => x.filter((y) => y.id !== p.id)); };
@@ -79,16 +81,21 @@ export default function Participants({ clientId, clientName, isAgency }:
 
               <div className="card" style={{ marginTop: 14, boxShadow: "none" }}>
                 <strong style={{ fontSize: 14 }}>Benachrichtigung bei neuer Anmeldung</strong>
-                <div className="muted" style={{ fontSize: 12, margin: "2px 0 10px" }}>
-                  Du und dein Team werdet immer benachrichtigt. Zusätzlich optional:
-                </div>
-                <label className="ki-check">
-                  <input type="checkbox" checked={nClient} onChange={(e) => setNClient(e.target.checked)} />
-                  <span>Auch an den Kunden senden <span className="muted" style={{ fontWeight: 400 }}>· an dessen Kontakt-E-Mail</span></span>
+                <label className="ki-check" style={{ marginTop: 8 }}>
+                  <input type="checkbox" checked={nEnabled} onChange={(e) => setNEnabled(e.target.checked)} />
+                  <span>E-Mail bei jeder neuen Anmeldung senden <span className="muted" style={{ fontWeight: 400 }}>· aus, wenn du keine Mails willst (der Eintrag erscheint trotzdem im Tool)</span></span>
                 </label>
-                <div className="field" style={{ marginTop: 6 }}><label>Zusätzliche E-Mail (optional)</label>
-                  <input className="input form-light" type="email" value={nEmail} onChange={(e) => setNEmail(e.target.value)} placeholder="z. B. anmeldungen@…" /></div>
-                <button className="btn btn-primary btn-sm" onClick={saveNotify}>Benachrichtigung speichern</button>
+                {nEnabled && (
+                  <div style={{ marginLeft: 26, marginTop: 4 }}>
+                    <label className="ki-check">
+                      <input type="checkbox" checked={nClient} onChange={(e) => setNClient(e.target.checked)} />
+                      <span>Auch an den Kunden senden <span className="muted" style={{ fontWeight: 400 }}>· an dessen Kontakt-E-Mail</span></span>
+                    </label>
+                    <div className="field" style={{ marginTop: 6 }}><label>Zusätzliche E-Mail (optional)</label>
+                      <input className="input form-light" type="email" value={nEmail} onChange={(e) => setNEmail(e.target.value)} placeholder="z. B. anmeldungen@…" /></div>
+                  </div>
+                )}
+                <button className="btn btn-primary btn-sm" style={{ marginTop: 6 }} onClick={saveNotify}>Benachrichtigung speichern</button>
               </div>
             </>
           ) : (
@@ -109,6 +116,7 @@ export default function Participants({ clientId, clientName, isAgency }:
                 </select>
               )}
               <input className="input form-light search" placeholder="Name oder E-Mail…" value={q} onChange={(e) => setQ(e.target.value)} />
+              <button className="btn btn-ghost btn-sm" onClick={emailMe} disabled={list.length === 0}>📧 An mich mailen</button>
               <button className="btn btn-ghost btn-sm" onClick={async () => { try { await api.downloadParticipantsCsv(clientId, clientName); } catch (err) { toast((err as Error).message, "err"); } }} disabled={list.length === 0}>CSV</button>
             </div>
           </div>

@@ -606,6 +606,7 @@ class ParticipantsStatus(BaseModel):
     enabled: bool
     webhook_url: str = ""
     count: int = 0
+    notify_enabled: bool = True
     notify_client: bool = False
     notify_email: str = ""
 

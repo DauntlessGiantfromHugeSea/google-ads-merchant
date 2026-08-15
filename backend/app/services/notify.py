@@ -63,12 +63,13 @@ def _add(db: Session, *, org_id: str, user_id: str, client_id: str | None,
 
 def notify_users(db: Session, user_ids: list[str], *, org_id: str, client_id: str | None,
                  type_: str, title: str, body: str = "", link: str = "",
-                 exclude_user_id: str | None = None) -> None:
+                 exclude_user_id: str | None = None, suppress_email: bool = False) -> None:
     recips = [uid for uid in set(user_ids) if uid and uid != exclude_user_id]
     for uid in recips:
         _add(db, org_id=org_id, user_id=uid, client_id=client_id,
              type_=type_, title=title, body=body, link=link)
-    _maybe_email(org_id, recips, type_, title, body, link)
+    if not suppress_email:
+        _maybe_email(org_id, recips, type_, title, body, link)
 
 
 def _agency_user_ids(db: Session, org_id: str) -> list[str]:

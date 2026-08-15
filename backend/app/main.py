@@ -35,6 +35,7 @@ _CLIENT_COLUMNS = {
     "contract_end_notified": "BOOLEAN DEFAULT FALSE",
     "kpi_sheet_url": "TEXT DEFAULT ''", "kpi_synced_at": "TIMESTAMP",
     "hourly_rate": "DOUBLE PRECISION DEFAULT 0",
+    "webhook_notify_enabled": "BOOLEAN DEFAULT TRUE",
     "webhook_notify_client": "BOOLEAN DEFAULT FALSE", "webhook_notify_email": "VARCHAR(255) DEFAULT ''",
 }
 _ORG_COLUMNS = {
