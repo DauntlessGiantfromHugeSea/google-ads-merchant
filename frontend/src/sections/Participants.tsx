@@ -19,17 +19,21 @@ export default function Participants({ clientId, clientName, isAgency }:
   const [form, setForm] = useState("");
   const [showGuide, setShowGuide] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [nClient, setNClient] = useState(false);
+  const [nEmail, setNEmail] = useState("");
 
   const load = () => {
     api.participantsStatus(clientId).then(setStatus).catch(() => {});
     api.participants(clientId).then(setList).catch(() => {});
   };
   useEffect(() => { load(); }, [clientId]);
+  useEffect(() => { if (status) { setNClient(status.notify_client); setNEmail(status.notify_email); } }, [status?.notify_client, status?.notify_email]);
 
-  const enable = async (on: boolean) => { setStatus(await api.enableParticipants(clientId, on)); toast(on ? "Teilnehmermanagement aktiv." : "Deaktiviert."); };
+  const enable = async (on: boolean) => { setStatus(await api.enableParticipants(clientId, on)); toast(on ? "Webhook aktiv." : "Deaktiviert."); };
+  const saveNotify = async () => { setStatus(await api.setWebhookNotify(clientId, { notify_client: nClient, notify_email: nEmail.trim() })); toast("Benachrichtigung gespeichert."); };
   const rotate = async () => { if (!confirm("Neue Webhook-URL erzeugen? Die alte wird ungültig.")) return; setStatus(await api.rotateParticipantToken(clientId)); toast("Neue URL erzeugt."); };
   const setStat = async (p: Participant, s: string) => { await api.updateParticipant(clientId, p.id, { status: s }); setList((x) => x.map((y) => (y.id === p.id ? { ...y, status: s } : y))); };
-  const del = async (p: Participant) => { if (!confirm("Teilnehmer löschen?")) return; await api.deleteParticipant(clientId, p.id); setList((x) => x.filter((y) => y.id !== p.id)); };
+  const del = async (p: Participant) => { if (!confirm("Anmeldung löschen?")) return; await api.deleteParticipant(clientId, p.id); setList((x) => x.filter((y) => y.id !== p.id)); };
   const copy = () => { if (status?.webhook_url) { navigator.clipboard.writeText(status.webhook_url); toast("Webhook-URL kopiert."); } };
 
   const forms = useMemo(() => Array.from(new Set(list.map((p) => p.form_name).filter(Boolean))), [list]);
@@ -39,14 +43,14 @@ export default function Participants({ clientId, clientName, isAgency }:
   if (!status) return <div className="section"><div className="empty">Lädt…</div></div>;
 
   // Kunde ohne Freischaltung: nichts zeigen
-  if (!isAgency && !status.enabled) return <div className="section"><div className="empty">Teilnehmermanagement ist nicht aktiv.</div></div>;
+  if (!isAgency && !status.enabled) return <div className="section"><div className="empty">Webhook ist nicht aktiv.</div></div>;
 
   return (
     <>
       {isAgency && (
         <div className="section">
           <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
-            <h2>Teilnehmermanagement</h2>
+            <h2>Webhook</h2>
             <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
               <input type="checkbox" checked={status.enabled} onChange={(e) => enable(e.target.checked)} /> aktiv
             </label>
@@ -72,6 +76,20 @@ export default function Participants({ clientId, clientName, isAgency }:
                   <div className="muted" style={{ marginTop: 8 }}>Erkannt werden E-Mail- und Namensfelder automatisch (z.B. <code>your-name</code>, <code>your-email</code>). Alle weiteren Felder werden mitgespeichert und exportiert.</div>
                 </div>
               )}
+
+              <div className="card" style={{ marginTop: 14, boxShadow: "none" }}>
+                <strong style={{ fontSize: 14 }}>Benachrichtigung bei neuer Anmeldung</strong>
+                <div className="muted" style={{ fontSize: 12, margin: "2px 0 10px" }}>
+                  Du und dein Team werdet immer benachrichtigt. Zusätzlich optional:
+                </div>
+                <label className="ki-check">
+                  <input type="checkbox" checked={nClient} onChange={(e) => setNClient(e.target.checked)} />
+                  <span>Auch an den Kunden senden <span className="muted" style={{ fontWeight: 400 }}>· an dessen Kontakt-E-Mail</span></span>
+                </label>
+                <div className="field" style={{ marginTop: 6 }}><label>Zusätzliche E-Mail (optional)</label>
+                  <input className="input form-light" type="email" value={nEmail} onChange={(e) => setNEmail(e.target.value)} placeholder="z. B. anmeldungen@…" /></div>
+                <button className="btn btn-primary btn-sm" onClick={saveNotify}>Benachrichtigung speichern</button>
+              </div>
             </>
           ) : (
             <p className="muted">Aktiviere die Funktion, um für diesen Kunden Anmeldungen aus Contact Form 7 zu sammeln.</p>
@@ -82,7 +100,7 @@ export default function Participants({ clientId, clientName, isAgency }:
       {status.enabled && (
         <div className="section">
           <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
-            <h2 style={{ margin: 0 }}>Teilnehmer <span className="muted" style={{ fontSize: 14, fontWeight: 400 }}>· {list.length}</span></h2>
+            <h2 style={{ margin: 0 }}>Anmeldungen <span className="muted" style={{ fontSize: 14, fontWeight: 400 }}>· {list.length}</span></h2>
             <div className="row-inline" style={{ alignItems: "center" }}>
               {forms.length > 1 && (
                 <select className="select form-light" style={{ maxWidth: 180 }} value={form} onChange={(e) => setForm(e.target.value)}>

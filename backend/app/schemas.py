@@ -606,6 +606,8 @@ class ParticipantsStatus(BaseModel):
     enabled: bool
     webhook_url: str = ""
     count: int = 0
+    notify_client: bool = False
+    notify_email: str = ""
 
 
 # --- Google-Ads-Aktivitätsprotokoll ---

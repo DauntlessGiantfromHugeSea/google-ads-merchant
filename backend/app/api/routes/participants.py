@@ -7,6 +7,7 @@ Any API") die Formulardaten als JSON oder Formular-POST an diese URL.
 import csv
 import io
 import secrets as pysecrets
+import threading
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
@@ -90,12 +91,18 @@ def _forbid_member(user: User) -> None:
                             "Anmeldungen sind nur für Admins und den Kunden sichtbar.")
 
 
+def _status(client: Client, request: Request, db: Session) -> ParticipantsStatus:
+    url = _webhook_url(request, client.participant_token) if client.participants_enabled and client.participant_token else ""
+    return ParticipantsStatus(
+        enabled=client.participants_enabled, webhook_url=url, count=_count(db, client.id),
+        notify_client=bool(client.webhook_notify_client), notify_email=client.webhook_notify_email or "")
+
+
 @router.get("/status", response_model=ParticipantsStatus)
 def status_(client_id: str, request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     _forbid_member(user)
     client = get_scoped_client(client_id, user, db)
-    url = _webhook_url(request, client.participant_token) if client.participants_enabled and client.participant_token else ""
-    return ParticipantsStatus(enabled=client.participants_enabled, webhook_url=url, count=_count(db, client_id))
+    return _status(client, request, db)
 
 
 @router.post("/enable", response_model=ParticipantsStatus)
@@ -106,8 +113,19 @@ def enable(client_id: str, request: Request, data: dict, user: User = Depends(re
         client.participant_token = pysecrets.token_urlsafe(24)
     db.commit()
     db.refresh(client)
-    url = _webhook_url(request, client.participant_token) if client.participants_enabled else ""
-    return ParticipantsStatus(enabled=client.participants_enabled, webhook_url=url, count=_count(db, client_id))
+    return _status(client, request, db)
+
+
+@router.post("/notify", response_model=ParticipantsStatus)
+def set_notify(client_id: str, request: Request, data: dict,
+               user: User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Bei neuer Webhook-Anmeldung Mail zusätzlich an den Kunden / eine feste Adresse."""
+    client = get_scoped_client(client_id, user, db)
+    client.webhook_notify_client = bool(data.get("notify_client", False))
+    client.webhook_notify_email = (data.get("notify_email") or "").strip()[:255]
+    db.commit()
+    db.refresh(client)
+    return _status(client, request, db)
 
 
 @router.post("/rotate", response_model=ParticipantsStatus)
@@ -118,8 +136,7 @@ def rotate(client_id: str, request: Request, user: User = Depends(require_admin)
     client.participants_enabled = True
     db.commit()
     db.refresh(client)
-    return ParticipantsStatus(enabled=True, webhook_url=_webhook_url(request, client.participant_token),
-                              count=_count(db, client_id))
+    return _status(client, request, db)
 
 
 @router.get("", response_model=list[ParticipantOut])
@@ -203,6 +220,40 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
     notify_users(db, _agency_admin_ids(db, client.organization_id),
                  org_id=client.organization_id, client_id=client.id,
                  type_="participant_new", title=f"Neue Anmeldung: {client.name}",
-                 body=(name or email or "Teilnehmer")[:140], link=f"/clients/{client.id}")
+                 body=(name or email or "Anmeldung")[:140], link=f"/clients/{client.id}")
     db.commit()
+    # Optional zusätzlich an Kunde / feste Adresse mailen (im Hintergrund).
+    extra = []
+    if client.webhook_notify_client and client.contact_email:
+        extra.append(client.contact_email)
+    if client.webhook_notify_email:
+        extra.append(client.webhook_notify_email)
+    if extra:
+        threading.Thread(target=_mail_new_signup,
+                         args=(client.organization_id, client.name, form_name, name, email, extra),
+                         daemon=True).start()
     return {"ok": True}
+
+
+def _mail_new_signup(org_id: str, client_name: str, form_name: str, name: str,
+                     email: str, recipients: list[str]) -> None:
+    """Sendet eine Info-Mail über eine neue Webhook-Anmeldung (eigene Session/Thread)."""
+    from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+    from app.database import SessionLocal  # noqa: PLC0415
+    from app.models import Organization  # noqa: PLC0415
+    db = SessionLocal()
+    try:
+        org = db.get(Organization, org_id)
+        if not org or not org.ms_refresh_token:
+            return
+        details = " · ".join([x for x in [name, email, form_name] if x]) or "Neue Anmeldung"
+        body = (f"Neue Anmeldung über das Formular{f' „{form_name}“' if form_name else ''} "
+                f"bei {client_name}.\n\n{details}")
+        html = render_email_html(org, body)
+        for to in dict.fromkeys(r for r in recipients if r):  # dedupe, Reihenfolge wahren
+            try:
+                send_via_graph(org, to, f"Neue Anmeldung: {client_name}", html, html=True)
+            except Exception:
+                pass
+    finally:
+        db.close()

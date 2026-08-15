@@ -179,6 +179,9 @@ class Client(Base):
     # Teilnehmermanagement (Contact Form 7 -> Webhook)
     participants_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     participant_token: Mapped[str] = mapped_column(String(64), default="")
+    # Webhook: bei neuer Anmeldung Mail zusätzlich an den Kunden / eine feste Adresse.
+    webhook_notify_client: Mapped[bool] = mapped_column(Boolean, default=False)
+    webhook_notify_email: Mapped[str] = mapped_column(String(255), default="")
 
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     organization: Mapped[Organization] = relationship(back_populates="clients")

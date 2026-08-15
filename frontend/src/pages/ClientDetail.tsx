@@ -36,7 +36,7 @@ const NAV = [
   { key: "business", label: "Angebote & Vertrag" },
   { key: "contact", label: "Kontakt & Verlauf" },
 ];
-const TEILNEHMER_TAB = { key: "participants", label: "Teilnehmer" };
+const TEILNEHMER_TAB = { key: "participants", label: "Webhook" };
 const STATUS = ["lead", "aktiv", "pausiert", "beendet"];
 
 export default function ClientDetail() {
