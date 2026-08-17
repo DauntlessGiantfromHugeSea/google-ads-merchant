@@ -607,8 +607,11 @@ class ParticipantsStatus(BaseModel):
     webhook_url: str = ""
     count: int = 0
     notify_enabled: bool = True
+    notify_agency: bool = True
     notify_client: bool = False
     notify_email: str = ""
+    include_fields: bool = False
+    include_link: bool = True
     confirm_enabled: bool = False
     confirm_subject: str = ""
     confirm_text: str = ""

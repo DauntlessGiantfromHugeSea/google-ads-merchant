@@ -179,10 +179,13 @@ class Client(Base):
     # Teilnehmermanagement (Contact Form 7 -> Webhook)
     participants_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     participant_token: Mapped[str] = mapped_column(String(64), default="")
-    # Webhook: Mail-Benachrichtigung bei neuer Anmeldung.
+    # Webhook: Mail-Benachrichtigung bei neuem Eintrag.
     webhook_notify_enabled: Mapped[bool] = mapped_column(Boolean, default=True)   # überhaupt mailen?
-    webhook_notify_client: Mapped[bool] = mapped_column(Boolean, default=False)   # auch an Kunden
+    webhook_notify_agency: Mapped[bool] = mapped_column(Boolean, default=True)    # an mich/Team
+    webhook_notify_client: Mapped[bool] = mapped_column(Boolean, default=False)   # an Kunden
     webhook_notify_email: Mapped[str] = mapped_column(String(255), default="")    # feste Zusatzadresse
+    webhook_include_fields: Mapped[bool] = mapped_column(Boolean, default=False)  # alle Felder in die Mail
+    webhook_include_link: Mapped[bool] = mapped_column(Boolean, default=True)     # Link zum Eintrag
     # Webhook: automatische Bestätigungsmail an den Anmelder (eigenes Logo/Absender).
     webhook_confirm_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     webhook_confirm_subject: Mapped[str] = mapped_column(String(255), default="")

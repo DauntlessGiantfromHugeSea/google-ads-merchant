@@ -67,7 +67,7 @@ export interface Participant {
   id: string; form_name: string; name: string; email: string; status: string;
   data: Record<string, unknown>; created_at: string;
 }
-export interface ParticipantsStatus { enabled: boolean; webhook_url: string; count: number; notify_enabled: boolean; notify_client: boolean; notify_email: string; confirm_enabled: boolean; confirm_subject: string; confirm_text: string; from_addr: string; has_logo: boolean; }
+export interface ParticipantsStatus { enabled: boolean; webhook_url: string; count: number; notify_enabled: boolean; notify_agency: boolean; notify_client: boolean; notify_email: string; include_fields: boolean; include_link: boolean; confirm_enabled: boolean; confirm_subject: string; confirm_text: string; from_addr: string; has_logo: boolean; }
 export interface IntakeForm {
   id: string; label: string; client_id: string | null; created_by: string;
   created_at: string; expires_at: string | null; submission_count: number;
@@ -382,7 +382,7 @@ export const api = {
     request<ParticipantsStatus>(`/clients/${cid}/participants/enable`, { method: "POST", body: JSON.stringify({ enabled }) }),
   rotateParticipantToken: (cid: string) =>
     request<ParticipantsStatus>(`/clients/${cid}/participants/rotate`, { method: "POST" }),
-  setWebhookNotify: (cid: string, d: { notify_enabled: boolean; notify_client: boolean; notify_email: string }) =>
+  setWebhookNotify: (cid: string, d: { notify_enabled: boolean; notify_agency: boolean; notify_client: boolean; notify_email: string; include_fields: boolean; include_link: boolean }) =>
     request<ParticipantsStatus>(`/clients/${cid}/participants/notify`, { method: "POST", body: JSON.stringify(d) }),
   emailMeParticipants: (cid: string) =>
     request<{ ok: boolean; to: string; count: number }>(`/clients/${cid}/participants/email-me`, { method: "POST" }),

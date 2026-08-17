@@ -96,7 +96,9 @@ def _status(client: Client, request: Request, db: Session) -> ParticipantsStatus
     return ParticipantsStatus(
         enabled=client.participants_enabled, webhook_url=url, count=_count(db, client.id),
         notify_enabled=bool(client.webhook_notify_enabled),
+        notify_agency=bool(client.webhook_notify_agency),
         notify_client=bool(client.webhook_notify_client), notify_email=client.webhook_notify_email or "",
+        include_fields=bool(client.webhook_include_fields), include_link=bool(client.webhook_include_link),
         confirm_enabled=bool(client.webhook_confirm_enabled),
         confirm_subject=client.webhook_confirm_subject or "",
         confirm_text=client.webhook_confirm_text or "",
@@ -129,8 +131,14 @@ def set_notify(client_id: str, request: Request, data: dict,
     client = get_scoped_client(client_id, user, db)
     if "notify_enabled" in data:
         client.webhook_notify_enabled = bool(data.get("notify_enabled"))
+    if "notify_agency" in data:
+        client.webhook_notify_agency = bool(data.get("notify_agency"))
     client.webhook_notify_client = bool(data.get("notify_client", False))
     client.webhook_notify_email = (data.get("notify_email") or "").strip()[:255]
+    if "include_fields" in data:
+        client.webhook_include_fields = bool(data.get("include_fields"))
+    if "include_link" in data:
+        client.webhook_include_link = bool(data.get("include_link"))
     db.commit()
     db.refresh(client)
     return _status(client, request, db)
@@ -311,23 +319,28 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
                     form_name=form_name, name=name, email=email, data=data)
     db.add(p)
     mail_on = bool(client.webhook_notify_enabled)
-    # In-App-Hinweis bleibt immer; E-Mail nur wenn aktiviert.
+    # In-App-Hinweis fürs Team bleibt immer; E-Mails werden separat verschickt.
     notify_users(db, _agency_admin_ids(db, client.organization_id),
                  org_id=client.organization_id, client_id=client.id,
-                 type_="participant_new", title=f"Neue Anmeldung: {client.name}",
-                 body=(name or email or "Anmeldung")[:140], link=f"/clients/{client.id}",
-                 suppress_email=not mail_on)
+                 type_="participant_new", title=f"Neuer Eintrag: {client.name}",
+                 body=(name or email or "Neuer Eintrag")[:140], link=f"/clients/{client.id}",
+                 suppress_email=True)
     db.commit()
-    # Optional zusätzlich an Kunde / feste Adresse mailen (im Hintergrund).
-    extra = []
-    if mail_on and client.webhook_notify_client and client.contact_email:
-        extra.append(client.contact_email)
-    if mail_on and client.webhook_notify_email:
-        extra.append(client.webhook_notify_email)
-    if extra:
-        threading.Thread(target=_mail_new_signup,
-                         args=(client.organization_id, client.name, form_name, name, email, extra),
-                         daemon=True).start()
+    # Empfänger der Eingangs-Mail zusammenstellen (Agentur / Kunde / feste Adresse).
+    recipients: list[str] = []
+    if mail_on:
+        if client.webhook_notify_agency:
+            recipients += [u.email for u in db.query(User).filter(
+                User.id.in_(_agency_admin_ids(db, client.organization_id))).all() if u.email]
+        if client.webhook_notify_client and client.contact_email:
+            recipients.append(client.contact_email)
+        if client.webhook_notify_email:
+            recipients.append(client.webhook_notify_email)
+    if recipients:
+        threading.Thread(target=_mail_new_entry, args=(
+            client.organization_id, client.id, client.name, form_name, name, email, data,
+            recipients, bool(client.webhook_include_fields), bool(client.webhook_include_link)),
+            daemon=True).start()
     # Automatische Bestätigung an den Anmelder (eigenes Logo/Absender).
     if client.webhook_confirm_enabled and email and _looks_email(email):
         threading.Thread(target=_send_confirmation, args=(
@@ -369,10 +382,13 @@ def _send_confirmation(org_id: str, client_id: str, client_name: str, to_email: 
         db.close()
 
 
-def _mail_new_signup(org_id: str, client_name: str, form_name: str, name: str,
-                     email: str, recipients: list[str]) -> None:
-    """Sendet eine Info-Mail über eine neue Webhook-Anmeldung (eigene Session/Thread)."""
+def _mail_new_entry(org_id: str, client_id: str, client_name: str, form_name: str, name: str,
+                    email: str, data: dict, recipients: list[str],
+                    include_fields: bool, include_link: bool) -> None:
+    """Info-Mail „Neuer Eintrag" an die konfigurierten Empfänger (eigene Session).
+    Optional mit allen Formularfeldern und dem Link zum Eintrag."""
     from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+    from app.config import get_settings  # noqa: PLC0415
     from app.database import SessionLocal  # noqa: PLC0415
     from app.models import Organization  # noqa: PLC0415
     db = SessionLocal()
@@ -380,13 +396,22 @@ def _mail_new_signup(org_id: str, client_name: str, form_name: str, name: str,
         org = db.get(Organization, org_id)
         if not org or not org.ms_refresh_token:
             return
-        details = " · ".join([x for x in [name, email, form_name] if x]) or "Neue Anmeldung"
-        body = (f"Neue Anmeldung über das Formular{f' „{form_name}“' if form_name else ''} "
-                f"bei {client_name}.\n\n{details}")
-        html = render_email_html(org, body)
+        lines = [f"Neuer Eintrag über das Formular{f' „{form_name}“' if form_name else ''} bei {client_name}."]
+        base_details = " · ".join([x for x in [name, email] if x])
+        if base_details:
+            lines += ["", base_details]
+        if include_fields:
+            fields = [(k, _flatten(v)) for k, v in (data or {}).items()
+                      if not k.startswith("_") and k != "form_name"]
+            if fields:
+                lines += [""] + [f"{k}: {v}" for k, v in fields]
+        if include_link:
+            base = get_settings().public_base_url.rstrip("/")
+            lines += ["", f"Zum Eintrag: {base}/clients/{client_id}"]
+        html = render_email_html(org, "\n".join(lines))
         for to in dict.fromkeys(r for r in recipients if r):  # dedupe, Reihenfolge wahren
             try:
-                send_via_graph(org, to, f"Neue Anmeldung: {client_name}", html, html=True)
+                send_via_graph(org, to, f"Neuer Eintrag: {client_name}", html, html=True)
             except Exception:
                 pass
     finally:
