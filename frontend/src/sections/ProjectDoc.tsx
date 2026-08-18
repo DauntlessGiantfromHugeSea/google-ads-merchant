@@ -218,9 +218,13 @@ export default function ProjectDoc({ clientId, clientName, isAgency }: { clientI
 
       {/* 3 · Doku-Bereiche aktivieren – nur was der Kunde braucht */}
       <div className="section">
-        <h3 style={{ fontSize: 16, margin: "0 0 4px" }}>Weitere Doku-Bereiche</h3>
-        <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
+        <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+          <h3 style={{ fontSize: 16, margin: 0 }}>Weitere Doku-Bereiche</h3>
+          <button className="btn btn-primary btn-sm" onClick={() => api.downloadProjectDocPdf(clientId, clientName, "gesamt")}>📄 Alles als PDF</button>
+        </div>
+        <div className="muted" style={{ fontSize: 12, margin: "6px 0 10px" }}>
           Nicht jeder Kunde braucht alles – aktiviere pro Kunde die passenden Dokus (jede mit eigenem PDF, intern).
+          „Alles als PDF" fasst Anleitung + alle ausgefüllten Bereiche in einer Datei zusammen.
         </div>
         <div className="ki-chips">
           {INTERNAL.map((m) => (

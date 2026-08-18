@@ -196,6 +196,30 @@ def sea_pdf(client_id: str, user: User = Depends(require_agency), db: Session = 
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
 
+@router.get("/gesamt.pdf")
+def gesamt_pdf(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Alle Dokus zusammen als EIN PDF – Deckblatt + Kapitel je Bereich."""
+    client = get_scoped_client(client_id, user, db)
+    doc = _get_or_create(client_id, user.organization_id, db)
+    secs = doc.sections or {}
+    sections = _anleitung_sections(secs)  # alle Gruppen mit Inhalt, in SECTIONS-Reihenfolge
+    chapters: list[str] = []
+    for s in sections:
+        if s["group"] not in chapters:
+            chapters.append(s["group"])
+    payload = {
+        "project": client.name,
+        "description": (secs.get("beschreibung") or "").strip(),
+        "chapters": chapters,
+        "sections": sections,
+        "generated_at": timeutil.now_local_str("%d.%m.%Y", _tz(user, db)),
+    }
+    data = pdf.render_gesamtdoc_pdf(payload)
+    fn = f"Gesamt-Doku-{client.name}.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
 @router.get("/verlauf.pdf")
 def verlauf_pdf(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
     client = get_scoped_client(client_id, user, db)
