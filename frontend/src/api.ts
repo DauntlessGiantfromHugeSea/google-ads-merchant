@@ -692,13 +692,14 @@ export const api = {
   delProjectDocChat: (clientId: string, msgId: string) =>
     request<ProjectDoc>(`/clients/${clientId}/projectdoc/chat/${msgId}`, { method: "DELETE" }),
   clientAnleitung: (clientId: string) => request<Anleitung>(`/clients/${clientId}/projectdoc/anleitung`),
-  async downloadProjectDocPdf(clientId: string, name: string, kind: "doc" | "verlauf" | "anleitung") {
-    const path = kind === "verlauf" ? "verlauf.pdf" : kind === "anleitung" ? "anleitung.pdf" : "pdf";
+  async downloadProjectDocPdf(clientId: string, name: string, kind: "doc" | "verlauf" | "anleitung" | "technik") {
+    const path = kind === "verlauf" ? "verlauf.pdf" : kind === "anleitung" ? "anleitung.pdf" : kind === "technik" ? "technik.pdf" : "pdf";
     const res = await fetch(`/api/clients/${clientId}/projectdoc/${path}`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("PDF fehlgeschlagen");
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url;
-    a.download = `${kind === "verlauf" ? "Verlauf" : "Anleitung"}-${name}.pdf`.replace(/\s+/g, "_");
+    const prefix = kind === "verlauf" ? "Verlauf" : kind === "technik" ? "Technische-Doku" : "Anleitung";
+    a.download = `${prefix}-${name}.pdf`.replace(/\s+/g, "_");
     a.click(); URL.revokeObjectURL(url);
   },
 

@@ -48,7 +48,9 @@ function RichText({ text }: { text: string }) {
   (text || "").split("\n").forEach((raw) => {
     const line = raw.trim();
     if (!line) { flushB(); flushP(); return; }
-    if (/^[-*•]\s?/.test(line)) { flushP(); bul.push(line.replace(/^[-*•]\s*/, "")); }
+    // Aufzählung nur bei „- "/„* " (Zeichen + Leerzeichen) oder „•", damit
+    // eine mit **fett** beginnende Zeile nicht als Liste missverstanden wird.
+    if (/^([-*]\s+|•\s*)/.test(line)) { flushP(); bul.push(line.replace(/^([-*]\s+|•\s*)/, "")); }
     else { flushB(); para.push(line); }
   });
   flushB(); flushP();
@@ -60,18 +62,20 @@ function ClientAnleitung({ clientId, clientName }: { clientId: string; clientNam
   const [sections, setSections] = useState<Record<string, string>>({});
   const [loaded, setLoaded] = useState(false);
   useEffect(() => { api.clientAnleitung(clientId).then((a) => { setSections(a.sections || {}); setLoaded(true); }).catch(() => setLoaded(true)); }, [clientId]);
-  const has = ALL.some((f) => (sections[f.id] || "").trim());
+  // Kunde sieht nur die Anleitung – die technische Doku bleibt intern.
+  const clientGroups = GROUPS.filter((g) => g.title.startsWith("Anleitung"));
+  const has = clientGroups.flatMap((g) => g.fields).some((f) => (sections[f.id] || "").trim());
   if (loaded && !has) return null;
   return (
     <>
       <div className="section">
         <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
           <div><h2 style={{ marginBottom: 2 }}>Anleitung</h2>
-            <div className="muted" style={{ fontSize: 13 }}>Bedienung & Technik deiner Website.</div></div>
+            <div className="muted" style={{ fontSize: 13 }}>Bedienung deiner Website.</div></div>
           <button className="btn btn-ghost btn-sm" onClick={() => api.downloadProjectDocPdf(clientId, clientName, "anleitung")}>📄 Als PDF</button>
         </div>
       </div>
-      {GROUPS.map((g) => {
+      {clientGroups.map((g) => {
         const fields = g.fields.filter((f) => (sections[f.id] || "").trim());
         if (!fields.length) return null;
         return (
@@ -174,20 +178,34 @@ export default function ProjectDoc({ clientId, clientName, isAgency }: { clientI
         </div>
       </div>
 
-      {GROUPS.map((g) => (
-        <div key={g.title} className="section">
-          <h3 style={{ fontSize: 16, marginBottom: 12 }}>{g.title}</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {g.fields.map((f) => (
-              <div key={f.id} className="field">
-                <label>{f.label}<span className="muted" style={{ fontWeight: 400 }}> · {f.hint}</span></label>
-                <textarea className="input form-light" rows={f.big ? 6 : 4} style={{ lineHeight: 1.6 }}
-                  value={sections[f.id] || ""} onChange={(e) => updSec(f.id, e.target.value)} />
-              </div>
-            ))}
+      {GROUPS.map((g) => {
+        const isTech = g.title.startsWith("Technische");
+        return (
+          <div key={g.title} className="section">
+            <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
+              <h3 style={{ fontSize: 16, margin: 0 }}>{g.title}</h3>
+              {isTech && <button className="btn btn-ghost btn-sm" onClick={() => api.downloadProjectDocPdf(clientId, clientName, "technik")}>📄 Technische Doku-PDF</button>}
+            </div>
+            {isTech && <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>Intern – der Kunde sieht diese Doku nicht. Das PDF bekommt ein Deckblatt (Projekt + Beschreibung).</div>}
+            <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12 }}>
+              {isTech && (
+                <div className="field">
+                  <label>Projektbeschreibung <span className="muted" style={{ fontWeight: 400 }}>· fürs Deckblatt, 1–2 Sätze</span></label>
+                  <textarea className="input form-light" rows={2} style={{ lineHeight: 1.6 }}
+                    value={sections["beschreibung"] || ""} onChange={(e) => updSec("beschreibung", e.target.value)} />
+                </div>
+              )}
+              {g.fields.map((f) => (
+                <div key={f.id} className="field">
+                  <label>{f.label}<span className="muted" style={{ fontWeight: 400 }}> · {f.hint}</span></label>
+                  <textarea className="input form-light" rows={f.big ? 6 : 4} style={{ lineHeight: 1.6 }}
+                    value={sections[f.id] || ""} onChange={(e) => updSec(f.id, e.target.value)} />
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </>
   );
 }

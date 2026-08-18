@@ -230,6 +230,16 @@ def render_richdoc_pdf(doc: dict) -> bytes:
     return _pdf_from_html(html, letterhead)
 
 
+def render_technikdoc_pdf(doc: dict) -> bytes:
+    """Technische Doku mit Deckblatt (Projekt + Kurzbeschreibung) + Abschnitts-Boxen."""
+    letterhead = _find_letterhead()
+    image_url = letterhead.name if letterhead and letterhead.suffix.lower() in _IMAGE_EXTS else None
+    secs = [{**s, "text": _doc_fmt(s.get("text", ""))} for s in (doc.get("sections") or [])]
+    template = _env.get_template("technikdoc.html")
+    html = template.render(doc={**doc, "sections": secs}, letterhead_image=image_url)
+    return _pdf_from_html(html, letterhead)
+
+
 def render_leistungsnachweis_pdf(doc: dict) -> bytes:
     """Leistungsnachweis (Datum, Tätigkeit, Zeit + Summe) auf dem Briefpapier."""
     letterhead = _find_letterhead()

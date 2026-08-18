@@ -57,9 +57,10 @@ def _tz(user: User, db: Session) -> str:
     return (org.timezone if org else None) or "Europe/Berlin"
 
 
-def _anleitung_sections(secs: dict) -> list[dict]:
+def _anleitung_sections(secs: dict, only_group: str | None = None) -> list[dict]:
     return [{"id": sid, "label": label, "group": group, "text": secs.get(sid, "")}
-            for sid, label, group in SECTIONS if (secs.get(sid, "") or "").strip()]
+            for sid, label, group in SECTIONS
+            if (secs.get(sid, "") or "").strip() and (only_group is None or group == only_group)]
 
 
 # ---------- Agentur ----------
@@ -117,8 +118,9 @@ def del_chat(client_id: str, msg_id: str, user: User = Depends(require_agency), 
 
 
 def _anleitung_pdf(client_name: str, secs: dict, tz: str) -> bytes:
+    # Nur die Kunden-Anleitung (ohne die interne technische Doku).
     payload = {"client_name": client_name, "title": "Anleitung",
-               "sections": _anleitung_sections(secs)}
+               "sections": _anleitung_sections(secs, only_group="Anleitung")}
     return pdf.render_projectdoc_pdf(payload, tz)
 
 
@@ -128,6 +130,24 @@ def doc_pdf(client_id: str, user: User = Depends(require_agency), db: Session = 
     doc = _get_or_create(client_id, user.organization_id, db)
     data = _anleitung_pdf(client.name, doc.sections or {}, _tz(user, db))
     fn = f"Anleitung-{client.name}.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
+@router.get("/technik.pdf")
+def technik_pdf(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Technische Doku als PDF – mit Deckblatt (Projekt + Kurzbeschreibung)."""
+    client = get_scoped_client(client_id, user, db)
+    doc = _get_or_create(client_id, user.organization_id, db)
+    secs = doc.sections or {}
+    payload = {
+        "project": client.name,
+        "description": (secs.get("beschreibung") or "").strip(),
+        "sections": _anleitung_sections(secs, only_group="Technische Doku"),
+        "generated_at": timeutil.now_local_str("%d.%m.%Y", _tz(user, db)),
+    }
+    data = pdf.render_technikdoc_pdf(payload)
+    fn = f"Technische-Doku-{client.name}.pdf".replace(" ", "_")
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 

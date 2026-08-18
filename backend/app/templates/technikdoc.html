@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 4cm 5cm 3.2cm 2.8cm; }
+  html, body { background: transparent; }
+  .letterhead { position: fixed; top: -4cm; left: -2.8cm; width: 210mm; height: 297mm; z-index: -1; }
+  * { box-sizing: border-box; }
+  body { font-family: "Helvetica Neue", Arial, sans-serif; color: #1f2933; font-size: 11px; line-height: 1.5; }
+
+  /* Deckblatt */
+  .cover { page-break-after: always; padding-top: 5.5cm; }
+  .cover .eyebrow { text-transform: uppercase; letter-spacing: .16em; font-size: 12px; color: #c4553f; font-weight: bold; }
+  .cover h1 { font-size: 34px; margin: 8px 0 0; color: #1c2140; line-height: 1.15; }
+  .cover .rule { width: 64px; height: 4px; background: #c4553f; border-radius: 3px; margin: 16px 0 18px; }
+  .cover .desc { font-size: 14px; color: #3a4450; max-width: 15cm; line-height: 1.6; }
+  .cover .meta { margin-top: 26px; font-size: 11px; color: #687481; }
+  .cover .kind { margin-top: 2px; font-size: 12px; color: #1f2933; font-weight: bold; }
+
+  /* Inhalt */
+  h2.section-title { font-size: 15px; margin: 0 0 12px; padding-bottom: 4px; border-bottom: 2px solid #c4553f; color: #c4553f; }
+  .box { border: 1px solid #e4e7eb; border-radius: 6px; padding: 10px 14px; margin: 0 0 12px; }
+  .box h2 { font-size: 13px; margin: 0 0 6px; color: #1c2140; }
+  .box .body p { margin: 0 0 7px; }
+  .box .body ul { margin: 4px 0 7px; padding-left: 18px; }
+  .box .body li { margin: 2px 0; }
+  .empty { color: #97a1ab; }
+</style>
+</head>
+<body>
+  {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
+
+  <div class="cover">
+    <div class="eyebrow">Technische Dokumentation</div>
+    <h1>{{ doc.project }}</h1>
+    <div class="rule"></div>
+    {% if doc.description %}<p class="desc">{{ doc.description }}</p>{% endif %}
+    <div class="meta">
+      <div class="kind">Projekt: {{ doc.project }}</div>
+      Stand: {{ doc.generated_at }}
+    </div>
+  </div>
+
+  <h2 class="section-title">Technische Doku</h2>
+  {% for sec in doc.sections %}
+  <div class="box">
+    <h2>{{ sec.label }}</h2>
+    <div class="body">{{ sec.text }}</div>
+  </div>
+  {% else %}
+  <div class="box"><div class="body empty">Noch keine technischen Angaben erfasst.</div></div>
+  {% endfor %}
+</body>
+</html>
