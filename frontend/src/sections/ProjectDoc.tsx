@@ -33,8 +33,41 @@ const GROUPS: { title: string; fields: { id: string; label: string; hint: string
       { id: "uebergabe", label: "Übergabe & Wartung", hint: "Was ist zu tun, Wartungsintervalle", big: true },
     ],
   },
+  {
+    title: "SEO-Doku (Website)",
+    fields: [
+      { id: "seo_keywords", label: "Keywords & Fokusthemen", hint: "Haupt-Keywords, Suchintention, Prioritäten", big: true },
+      { id: "seo_onpage", label: "OnPage (Titel, Meta, Überschriften)", hint: "Title/Meta-Strategie, H1/H2, interne Links", big: true },
+      { id: "seo_technik", label: "Technisches SEO", hint: "Sitemap, robots.txt, Canonicals, Ladezeit, Mobile" },
+      { id: "seo_content", label: "Content & Seitenstruktur", hint: "Seitenstruktur, Content-Plan, Landingpages", big: true },
+      { id: "seo_local", label: "Local SEO", hint: "Google Business Profil, NAP, Verzeichnisse" },
+      { id: "seo_tracking", label: "Tracking & Tools", hint: "Search Console, Analytics, Rank-Tracking" },
+      { id: "seo_backlinks", label: "Backlinks & Offpage", hint: "Linkaufbau, Erwähnungen, Partner" },
+      { id: "seo_todos", label: "Maßnahmen & To-dos", hint: "geplante/erledigte SEO-Maßnahmen", big: true },
+    ],
+  },
+  {
+    title: "SEA-Doku (Google Ads)",
+    fields: [
+      { id: "sea_konten", label: "Konten & Zugänge", hint: "Google-Ads-Konto-ID, MCC, wo einloggen (Passwörter in Zugangsdaten)" },
+      { id: "sea_ziele", label: "Ziele & Budget", hint: "Ziele, Gesamtbudget, Zeitraum" },
+      { id: "sea_kampagnen", label: "Kampagnen", hint: "Mehrere: je Kampagne Typ, Budget, Ziel – z. B. **Suche Brand**, dann Aufzählung", big: true },
+      { id: "sea_zielgruppen", label: "Zielgruppen & Keywords", hint: "Zielgruppen, Keywords, Ausschlüsse", big: true },
+      { id: "sea_anzeigen", label: "Anzeigen & Assets", hint: "Anzeigentexte, Assets, Erweiterungen" },
+      { id: "sea_gebote", label: "Gebotsstrategie", hint: "Smart Bidding, Ziel-CPA/ROAS …" },
+      { id: "sea_tracking", label: "Conversion-Tracking", hint: "Conversions, Tag, Import aus Analytics" },
+      { id: "sea_todos", label: "Maßnahmen & To-dos", hint: "geplante/erledigte SEA-Maßnahmen", big: true },
+    ],
+  },
 ];
-const ALL = GROUPS.flatMap((g) => g.fields);
+
+// Interne Doku-Bereiche (aktivierbar). Anleitung ist immer an.
+const INTERNAL = [
+  { key: "technik", title: "Technische Doku (Website)", label: "Technische Doku", pdf: "technik" as const },
+  { key: "seo", title: "SEO-Doku (Website)", label: "SEO-Doku", pdf: "seo" as const },
+  { key: "sea", title: "SEA-Doku (Google Ads)", label: "SEA-Doku", pdf: "sea" as const },
+];
+const groupMeta = (title: string) => INTERNAL.find((m) => m.title === title);
 
 // Absätze (Leerzeile), Aufzählungen (- / * / •) und **fett** -> React-Elemente.
 function RichText({ text }: { text: string }) {
@@ -122,13 +155,18 @@ export default function ProjectDoc({ clientId, clientName, isAgency }: { clientI
   useEffect(() => { if (saveState !== "dirty") return; const t = setTimeout(persist, 1500); return () => clearTimeout(t); }, [saveState, sections, status]);
 
   const updSec = (id: string, v: string) => { setSections((s) => ({ ...s, [id]: v })); touch(); };
+  // Aktivierte interne Doku-Bereiche (in den Sektionen gespeichert, teamweit).
+  const active = (sections["__active__"] || "").split(",").filter(Boolean);
+  const toggleDoc = (key: string) =>
+    updSec("__active__", (active.includes(key) ? active.filter((k) => k !== key) : [...active, key]).join(","));
   const send = async () => {
     if (!msg.trim()) return;
     try { const d = await api.addProjectDocChat(clientId, msg); setChat(d.log || []); setMsg(""); }
     catch (e) { toast((e as Error).message, "err"); }
   };
   const delMsg = async (id: string) => { try { const d = await api.delProjectDocChat(clientId, id); setChat(d.log || []); } catch { /* ignore */ } };
-  const filled = useMemo(() => ALL.filter((f) => (sections[f.id] || "").trim()).length, [sections]);
+  const anleitungFields = GROUPS[0].fields;
+  const filled = useMemo(() => anleitungFields.filter((f) => (sections[f.id] || "").trim()).length, [sections]);
   const when = (iso: string) => new Date(iso).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   const sorted = [...chat].sort((a, b) => (a.created_at || "").localeCompare(b.created_at || ""));
   const saveLabel = saveState === "saving" ? "Speichert…" : saveState === "saved" ? "✓ Gespeichert" : saveState === "dirty" ? "…" : "";
@@ -167,7 +205,7 @@ export default function ProjectDoc({ clientId, clientName, isAgency }: { clientI
       <div className="section">
         <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div><h2 style={{ marginBottom: 2 }}>Anleitung für den Kunden</h2>
-            <div className="muted" style={{ fontSize: 13 }}>Bekommt der Kunde am Ende – im Portal &amp; als PDF. {filled}/{ALL.length} Felder · {saveLabel}</div></div>
+            <div className="muted" style={{ fontSize: 13 }}>Bekommt der Kunde am Ende – im Portal &amp; als PDF. {filled}/{anleitungFields.length} Felder · {saveLabel}</div></div>
           <div className="row-inline" style={{ gap: 6 }}>
             <button className="btn btn-ghost btn-sm" onClick={persist}>Speichern</button>
             <button className="btn btn-ghost btn-sm" onClick={() => api.downloadProjectDocPdf(clientId, clientName, "doc")}>📄 Anleitung-PDF</button>
@@ -178,17 +216,36 @@ export default function ProjectDoc({ clientId, clientName, isAgency }: { clientI
         </div>
       </div>
 
+      {/* 3 · Doku-Bereiche aktivieren – nur was der Kunde braucht */}
+      <div className="section">
+        <h3 style={{ fontSize: 16, margin: "0 0 4px" }}>Weitere Doku-Bereiche</h3>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>
+          Nicht jeder Kunde braucht alles – aktiviere pro Kunde die passenden Dokus (jede mit eigenem PDF, intern).
+        </div>
+        <div className="ki-chips">
+          {INTERNAL.map((m) => (
+            <button key={m.key} type="button" className={`chip ${active.includes(m.key) ? "on" : ""}`} onClick={() => toggleDoc(m.key)}>
+              {active.includes(m.key) ? "✓ " : "+ "}{m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {GROUPS.map((g) => {
-        const isTech = g.title.startsWith("Technische");
+        const meta = groupMeta(g.title);
+        if (meta && !active.includes(meta.key)) return null;   // interner Bereich nicht aktiviert
+        const isInternal = !!meta;
+        const pdfKind = meta?.pdf ?? "technik";
+        const pdfLabel = `${meta?.label ?? "Technische Doku"}-PDF`;
         return (
           <div key={g.title} className="section">
             <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
               <h3 style={{ fontSize: 16, margin: 0 }}>{g.title}</h3>
-              {isTech && <button className="btn btn-ghost btn-sm" onClick={() => api.downloadProjectDocPdf(clientId, clientName, "technik")}>📄 Technische Doku-PDF</button>}
+              {isInternal && <button className="btn btn-ghost btn-sm" onClick={() => api.downloadProjectDocPdf(clientId, clientName, pdfKind)}>📄 {pdfLabel}</button>}
             </div>
-            {isTech && <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>Intern – der Kunde sieht diese Doku nicht. Das PDF bekommt ein Deckblatt (Projekt + Beschreibung).</div>}
+            {isInternal && <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>Intern – der Kunde sieht diese Doku nicht. Das PDF bekommt ein Deckblatt (Projekt + Beschreibung).</div>}
             <div style={{ display: "flex", flexDirection: "column", gap: 14, marginTop: 12 }}>
-              {isTech && (
+              {isInternal && (
                 <div className="field">
                   <label>Projektbeschreibung <span className="muted" style={{ fontWeight: 400 }}>· fürs Deckblatt, 1–2 Sätze</span></label>
                   <textarea className="input form-light" rows={2} style={{ lineHeight: 1.6 }}

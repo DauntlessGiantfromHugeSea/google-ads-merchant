@@ -32,7 +32,7 @@
   {% if letterhead_image %}<img class="letterhead" src="{{ letterhead_image }}" alt="">{% endif %}
 
   <div class="cover">
-    <div class="eyebrow">Technische Dokumentation</div>
+    <div class="eyebrow">{{ doc.kind or "Technische Dokumentation" }}</div>
     <h1>{{ doc.project }}</h1>
     <div class="rule"></div>
     {% if doc.description %}<p class="desc">{{ doc.description }}</p>{% endif %}
@@ -42,7 +42,7 @@
     </div>
   </div>
 
-  <h2 class="section-title">Technische Doku</h2>
+  <h2 class="section-title">{{ doc.section_title or "Technische Doku" }}</h2>
   {% for sec in doc.sections %}
   <div class="box">
     <h2>{{ sec.label }}</h2>

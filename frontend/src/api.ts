@@ -692,14 +692,14 @@ export const api = {
   delProjectDocChat: (clientId: string, msgId: string) =>
     request<ProjectDoc>(`/clients/${clientId}/projectdoc/chat/${msgId}`, { method: "DELETE" }),
   clientAnleitung: (clientId: string) => request<Anleitung>(`/clients/${clientId}/projectdoc/anleitung`),
-  async downloadProjectDocPdf(clientId: string, name: string, kind: "doc" | "verlauf" | "anleitung" | "technik") {
-    const path = kind === "verlauf" ? "verlauf.pdf" : kind === "anleitung" ? "anleitung.pdf" : kind === "technik" ? "technik.pdf" : "pdf";
-    const res = await fetch(`/api/clients/${clientId}/projectdoc/${path}`, { headers: { Authorization: `Bearer ${auth.token}` } });
+  async downloadProjectDocPdf(clientId: string, name: string, kind: "doc" | "verlauf" | "anleitung" | "technik" | "seo" | "sea") {
+    const paths: Record<string, string> = { verlauf: "verlauf.pdf", anleitung: "anleitung.pdf", technik: "technik.pdf", seo: "seo.pdf", sea: "sea.pdf" };
+    const res = await fetch(`/api/clients/${clientId}/projectdoc/${paths[kind] || "pdf"}`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("PDF fehlgeschlagen");
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url;
-    const prefix = kind === "verlauf" ? "Verlauf" : kind === "technik" ? "Technische-Doku" : "Anleitung";
-    a.download = `${prefix}-${name}.pdf`.replace(/\s+/g, "_");
+    const prefix: Record<string, string> = { verlauf: "Verlauf", technik: "Technische-Doku", seo: "SEO-Doku", sea: "SEA-Doku" };
+    a.download = `${prefix[kind] || "Anleitung"}-${name}.pdf`.replace(/\s+/g, "_");
     a.click(); URL.revokeObjectURL(url);
   },
 

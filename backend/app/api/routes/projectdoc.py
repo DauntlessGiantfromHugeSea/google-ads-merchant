@@ -39,6 +39,22 @@ SECTIONS = [
     ("sicherheit", "Sicherheit & Backups", "Technische Doku"),
     ("monitoring", "Monitoring & Verfügbarkeit", "Technische Doku"),
     ("uebergabe", "Übergabe & Wartung", "Technische Doku"),
+    ("seo_keywords", "Keywords & Fokusthemen", "SEO-Doku"),
+    ("seo_onpage", "OnPage (Titel, Meta, Überschriften)", "SEO-Doku"),
+    ("seo_technik", "Technisches SEO", "SEO-Doku"),
+    ("seo_content", "Content & Seitenstruktur", "SEO-Doku"),
+    ("seo_local", "Local SEO", "SEO-Doku"),
+    ("seo_tracking", "Tracking & Tools", "SEO-Doku"),
+    ("seo_backlinks", "Backlinks & Offpage", "SEO-Doku"),
+    ("seo_todos", "Maßnahmen & To-dos", "SEO-Doku"),
+    ("sea_konten", "Konten & Zugänge", "SEA-Doku"),
+    ("sea_ziele", "Ziele & Budget", "SEA-Doku"),
+    ("sea_kampagnen", "Kampagnen", "SEA-Doku"),
+    ("sea_zielgruppen", "Zielgruppen & Keywords", "SEA-Doku"),
+    ("sea_anzeigen", "Anzeigen & Assets", "SEA-Doku"),
+    ("sea_gebote", "Gebotsstrategie", "SEA-Doku"),
+    ("sea_tracking", "Conversion-Tracking", "SEA-Doku"),
+    ("sea_todos", "Maßnahmen & To-dos", "SEA-Doku"),
 ]
 
 
@@ -134,20 +150,48 @@ def doc_pdf(client_id: str, user: User = Depends(require_agency), db: Session = 
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
 
+def _cover_pdf(client, secs: dict, tz: str, group: str, kind: str, section_title: str) -> bytes:
+    payload = {
+        "project": client.name, "kind": kind, "section_title": section_title,
+        "description": (secs.get("beschreibung") or "").strip(),
+        "sections": _anleitung_sections(secs, only_group=group),
+        "generated_at": timeutil.now_local_str("%d.%m.%Y", tz),
+    }
+    return pdf.render_technikdoc_pdf(payload)
+
+
 @router.get("/technik.pdf")
 def technik_pdf(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
     """Technische Doku als PDF – mit Deckblatt (Projekt + Kurzbeschreibung)."""
     client = get_scoped_client(client_id, user, db)
     doc = _get_or_create(client_id, user.organization_id, db)
-    secs = doc.sections or {}
-    payload = {
-        "project": client.name,
-        "description": (secs.get("beschreibung") or "").strip(),
-        "sections": _anleitung_sections(secs, only_group="Technische Doku"),
-        "generated_at": timeutil.now_local_str("%d.%m.%Y", _tz(user, db)),
-    }
-    data = pdf.render_technikdoc_pdf(payload)
+    data = _cover_pdf(client, doc.sections or {}, _tz(user, db),
+                      "Technische Doku", "Technische Dokumentation", "Technische Doku")
     fn = f"Technische-Doku-{client.name}.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
+@router.get("/seo.pdf")
+def seo_pdf(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """SEO-Doku als PDF – mit Deckblatt (Projekt + Kurzbeschreibung)."""
+    client = get_scoped_client(client_id, user, db)
+    doc = _get_or_create(client_id, user.organization_id, db)
+    data = _cover_pdf(client, doc.sections or {}, _tz(user, db),
+                      "SEO-Doku", "SEO-Dokumentation", "SEO-Doku")
+    fn = f"SEO-Doku-{client.name}.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})
+
+
+@router.get("/sea.pdf")
+def sea_pdf(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """SEA-Doku (Google Ads) als PDF – mit Deckblatt."""
+    client = get_scoped_client(client_id, user, db)
+    doc = _get_or_create(client_id, user.organization_id, db)
+    data = _cover_pdf(client, doc.sections or {}, _tz(user, db),
+                      "SEA-Doku", "SEA-Dokumentation (Google Ads)", "SEA-Doku")
+    fn = f"SEA-Doku-{client.name}.pdf".replace(" ", "_")
     return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
                              headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
