@@ -31,9 +31,13 @@ SECTIONS = [
     ("support", "Support & Ansprechpartner", "Anleitung"),
     ("setup", "Setup & Hosting", "Technische Doku"),
     ("domain", "Domain, E-Mail & DNS", "Technische Doku"),
-    ("stack", "Verwendete Technik / Stack", "Technische Doku"),
+    ("cms", "CMS & Logins", "Technische Doku"),
+    ("stack", "Technik / Stack & Plugins", "Technische Doku"),
+    ("integrationen", "Integrationen & Schnittstellen", "Technische Doku"),
     ("einstellungen", "Wichtige Einstellungen", "Technische Doku"),
+    ("deployment", "Deployment & Updates", "Technische Doku"),
     ("sicherheit", "Sicherheit & Backups", "Technische Doku"),
+    ("monitoring", "Monitoring & Verfügbarkeit", "Technische Doku"),
     ("uebergabe", "Übergabe & Wartung", "Technische Doku"),
 ]
 
