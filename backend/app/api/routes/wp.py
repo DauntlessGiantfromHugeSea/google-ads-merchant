@@ -206,11 +206,19 @@ async def wp_webhook(token: str, request: Request, db: Session = Depends(get_db)
         it["client_id"] = cid
         for k in ("client_id", "site", "host", "url", "type", "slug", "name", "installed", "latest", "first_seen"):
             setattr(existing, k, it[k])
-    # Erledigte Updates entfernen.
+    # Erledigte Updates entfernen + als Systemeintrag ins Protokoll schreiben.
+    from app.api.routes.activity import log_activity  # noqa: PLC0415
+    TL = {"core": "WordPress-Core", "plugin": "Plugin", "theme": "Theme"}
     for it in recoveries:
         db.query(WpUpdate).filter(
             WpUpdate.organization_id == org.id, WpUpdate.host == it["host"],
             WpUpdate.type == it["type"], WpUpdate.slug == it["slug"]).delete()
+        s = db.query(WpSite).filter(WpSite.organization_id == org.id, WpSite.host == it["host"]).first()
+        if s and s.client_id:
+            ver = f" {it['installed']} → {it['latest']}" if it["installed"] and it["latest"] else ""
+            log_activity(db, org_id=org.id, client_id=s.client_id,
+                         text=f"WordPress-Update erledigt: {TL.get(it['type'], it['type'])} „{it['name']}“{ver}",
+                         source="system", author="WordPress-Monitor", client_visible=True, occurred_at=now)
 
     if added:
         by_client: dict[str, int] = {}

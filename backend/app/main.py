@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.api.routes import (
-    admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
+    activity, admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
     payments, projects, reports, requests, richdocs, secrets, seo, tasks, team, timetracking, wp,
@@ -262,6 +262,7 @@ app.include_router(invoices.client_router)
 app.include_router(assets.router)
 app.include_router(wp.router)
 app.include_router(wp.client_router)
+app.include_router(activity.router)
 
 
 @app.get("/api/health")

@@ -1079,3 +1079,21 @@ class WpSite(Base):
     site: Mapped[str] = mapped_column(String(255), default="")
     url: Mapped[str] = mapped_column(String(512), default="")
     last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ActivityEntry(Base):
+    """Protokoll je Kunde: „Was wurde wann gemacht." Manuelle Einträge (Agentur)
+    und automatische Systemeinträge (z. B. WordPress-Update erledigt). Optional
+    für den Kunden sichtbar (Transparenz)."""
+
+    __tablename__ = "activity_entries"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"), index=True)
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    author: Mapped[str] = mapped_column(String(255), default="")
+    source: Mapped[str] = mapped_column(String(16), default="manual")  # manual / system
+    text: Mapped[str] = mapped_column(Text, default="")
+    client_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

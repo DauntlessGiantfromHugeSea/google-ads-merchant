@@ -115,6 +115,9 @@ export interface WpSiteRow {
   host: string; site: string; url: string; client_id: string | null; client_name: string;
   pending: number; last_seen: string;
 }
+export interface ActivityEntry {
+  id: string; occurred_at: string; author: string; source: string; text: string; client_visible: boolean;
+}
 export interface MonitorEvent {
   id: string; name: string; url: string; status: string; message: string; created_at: string;
 }
@@ -317,6 +320,12 @@ export const api = {
   wpWebhookUrl: () => request<{ url: string; has_secret: boolean }>("/wp/webhook-url"),
   wpSetSecret: (secret: string) => request<{ has_secret: boolean }>("/wp/secret", { method: "POST", body: JSON.stringify({ secret }) }),
   wpClient: (cid: string) => request<{ has_site: boolean; updates: WpUpdate[] }>(`/clients/${cid}/wp`),
+  activity: (cid: string) => request<ActivityEntry[]>(`/clients/${cid}/activity`),
+  addActivity: (cid: string, d: { text: string; occurred_at?: string; client_visible?: boolean }) =>
+    request<ActivityEntry>(`/clients/${cid}/activity`, { method: "POST", body: JSON.stringify(d) }),
+  editActivity: (cid: string, id: string, d: { text?: string; occurred_at?: string; client_visible?: boolean }) =>
+    request<ActivityEntry>(`/clients/${cid}/activity/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteActivity: (cid: string, id: string) => request<void>(`/clients/${cid}/activity/${id}`, { method: "DELETE" }),
   wpSites: () => request<WpSiteRow[]>("/wp/sites"),
   wpAssignSite: (host: string, clientId: string | null) =>
     request<{ ok: boolean }>("/wp/sites/assign", { method: "POST", body: JSON.stringify({ host, client_id: clientId }) }),

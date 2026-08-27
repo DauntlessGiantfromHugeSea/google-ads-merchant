@@ -27,6 +27,7 @@ import ProjectDoc from "../sections/ProjectDoc";
 import ClientTime from "../sections/ClientTime";
 import ClientInvoices from "../sections/ClientInvoices";
 import WpUpdates from "../sections/WpUpdates";
+import Activity from "../sections/Activity";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 const NAV = [
@@ -145,6 +146,7 @@ export default function ClientDetail() {
               <Todos clientId={id} isAgency={isAgency} onCount={setOpenTodos} />
               <Appointments clientId={id} isAgency={isAgency} />
               <WorkCalendar clientId={id} clientName={client.name} />
+              <ErrorBoundary label="Protokoll"><Activity clientId={id} isAgency={isAgency} /></ErrorBoundary>
               <ErrorBoundary label="Doku"><ProjectDoc clientId={id} clientName={client.name} isAgency={isAgency} /></ErrorBoundary>
             </>
           )}
