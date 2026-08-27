@@ -22,7 +22,8 @@ export default class ErrorBoundary extends Component<
       return (
         <div className="section" style={{ borderLeft: "3px solid #f87171" }}>
           <strong>{this.props.label || "Dieser Bereich"} konnte nicht geladen werden.</strong>
-          <div className="muted" style={{ fontSize: 12, marginTop: 6 }}>{String(this.state.error.message || this.state.error)}</div>
+          <div className="muted" style={{ fontSize: 12, margin: "6px 0 10px" }}>{String(this.state.error.message || this.state.error)}</div>
+          <button className="btn btn-ghost btn-sm" onClick={() => window.location.reload()}>Neu laden</button>
         </div>
       );
     }

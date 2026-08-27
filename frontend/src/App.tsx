@@ -1,4 +1,4 @@
-import { createContext, lazy, Suspense, useContext, useEffect, useState } from "react";
+import { Component, createContext, lazy, Suspense, useContext, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { api, auth, User } from "./api";
 import Login from "./pages/Login";
@@ -89,6 +89,7 @@ export default function App() {
 
   return (
     <Ctx.Provider value={{ user, setUser, logout, impersonating, startImpersonate, stopImpersonate }}>
+      <RootBoundary>
       <Suspense fallback={<Splash />}>
       <Routes>
         {/* Öffentlich (ohne Login): Geheimnis abrufen bzw. einreichen */}
@@ -126,8 +127,29 @@ export default function App() {
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
       </Suspense>
+      </RootBoundary>
     </Ctx.Provider>
   );
+}
+
+// App-weiter Fallback: nie ein komplett leerer Bildschirm. Fängt auch veraltete
+// Chunks nach einem Deploy ab (Import-Fehler) und bietet Neuladen an.
+class RootBoundary extends Component<{ children: React.ReactNode }, { err: Error | null }> {
+  state = { err: null as Error | null };
+  static getDerivedStateFromError(err: Error) { return { err }; }
+  render() {
+    if (!this.state.err) return this.props.children;
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <div className="card" style={{ maxWidth: 420, textAlign: "center", padding: 24 }}>
+          <h2 style={{ marginTop: 0 }}>Kurz hakt’s.</h2>
+          <p className="muted" style={{ fontSize: 14 }}>Die Ansicht konnte nicht geladen werden – meist hilft ein Neuladen (nach einem Update).</p>
+          <div className="muted" style={{ fontSize: 11, margin: "8px 0 14px", wordBreak: "break-word" }}>{String(this.state.err.message || this.state.err)}</div>
+          <button className="btn btn-primary" onClick={() => window.location.reload()}>Neu laden</button>
+        </div>
+      </div>
+    );
+  }
 }
 
 // Gruppen-Dropdown in der Topbar – bündelt verwandte Bereiche, damit die
