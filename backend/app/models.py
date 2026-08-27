@@ -93,6 +93,9 @@ class Organization(Base):
 
     # Uptime-Kuma-Webhook-Token (für Monitoring-Meldungen)
     monitor_token: Mapped[str] = mapped_column(String(64), default="")
+    # WordPress-Update-Digest-Webhook (WPMonitor o. Ä.) – ein Endpunkt fürs ganze Konto.
+    wp_token: Mapped[str] = mapped_column(String(64), default="")
+    wp_secret: Mapped[str] = mapped_column(Text, default="")  # optionales Signatur-Secret (verschlüsselt)
 
     users: Mapped[list[User]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     clients: Mapped[list[Client]] = relationship(back_populates="organization", cascade="all, delete-orphan")
@@ -1039,3 +1042,25 @@ class MailMessage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
+
+
+class WpUpdate(Base):
+    """Ein aktuell fälliges WordPress-Update (Core/Plugin/Theme) einer Website.
+    Kommt aus dem WPMonitor-Digest; per Host dem Kunden zugeordnet (client_id
+    kann leer sein, wenn die Seite keinem Kunden zugeordnet werden konnte)."""
+
+    __tablename__ = "wp_updates"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True, index=True)
+    site: Mapped[str] = mapped_column(String(255), default="")     # Anzeigename der Seite
+    host: Mapped[str] = mapped_column(String(255), default="", index=True)
+    url: Mapped[str] = mapped_column(String(512), default="")
+    type: Mapped[str] = mapped_column(String(16), default="plugin")  # core / plugin / theme
+    slug: Mapped[str] = mapped_column(String(200), default="")
+    name: Mapped[str] = mapped_column(String(255), default="")
+    installed: Mapped[str] = mapped_column(String(40), default="")
+    latest: Mapped[str] = mapped_column(String(40), default="")
+    first_seen: Mapped[str] = mapped_column(String(40), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

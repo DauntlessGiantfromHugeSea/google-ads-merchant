@@ -26,6 +26,7 @@ import Credentials from "../sections/Credentials";
 import ProjectDoc from "../sections/ProjectDoc";
 import ClientTime from "../sections/ClientTime";
 import ClientInvoices from "../sections/ClientInvoices";
+import WpUpdates from "../sections/WpUpdates";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 const NAV = [
@@ -154,6 +155,7 @@ export default function ClientDetail() {
               <ErrorBoundary label="Live-Auswertung"><Dashboards clientId={id} isAgency={isAgency} /></ErrorBoundary>
               <ErrorBoundary label="SEO"><Seo clientId={id} isAgency={isAgency} /></ErrorBoundary>
               <ErrorBoundary label="Monitoring"><Monitoring clientId={id} clientName={client.name} isAgency={isAgency} /></ErrorBoundary>
+              <ErrorBoundary label="WordPress-Updates"><WpUpdates clientId={id} isAgency={isAgency} /></ErrorBoundary>
             </>
           )}
           {section === "participants" && user?.role !== "agency_member" && (

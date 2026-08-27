@@ -9,7 +9,7 @@ from app.api.routes import (
     admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
-    payments, projects, reports, requests, richdocs, secrets, seo, tasks, team, timetracking,
+    payments, projects, reports, requests, richdocs, secrets, seo, tasks, team, timetracking, wp,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -48,6 +48,7 @@ _ORG_COLUMNS = {
     "agency_contact_phone": "VARCHAR(64) DEFAULT ''", "agency_contact_note": "TEXT DEFAULT ''",
     "ms_refresh_token": "TEXT DEFAULT ''", "ms_email": "VARCHAR(255) DEFAULT ''",
     "monitor_token": "VARCHAR(64) DEFAULT ''", "agency_address": "TEXT DEFAULT ''",
+    "wp_token": "VARCHAR(64) DEFAULT ''", "wp_secret": "TEXT DEFAULT ''",
     "email_notifications": "BOOLEAN DEFAULT TRUE", "meeting_link": "VARCHAR(512) DEFAULT ''",
     "login_tagline": "VARCHAR(255) DEFAULT 'Reporting-Plattform für deine Kunden.'",
     "timezone": "VARCHAR(64) DEFAULT 'Europe/Berlin'",
@@ -259,6 +260,8 @@ app.include_router(richdocs.router)
 app.include_router(payments.router)
 app.include_router(invoices.client_router)
 app.include_router(assets.router)
+app.include_router(wp.router)
+app.include_router(wp.client_router)
 
 
 @app.get("/api/health")

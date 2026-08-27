@@ -107,6 +107,10 @@ export interface Monitor {
   id: string; name: string; url: string; status: string; message: string;
   client_id: string | null; client_name: string; changed_at: string;
 }
+export interface WpUpdate {
+  id: string; type: string; name: string; slug: string; installed: string; latest: string;
+  site: string; host: string; url: string; first_seen: string;
+}
 export interface MonitorEvent {
   id: string; name: string; url: string; status: string; message: string; created_at: string;
 }
@@ -305,6 +309,11 @@ export const api = {
   assignMonitor: (id: string, clientId: string | null) =>
     request<Monitor>(`/monitoring/${id}`, { method: "PATCH", body: JSON.stringify({ client_id: clientId }) }),
   deleteMonitor: (id: string) => request<void>(`/monitoring/${id}`, { method: "DELETE" }),
+  // WordPress-Updates (WPMonitor-Digest)
+  wpWebhookUrl: () => request<{ url: string; has_secret: boolean }>("/wp/webhook-url"),
+  wpSetSecret: (secret: string) => request<{ has_secret: boolean }>("/wp/secret", { method: "POST", body: JSON.stringify({ secret }) }),
+  wpClient: (cid: string) => request<{ has_site: boolean; updates: WpUpdate[] }>(`/clients/${cid}/wp`),
+
   clientMonitors: (cid: string) => request<Monitor[]>(`/monitoring/client/${cid}`),
   clientMonitorEvents: (cid: string) => request<MonitorEvent[]>(`/monitoring/client/${cid}/events`),
   async downloadMonitoringReport(cid: string, days: number, clientName: string) {
