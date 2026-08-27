@@ -23,13 +23,19 @@ export default function WpUpdates({ clientId, isAgency }: { clientId: string; is
   if (!isAgency && (!loaded || updates.length === 0)) return null;
 
   const saveSecret = async () => { try { const r = await api.wpSetSecret(secret); setHook((h) => h && { ...h, has_secret: r.has_secret }); toast("Signatur-Secret gespeichert."); } catch (e) { toast((e as Error).message, "err"); } };
+  const load2 = () => api.wpClient(clientId).then((d) => { setUpdates(d.updates); setHasSite(d.has_site); }).catch(() => {});
+  const markDone = async (id: string) => { try { await api.wpMarkDone(clientId, id); toast("Als erledigt vermerkt – steht im Protokoll."); load2(); } catch (e) { toast((e as Error).message, "err"); } };
+  const markAll = async () => { if (!confirm("Alle offenen Updates als erledigt markieren?")) return; try { const r = await api.wpMarkAllDone(clientId); toast(`${r.done} als erledigt vermerkt.`); load2(); } catch (e) { toast((e as Error).message, "err"); } };
 
   return (
     <div className="section">
       <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 8 }}>
         <div><h2 style={{ marginBottom: 2 }}>WordPress-Updates</h2>
           <div className="muted" style={{ fontSize: 13 }}>Fällige Updates dieser Website{updates.length ? ` · ${updates.length} offen` : ""}.</div></div>
-        {isAgency && <button className="btn btn-ghost btn-sm" onClick={() => setSetup((s) => !s)}>{setup ? "Einrichtung ausblenden" : "Webhook einrichten"}</button>}
+        <div className="row-inline" style={{ gap: 6 }}>
+          {isAgency && updates.length > 0 && <button className="btn btn-ghost btn-sm" onClick={markAll}>✓ Alle erledigt</button>}
+          {isAgency && <button className="btn btn-ghost btn-sm" onClick={() => setSetup((s) => !s)}>{setup ? "Einrichtung ausblenden" : "Webhook einrichten"}</button>}
+        </div>
       </div>
 
       {isAgency && setup && (
@@ -59,7 +65,7 @@ export default function WpUpdates({ clientId, isAgency }: { clientId: string; is
       ) : (
         <div style={{ marginTop: 10 }}>
           {updates.map((u) => (
-            <div key={u.id} className="list-row">
+            <div key={u.id} className="list-row" style={{ alignItems: "center" }}>
               <div style={{ minWidth: 0 }}>
                 <span className={`status-badge ${typeCls(u.type)}`} style={{ marginRight: 8 }}>{TYPE_LABEL[u.type] || u.type}</span>
                 <strong>{u.name}</strong>
@@ -68,6 +74,7 @@ export default function WpUpdates({ clientId, isAgency }: { clientId: string; is
                   {u.first_seen ? ` · seit ${u.first_seen.slice(0, 10)}` : ""}
                 </div>
               </div>
+              {isAgency && <button className="btn btn-ghost btn-sm" onClick={() => markDone(u.id)}>✓ erledigt</button>}
             </div>
           ))}
         </div>

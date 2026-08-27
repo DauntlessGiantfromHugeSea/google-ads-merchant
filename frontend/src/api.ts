@@ -320,6 +320,8 @@ export const api = {
   wpWebhookUrl: () => request<{ url: string; has_secret: boolean }>("/wp/webhook-url"),
   wpSetSecret: (secret: string) => request<{ has_secret: boolean }>("/wp/secret", { method: "POST", body: JSON.stringify({ secret }) }),
   wpClient: (cid: string) => request<{ has_site: boolean; updates: WpUpdate[] }>(`/clients/${cid}/wp`),
+  wpMarkDone: (cid: string, id: string) => request<{ ok: boolean }>(`/clients/${cid}/wp/${id}/done`, { method: "POST" }),
+  wpMarkAllDone: (cid: string) => request<{ ok: boolean; done: number }>(`/clients/${cid}/wp/done-all`, { method: "POST" }),
   activity: (cid: string) => request<ActivityEntry[]>(`/clients/${cid}/activity`),
   addActivity: (cid: string, d: { text: string; occurred_at?: string; client_visible?: boolean }) =>
     request<ActivityEntry>(`/clients/${cid}/activity`, { method: "POST", body: JSON.stringify(d) }),

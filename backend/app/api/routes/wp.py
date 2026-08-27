@@ -90,6 +90,50 @@ def client_wp(client_id: str, user: User = Depends(get_current_user), db: Sessio
     return {"has_site": bool(host), "updates": [_item_dict(u) for u in rows]}
 
 
+_TL = {"core": "WordPress-Core", "plugin": "Plugin", "theme": "Theme"}
+
+
+def _mark_update_done(u: WpUpdate, client_id: str, author: str, db: Session) -> None:
+    """Update abhaken: Systemeintrag ins Protokoll + Eintrag entfernen."""
+    from app.api.routes.activity import log_activity  # noqa: PLC0415
+    ver = f" {u.installed} → {u.latest}" if u.installed and u.latest else ""
+    log_activity(db, org_id=u.organization_id, client_id=client_id,
+                 text=f"WordPress-Update erledigt: {_TL.get(u.type, u.type)} „{u.name}“{ver}",
+                 source="manual", author=author, client_visible=True)
+    db.delete(u)
+
+
+def _relevant(u: WpUpdate, client, host: str) -> bool:
+    return bool(u) and u.organization_id == client.organization_id and \
+        (u.client_id == client.id or (host and u.host == host))
+
+
+@client_router.post("/{update_id}/done")
+def mark_done(client_id: str, update_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    """Ein Update manuell als erledigt markieren (erscheint im Protokoll)."""
+    client = get_scoped_client(client_id, user, db)
+    u = db.get(WpUpdate, update_id)
+    if not _relevant(u, client, _host(client.website)):
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Update nicht gefunden")
+    _mark_update_done(u, client_id, user.full_name or user.email, db)
+    db.commit()
+    return {"ok": True}
+
+
+@client_router.post("/done-all")
+def mark_all_done(client_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    """Alle offenen Updates dieses Kunden als erledigt markieren."""
+    client = get_scoped_client(client_id, user, db)
+    host = _host(client.website)
+    done = 0
+    for u in db.query(WpUpdate).filter(WpUpdate.organization_id == client.organization_id).all():
+        if _relevant(u, client, host):
+            _mark_update_done(u, client_id, user.full_name or user.email, db)
+            done += 1
+    db.commit()
+    return {"ok": True, "done": done}
+
+
 # ---------- Zentrale Seiten-Übersicht & Zuordnung ----------
 @router.get("/sites")
 def list_sites(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> list[dict]:
