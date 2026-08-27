@@ -17,7 +17,7 @@ from app.api.deps import get_current_user, get_scoped_client, require_admin, req
 from app.config import get_settings
 from app.core.crypto import decrypt, encrypt
 from app.database import get_db
-from app.models import Client, Organization, User, WpUpdate
+from app.models import Client, Organization, User, WpSite, WpUpdate
 from app.services import notify
 
 settings = get_settings()
@@ -90,8 +90,41 @@ def client_wp(client_id: str, user: User = Depends(get_current_user), db: Sessio
     return {"has_site": bool(host), "updates": [_item_dict(u) for u in rows]}
 
 
+# ---------- Zentrale Seiten-Übersicht & Zuordnung ----------
+@router.get("/sites")
+def list_sites(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> list[dict]:
+    """Alle gemeldeten WordPress-Seiten + Zuordnung + Anzahl offener Updates."""
+    sites = (db.query(WpSite).filter(WpSite.organization_id == user.organization_id)
+             .order_by(WpSite.host).all())
+    names = {c.id: c.name for c in db.query(Client).filter(Client.organization_id == user.organization_id).all()}
+    pending: dict[str, int] = {}
+    for u in db.query(WpUpdate).filter(WpUpdate.organization_id == user.organization_id).all():
+        pending[u.host] = pending.get(u.host, 0) + 1
+    return [{"host": s.host, "site": s.site, "url": s.url, "client_id": s.client_id,
+             "client_name": names.get(s.client_id or "", ""), "pending": pending.get(s.host, 0),
+             "last_seen": s.last_seen} for s in sites]
+
+
+@router.post("/sites/assign")
+def assign_site(data: dict, user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    """Eine Seite (Host) manuell einem Kunden zuordnen (oder Zuordnung lösen)."""
+    host = (data.get("host") or "").strip().lower()
+    cid = data.get("client_id") or None
+    s = db.query(WpSite).filter(WpSite.organization_id == user.organization_id, WpSite.host == host).first()
+    if not s:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Seite nicht gefunden")
+    if cid:
+        get_scoped_client(cid, user, db)  # Zugehörigkeit prüfen
+    s.client_id = cid
+    # Bestehende Updates dieser Seite mitziehen.
+    for u in db.query(WpUpdate).filter(WpUpdate.organization_id == user.organization_id, WpUpdate.host == host).all():
+        u.client_id = cid
+    db.commit()
+    return {"ok": True, "host": host, "client_id": cid}
+
+
 # ---------- Öffentlich: Digest-Webhook ----------
-def _norm(items, org_id, host_map) -> list[dict]:
+def _norm(items) -> list[dict]:
     out = []
     for it in (items or []):
         if not isinstance(it, dict):
@@ -108,7 +141,6 @@ def _norm(items, org_id, host_map) -> list[dict]:
             "installed": str(it.get("installed") or it.get("current") or "")[:40],
             "latest": str(it.get("latest") or it.get("new") or "")[:40],
             "first_seen": str(it.get("firstSeenAt") or it.get("first_seen") or "")[:40],
-            "client_id": host_map.get(host),
         })
     return out
 
@@ -136,19 +168,34 @@ async def wp_webhook(token: str, request: Request, db: Session = Depends(get_db)
     if not isinstance(p, dict):
         p = {}
 
-    # Host -> Kunde (über die hinterlegte Website).
-    host_map = {}
+    # Auto-Zuordnung Host -> Kunde (über die hinterlegte Website).
+    auto_map = {}
     for c in db.query(Client).filter(Client.organization_id == org.id).all():
         h = _host(c.website)
         if h:
-            host_map[h] = c.id
+            auto_map[h] = c.id
 
-    new_items = _norm(p.get("newUpdates"), org.id, host_map)
-    recoveries = _norm(p.get("recoveries"), org.id, host_map)
+    new_items = _norm(p.get("newUpdates"))
+    recoveries = _norm(p.get("recoveries"))
     now = datetime.now(timezone.utc)
+
+    def site_client(it) -> str | None:
+        """Seite (Host) kennen/aktualisieren und den zugeordneten Kunden liefern.
+        Manuelle Zuordnung bleibt bestehen; solange keine da ist, Auto-Match."""
+        s = db.query(WpSite).filter(WpSite.organization_id == org.id, WpSite.host == it["host"]).first()
+        if not s:
+            s = WpSite(organization_id=org.id, host=it["host"], client_id=auto_map.get(it["host"]))
+            db.add(s)
+        elif not s.client_id:
+            s.client_id = auto_map.get(it["host"])
+        s.site = it["site"] or s.site
+        s.url = it["url"] or s.url
+        s.last_seen = now
+        return s.client_id
 
     added = 0
     for it in new_items:
+        cid = site_client(it)
         existing = (db.query(WpUpdate).filter(
             WpUpdate.organization_id == org.id, WpUpdate.host == it["host"],
             WpUpdate.type == it["type"], WpUpdate.slug == it["slug"]).first())
@@ -156,6 +203,7 @@ async def wp_webhook(token: str, request: Request, db: Session = Depends(get_db)
             existing = WpUpdate(organization_id=org.id, created_at=now)
             db.add(existing)
             added += 1
+        it["client_id"] = cid
         for k in ("client_id", "site", "host", "url", "type", "slug", "name", "installed", "latest", "first_seen"):
             setattr(existing, k, it[k])
     # Erledigte Updates entfernen.

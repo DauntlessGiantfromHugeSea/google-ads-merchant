@@ -1064,3 +1064,18 @@ class WpUpdate(Base):
     latest: Mapped[str] = mapped_column(String(40), default="")
     first_seen: Mapped[str] = mapped_column(String(40), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class WpSite(Base):
+    """Bekannte WordPress-Seite aus dem WPMonitor-Digest + Zuordnung zum Kunden.
+    Eine Zeile je Host. Zuordnung: automatisch per Domain, manuell überschreibbar."""
+
+    __tablename__ = "wp_sites"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    host: Mapped[str] = mapped_column(String(255), default="", index=True)
+    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
+    site: Mapped[str] = mapped_column(String(255), default="")
+    url: Mapped[str] = mapped_column(String(512), default="")
+    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

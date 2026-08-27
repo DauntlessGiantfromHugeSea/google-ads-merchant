@@ -111,6 +111,10 @@ export interface WpUpdate {
   id: string; type: string; name: string; slug: string; installed: string; latest: string;
   site: string; host: string; url: string; first_seen: string;
 }
+export interface WpSiteRow {
+  host: string; site: string; url: string; client_id: string | null; client_name: string;
+  pending: number; last_seen: string;
+}
 export interface MonitorEvent {
   id: string; name: string; url: string; status: string; message: string; created_at: string;
 }
@@ -313,6 +317,9 @@ export const api = {
   wpWebhookUrl: () => request<{ url: string; has_secret: boolean }>("/wp/webhook-url"),
   wpSetSecret: (secret: string) => request<{ has_secret: boolean }>("/wp/secret", { method: "POST", body: JSON.stringify({ secret }) }),
   wpClient: (cid: string) => request<{ has_site: boolean; updates: WpUpdate[] }>(`/clients/${cid}/wp`),
+  wpSites: () => request<WpSiteRow[]>("/wp/sites"),
+  wpAssignSite: (host: string, clientId: string | null) =>
+    request<{ ok: boolean }>("/wp/sites/assign", { method: "POST", body: JSON.stringify({ host, client_id: clientId }) }),
 
   clientMonitors: (cid: string) => request<Monitor[]>(`/monitoring/client/${cid}`),
   clientMonitorEvents: (cid: string) => request<MonitorEvent[]>(`/monitoring/client/${cid}/events`),

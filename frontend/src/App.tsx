@@ -30,6 +30,7 @@ const Dateien = lazy(() => import("./pages/Dateien"));
 const Briefe = lazy(() => import("./pages/Briefe"));
 const Upload = lazy(() => import("./pages/Upload"));
 const AiTransparency = lazy(() => import("./pages/AiTransparency"));
+const WpMonitor = lazy(() => import("./pages/WpMonitor"));
 
 function Splash() {
   return <div className="boot-splash"><div className="boot-spinner" /></div>;
@@ -115,6 +116,7 @@ export default function App() {
         <Route path="/briefe/:id" element={user && user.role !== "client_user" ? <Shell><Briefe /></Shell> : <Navigate to="/" />} />
         <Route path="/monitoring" element={user && user.role !== "client_user" ? <Shell><MonitoringPage /></Shell> : <Navigate to="/" />} />
         <Route path="/seo" element={user && user.role !== "client_user" ? <Shell><SeoPage /></Shell> : <Navigate to="/" />} />
+        <Route path="/wp" element={user && user.role !== "client_user" ? <Shell><WpMonitor /></Shell> : <Navigate to="/" />} />
         <Route path="/projects" element={<Navigate to="/planner" />} />
         <Route path="/tasks" element={<Navigate to="/planner" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
@@ -186,6 +188,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <NavGroup label="Analyse" go={go} items={[
                 { label: "Monitoring", path: "/monitoring" },
                 { label: "SEO", path: "/seo" },
+                { label: "WordPress-Updates", path: "/wp" },
               ]} />
             </>
           )}
