@@ -53,6 +53,7 @@ def _out(inv: Invoice, db: Session) -> InvoiceOut:
         paid_at=inv.paid_at.date().isoformat() if inv.paid_at else "",
         filename=inv.filename, has_file=bool(inv.data_base64),
         has_receipt=bool(inv.receipt_base64), receipt_filename=inv.receipt_filename or "",
+        recipient_email=inv.recipient_email or "",
         client_id=inv.client_id, client_name=client.name if client else "",
         created_at=inv.created_at,
     )
@@ -80,7 +81,7 @@ async def upload_invoice(
     file: UploadFile | None = File(None),
     client_id: str = Form(""), number: str = Form(""), amount: float = Form(0.0),
     currency: str = Form("EUR"), issue_date: str = Form(""), due_date: str = Form(""),
-    service_period: str = Form(""), note: str = Form(""),
+    service_period: str = Form(""), note: str = Form(""), recipient_email: str = Form(""),
     user: User = Depends(require_agency), db: Session = Depends(get_db),
 ):
     """Rechnung anlegen. Optional mit Datei; bei E-Rechnung (XRechnung/ZUGFeRD)
@@ -112,7 +113,7 @@ async def upload_invoice(
         organization_id=user.organization_id, client_id=client_id or None,
         number=number, amount=amount, currency=currency or "EUR",
         issue_date=issue_date, due_date=due_date, service_period=(service_period or "")[:7],
-        note=note, source=source,
+        note=note, source=source, recipient_email=(recipient_email or "").strip()[:255],
         filename=filename, content_type=content_type,
         data_base64=base64.b64encode(data).decode() if data else "",
         created_by=user.full_name or user.email,
@@ -141,7 +142,7 @@ def _notify_new_invoice(inv: Invoice, user: User, db: Session) -> None:
     # E-Mail (best effort)
     try:
         org = db.get(Organization, inv.organization_id)
-        to = (client.billing_email or client.contact_email or "").strip()
+        to = (inv.recipient_email or client.billing_email or client.contact_email or "").strip()
         if org and org.ms_refresh_token and to:
             first = (client.contact_person or client.name or "").split(" ")[0]
             body = (f"Hallo{(' ' + first) if first else ''},\n\n"
@@ -321,7 +322,7 @@ def remind_invoice(invoice_id: str, user: User = Depends(require_agency), db: Se
     if not inv or inv.organization_id != user.organization_id:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Rechnung nicht gefunden")
     client = db.get(Client, inv.client_id) if inv.client_id else None
-    to = (client.billing_email or client.contact_email) if client else ""
+    to = (inv.recipient_email or (client.billing_email or client.contact_email if client else "") or "").strip()
     if not to:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Für den Kunden ist keine E-Mail hinterlegt.")
     org = db.get(Organization, user.organization_id)

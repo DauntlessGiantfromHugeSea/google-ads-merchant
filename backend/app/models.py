@@ -440,6 +440,8 @@ class Invoice(Base):
     status: Mapped[str] = mapped_column(String(16), default="offen")  # offen/bezahlt/storniert
     note: Mapped[str] = mapped_column(Text, default="")
     source: Mapped[str] = mapped_column(String(16), default="upload")  # upload/xrechnung
+    # Abweichende Empfänger-Adresse für DIESE Rechnung (statt Kunden-Mail).
+    recipient_email: Mapped[str] = mapped_column(String(255), default="")
     # optional gespeicherte Datei (die Rechnung)
     filename: Mapped[str] = mapped_column(String(512), default="")
     content_type: Mapped[str] = mapped_column(String(128), default="")

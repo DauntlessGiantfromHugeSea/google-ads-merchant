@@ -32,6 +32,7 @@ export default function Invoices() {
   const [due, setDue] = useState("");
   const [sp, setSp] = useState("");
   const [note, setNote] = useState("");
+  const [reMail, setReMail] = useState("");
   const [busy, setBusy] = useState(false);
 
   const load = () => api.invoices().then(setAll).catch((e) => toast((e as Error).message, "err"));
@@ -50,8 +51,8 @@ export default function Invoices() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true);
     try {
-      await api.uploadInvoice({ file, client_id: fClient, number, amount, issue_date: issue, due_date: due, service_period: sp, note });
-      setFile(null); setFClient(""); setNumber(""); setAmount(""); setIssue(""); setDue(""); setSp(""); setNote("");
+      await api.uploadInvoice({ file, client_id: fClient, number, amount, issue_date: issue, due_date: due, service_period: sp, note, recipient_email: reMail });
+      setFile(null); setFClient(""); setNumber(""); setAmount(""); setIssue(""); setDue(""); setSp(""); setNote(""); setReMail("");
       setShowForm(false); load(); toast("Rechnung gespeichert.");
     } catch (err) { toast((err as Error).message, "err"); }
     finally { setBusy(false); }
@@ -94,6 +95,8 @@ export default function Invoices() {
               <input className="input" type="month" value={sp} onChange={(e) => setSp(e.target.value)} /></div>
           </div>
           <div className="field"><label>Notiz</label><input className="input" value={note} onChange={(e) => setNote(e.target.value)} /></div>
+          <div className="field"><label>Rechnungs-E-Mail (abweichend, optional)</label>
+            <input className="input" type="email" value={reMail} onChange={(e) => setReMail(e.target.value)} placeholder="z. B. buchhaltung@kunde.de – sonst geht sie an die Kunden-Mail" /></div>
           <button className="btn btn-primary" disabled={busy}>{busy ? "Speichere…" : "Speichern"}</button>
         </form>
       )}

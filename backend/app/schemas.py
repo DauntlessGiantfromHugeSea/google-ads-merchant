@@ -786,6 +786,7 @@ class InvoiceUpdate(BaseModel):
     status: str | None = None
     note: str | None = None
     client_id: str | None = None
+    recipient_email: str | None = None
 
 
 class InvoiceOut(BaseModel):
@@ -805,6 +806,7 @@ class InvoiceOut(BaseModel):
     has_file: bool = False
     has_receipt: bool = False
     receipt_filename: str = ""
+    recipient_email: str = ""
     client_id: str | None = None
     client_name: str = ""
     created_at: datetime

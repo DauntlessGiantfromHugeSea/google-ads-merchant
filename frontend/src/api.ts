@@ -185,7 +185,7 @@ export interface Invoice {
   id: string; number: string; amount: number; currency: string;
   issue_date: string; due_date: string; service_period: string; status: string; overdue: boolean;
   paid_at: string; note: string; source: string; filename: string; has_file: boolean;
-  has_receipt: boolean; receipt_filename: string;
+  has_receipt: boolean; receipt_filename: string; recipient_email: string;
   client_id: string | null; client_name: string; created_at: string;
 }
 export interface Dashboard {
@@ -560,10 +560,10 @@ export const api = {
     const qs = p.toString();
     return request<Invoice[]>(`/invoices${qs ? `?${qs}` : ""}`);
   },
-  uploadInvoice: (fields: { file?: File | null; client_id?: string; number?: string; amount?: string; currency?: string; issue_date?: string; due_date?: string; service_period?: string; note?: string }) => {
+  uploadInvoice: (fields: { file?: File | null; client_id?: string; number?: string; amount?: string; currency?: string; issue_date?: string; due_date?: string; service_period?: string; note?: string; recipient_email?: string }) => {
     const fd = new FormData();
     if (fields.file) fd.set("file", fields.file);
-    for (const k of ["client_id", "number", "amount", "currency", "issue_date", "due_date", "service_period", "note"] as const)
+    for (const k of ["client_id", "number", "amount", "currency", "issue_date", "due_date", "service_period", "note", "recipient_email"] as const)
       if (fields[k] != null) fd.set(k, String(fields[k]));
     return request<Invoice>("/invoices", { method: "POST", body: fd });
   },

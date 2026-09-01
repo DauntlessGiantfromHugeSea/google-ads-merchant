@@ -102,7 +102,7 @@ _TIME_COLUMNS = {
 _INVOICE_COLUMNS = {
     "service_period": "VARCHAR(7) DEFAULT ''",
     "receipt_filename": "VARCHAR(512) DEFAULT ''", "receipt_content_type": "VARCHAR(128) DEFAULT ''",
-    "receipt_base64": "TEXT DEFAULT ''",
+    "receipt_base64": "TEXT DEFAULT ''", "recipient_email": "VARCHAR(255) DEFAULT ''",
 }
 
 
