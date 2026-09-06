@@ -66,12 +66,15 @@ def _access_token(refresh_token: str, scope: str = SCOPE_SEND) -> str:
     return token
 
 
-def render_email_html(org, body_text: str, reference: str = "", logo_url: str = "") -> str:
-    """Verpackt Text in eine gebrandete HTML-Mail (Logo, Farben, Footer).
+def render_email_html(org, body_text: str, reference: str = "", logo_url: str = "",
+                      banner_url: str = "") -> str:
+    """Verpackt Text in eine gebrandete HTML-Mail (Banner, Farben, Footer).
     reference: optionale Konversations-Referenz – wird sichtbar in den Footer
     gesetzt, damit sie beim Antworten erhalten bleibt (Zuordnung).
-    logo_url: überschreibt das Standard-Logo (z. B. Kundenlogo der Bestätigung)."""
-    logo = logo_url or f"{settings.public_base_url.rstrip('/')}/api/branding/logo"
+    banner_url: überschreibt das Kopf-Banner (z. B. Kunden-Banner der Bestätigung).
+    logo_url: nur noch für Abwärtskompatibilität – der Header ist jetzt ein Bild."""
+    base = settings.public_base_url.rstrip("/")
+    banner = banner_url or f"{base}/api/branding/mail-banner"
     body_html = htmllib.escape(body_text).replace("\n", "<br>")
     name = getattr(org, "agency_contact_name", "") or getattr(org, "name", "") or ""
     email = getattr(org, "agency_contact_email", "") or getattr(org, "ms_email", "") or ""
@@ -91,9 +94,7 @@ def render_email_html(org, body_text: str, reference: str = "", logo_url: str = 
     return f"""\
 <div style="background:#ffffff;padding:24px;font-family:Arial,Helvetica,sans-serif;">
   <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e8e8ee;">
-    <div bgcolor="#1c2140" style="background-color:#1c2140;background-image:linear-gradient(120deg,#1c2140,#c4553f);padding:24px;text-align:center;">
-      <img src="{logo}" alt="" style="height:auto;width:auto;max-height:48px;max-width:100%;display:inline-block;border:0;"/>
-    </div>
+    <img src="{banner}" width="560" alt="{htmllib.escape(name)}" style="display:block;width:100%;max-width:560px;height:auto;border:0;"/>
     <div style="padding:26px 24px;color:#15161a;font-size:15px;line-height:1.65;">{body_html}</div>
     <div style="padding:16px 24px;background:#ffffff;color:#6b6b72;font-size:12px;border-top:1px solid #eee;">
       {htmllib.escape(footer)}{ref_block}

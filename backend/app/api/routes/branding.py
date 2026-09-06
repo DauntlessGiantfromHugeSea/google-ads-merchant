@@ -46,6 +46,19 @@ def get_logo(db: Session = Depends(get_db)):
     )
 
 
+@router.get("/mail-banner")
+def mail_banner(db: Session = Depends(get_db)):
+    """Öffentlich: Kopf-Banner für Mails (Marken-Gradient + Agentur-Logo) als PNG.
+    Wird als Bild in die Mail eingebunden, damit der Verlauf in JEDEM Client
+    (auch Outlook) gleich aussieht."""
+    from app.services.mailbanner import build_banner  # noqa: PLC0415
+    org = db.query(Organization).filter(Organization.logo_base64 != "").first()
+    png = build_banner(org.logo_base64 if org else "",
+                       (org.logo_content_type if org else "") or "")
+    return Response(content=png, media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=3600"})
+
+
 @router.post("/logo", status_code=204)
 async def upload_logo(
     file: UploadFile = File(...),

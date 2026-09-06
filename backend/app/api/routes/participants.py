@@ -9,7 +9,7 @@ import io
 import secrets as pysecrets
 import threading
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -203,6 +203,26 @@ def public_confirm_logo(client_id: str, db: Session = Depends(get_db)):
                              media_type=client.webhook_logo_content_type or "image/png")
 
 
+@public_router.get("/confirm-banner/{client_id}")
+def public_confirm_banner(client_id: str, db: Session = Depends(get_db)):
+    """Öffentliches Kopf-Banner (Gradient + Kundenlogo) für die Bestätigungsmail.
+    Fällt ohne Kundenlogo auf das Agentur-Logo zurück, damit der Verlauf trotzdem
+    in jedem Client (inkl. Outlook) gleich aussieht."""
+    from app.models import Organization  # noqa: PLC0415
+    from app.services.mailbanner import build_banner  # noqa: PLC0415
+    client = db.get(Client, client_id)
+    if not client:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unbekannt")
+    if client.webhook_logo_base64:
+        logo_b64, ct = client.webhook_logo_base64, client.webhook_logo_content_type
+    else:
+        org = db.get(Organization, client.organization_id)
+        logo_b64, ct = (org.logo_base64, org.logo_content_type) if org else ("", "")
+    png = build_banner(logo_b64 or "", ct or "")
+    return Response(content=png, media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=3600"})
+
+
 @router.post("/rotate", response_model=ParticipantsStatus)
 def rotate(client_id: str, request: Request, user: User = Depends(require_admin), db: Session = Depends(get_db)):
     """Neuen Webhook-Token erzeugen (alte URL wird ungültig)."""
@@ -365,12 +385,12 @@ def _send_confirmation(org_id: str, client_id: str, client_name: str, to_email: 
         if not org or not org.ms_refresh_token:
             return
         base = get_settings().public_base_url.rstrip("/")
-        logo_url = f"{base}/api/participants/confirm-logo/{client_id}" if has_logo else ""
+        banner_url = f"{base}/api/participants/confirm-banner/{client_id}"
         subj = subject or f"Bestätigung deiner Anmeldung – {client_name}"
         hi = f"Hallo{(' ' + name) if name else ''},"
         body = text or (f"{hi}\n\nvielen Dank für deine Anmeldung bei {client_name}. "
                         f"Wir haben sie erhalten und melden uns.\n\nBeste Grüße")
-        html = render_email_html(org, body, logo_url=logo_url)
+        html = render_email_html(org, body, banner_url=banner_url)
         try:
             send_via_graph(org, to_email, subj, html, html=True, from_addr=from_addr, reply_to=from_addr)
         except Exception:
