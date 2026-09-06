@@ -145,7 +145,7 @@ export default function Participants({ clientId, clientName, isAgency }:
                     <div className="field">
                       <label>Logo für die Bestätigung</label>
                       <div className="row-inline" style={{ alignItems: "center", gap: 10 }}>
-                        {status.has_logo && <img src={`${api.confirmLogoUrl(clientId)}?v=${logoV}`} alt="Logo" style={{ maxHeight: 40, maxWidth: 160, background: "linear-gradient(120deg,#1c2140,#c4553f 42%,#f8836b)", borderRadius: 8, padding: "6px 10px" }} />}
+                        {status.has_logo && <img src={`${api.confirmLogoUrl(clientId)}?v=${logoV}`} alt="Logo" style={{ maxHeight: 40, maxWidth: 160, background: "linear-gradient(120deg,#1c2140,#c4553f)", borderRadius: 8, padding: "6px 10px" }} />}
                         <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }}>{status.has_logo ? "Ersetzen" : "+ Logo"}
                           <input type="file" accept="image/*" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.currentTarget.value = ""; }} /></label>
                         {status.has_logo && <button className="del" onClick={removeLogo}>entfernen</button>}
