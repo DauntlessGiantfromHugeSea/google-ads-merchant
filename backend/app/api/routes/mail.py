@@ -81,18 +81,21 @@ def render_email_html(org, body_text: str, reference: str = "", logo_url: str = 
     ref_block = ""
     if reference:
         ref_block = (
-            f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid #eee;'
-            f'color:#9aa0a6;font-size:11px;">Referenz <strong>{htmllib.escape(reference)}</strong>'
+            f'<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.28);'
+            f'color:rgba(255,255,255,0.72);font-size:11px;">Referenz '
+            f'<strong style="color:#ffffff;">{htmllib.escape(reference)}</strong>'
             f' · Bitte lass diese Nummer beim Antworten stehen, damit wir deine Antwort'
             f' automatisch zuordnen können.</div>')
+    # Vollflächiger Marken-Gradient (kein Grau). Weißer Text darauf.
+    # Outlook (Word-Engine) kann kein CSS-Gradient -> solider Navy-Fallback per bgcolor.
     return f"""\
-<div style="background:#f1f2f6;padding:24px;font-family:Arial,Helvetica,sans-serif;">
-  <div style="max-width:560px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #e8e8ee;">
-    <div bgcolor="#1c2140" style="background-color:#1c2140;background-image:linear-gradient(120deg,#1c2140,#c4553f);padding:24px;text-align:center;">
+<div bgcolor="#1c2140" style="margin:0;padding:24px;background-color:#1c2140;background-image:linear-gradient(160deg,#1c2140 0%,#1c2140 58%,#c4553f 100%);font-family:Arial,Helvetica,sans-serif;">
+  <div style="max-width:560px;margin:0 auto;padding:12px 22px 20px;">
+    <div style="text-align:center;padding:16px 0 8px;">
       <img src="{logo}" alt="" style="height:auto;width:auto;max-height:48px;max-width:100%;display:inline-block;border:0;"/>
     </div>
-    <div style="padding:26px 24px;color:#15161a;font-size:15px;line-height:1.65;">{body_html}</div>
-    <div style="padding:16px 24px;background:#fafafb;color:#6b6b72;font-size:12px;border-top:1px solid #eee;">
+    <div style="padding:20px 4px;color:#ffffff;font-size:15px;line-height:1.65;">{body_html}</div>
+    <div style="padding:14px 4px 0;border-top:1px solid rgba(255,255,255,0.28);color:rgba(255,255,255,0.82);font-size:12px;">
       {htmllib.escape(footer)}{ref_block}
     </div>
   </div>
