@@ -112,6 +112,10 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
+    # Benachrichtigungs-Präferenz (v. a. für Kunden-Logins): E-Mail bei neuer
+    # Kontakt-Nachricht ja/nein. Der Kunde stellt das selbst im Portal ein.
+    notify_contact_email: Mapped[bool] = mapped_column(Boolean, default=True)
+
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     organization: Mapped[Organization] = relationship(back_populates="users")
 
@@ -153,6 +157,9 @@ class Client(Base):
     # Kontaktdaten
     contact_email: Mapped[str] = mapped_column(String(255), default="")
     contact_person: Mapped[str] = mapped_column(String(255), default="")
+    # Referenz (NK-...) für den Kontakt-Verlauf: steckt in der Mitteilungs-Mail an
+    # die Agentur; Antworten aus dem Postfach landen darüber automatisch im Verlauf.
+    contact_reference: Mapped[str] = mapped_column(String(40), default="")
     phone: Mapped[str] = mapped_column(String(64), default="")
     website: Mapped[str] = mapped_column(String(512), default="")
     address: Mapped[str] = mapped_column(Text, default="")
@@ -399,8 +406,10 @@ class ClientUpdate(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     title: Mapped[str] = mapped_column(String(512), default="")
     body: Mapped[str] = mapped_column(Text, default="")
-    category: Mapped[str] = mapped_column(String(64), default="update")  # update/note/milestone
+    category: Mapped[str] = mapped_column(String(64), default="update")  # update/note/milestone/message
     author_name: Mapped[str] = mapped_column(String(255), default="")
+    # Graph-Message-ID der Quelle (Antwort aus dem Postfach) – verhindert Doppel-Import.
+    ext_message_id: Mapped[str] = mapped_column(String(255), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"))

@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_scoped_client, require_agency
 from app.database import get_db
-from app.models import MailMessage, MailThread, Organization, User
+from app.models import Client, ClientUpdate, MailMessage, MailThread, Organization, User
 from app.schemas import ThreadReply, ThreadStart
 from app.services import notify
 
@@ -40,6 +40,29 @@ def _new_reference(db: Session) -> str:
                f"{''.join(secrets.choice(_ALPHABET) for _ in range(5))}-"
                f"{''.join(secrets.choice(_ALPHABET) for _ in range(5))}")
         if not db.query(MailThread.id).filter(MailThread.reference == ref).first():
+            return ref
+    raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Referenz konnte nicht erzeugt werden.")
+
+
+# ---------- Kontakt-Kanal (Portal-Verlauf) ----------
+# Eigener Präfix NK- (Kontakt), damit er sich NICHT mit der Mail-Konversation (NL-)
+# überschneidet. Steckt nur in der Mitteilungs-Mail an die Agentur; Antworten aus
+# dem Postfach landen darüber automatisch im Verlauf des Kunden.
+CONTACT_REF_PREFIX = "NK"
+CONTACT_REF_RE = re.compile(r"NK-[A-Z0-9]{4,6}-[A-Z0-9]{4,6}", re.IGNORECASE)
+
+
+def ensure_contact_reference(db: Session, client: Client) -> str:
+    """Liefert die Kontakt-Referenz des Kunden, erzeugt sie bei Bedarf (kollisionsfrei).
+    Der Aufrufer committet."""
+    if client.contact_reference:
+        return client.contact_reference
+    for _ in range(20):
+        ref = (f"{CONTACT_REF_PREFIX}-"
+               f"{''.join(secrets.choice(_ALPHABET) for _ in range(5))}-"
+               f"{''.join(secrets.choice(_ALPHABET) for _ in range(5))}")
+        if not db.query(Client.id).filter(Client.contact_reference == ref).first():
+            client.contact_reference = ref
             return ref
     raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, "Referenz konnte nicht erzeugt werden.")
 
@@ -242,6 +265,8 @@ def sync_org_inbox(db: Session, org: Organization) -> int:
     # Referenz -> Thread (nur dieser Organisation).
     threads = {t.reference: t for t in db.query(MailThread).filter(
         MailThread.organization_id == org.id).all()}
+    cmap = _contact_clients(db, org)          # Kontakt-Referenz -> Kunde
+    touched_contacts: dict[str, Client] = {}  # Kunden mit neuer Verlauf-Antwort
     new_count = 0
     touched: dict[str, MailThread] = {}
     for m in messages:
@@ -277,6 +302,12 @@ def sync_org_inbox(db: Session, org: Organization) -> int:
         touched[thread.id] = thread
         new_count += 1
 
+    # Kontakt-Antworten (NK-Referenz) aus dem Posteingang in den Verlauf übernehmen.
+    for m in messages:
+        c = _import_contact_reply(db, org, m, cmap)
+        if c is not None:
+            touched_contacts[c.id] = c
+
     # Eingehende Nachrichten zuerst persistieren (+ Team benachrichtigen), damit ein
     # späterer Fehler beim Sent-Abgleich sie NICHT zurückrollt.
     if new_count:
@@ -293,22 +324,37 @@ def sync_org_inbox(db: Session, org: Organization) -> int:
     # wurden. Aus dem Tool gesendete Mails sind schon in der DB (ohne Graph-ID) und
     # werden über ihre Graph-ID zurückgeschrieben, damit nichts doppelt erscheint.
     try:
-        _sync_sent(db, org, threads)
+        _sync_sent(db, org, threads, cmap, touched_contacts)
         db.commit()
     except Exception:  # Postfach ohne Sent-Zugriff darf den Abgleich nicht stoppen
+        db.rollback()
+
+    # Kunden über neue Verlauf-Antworten informieren (In-App + optional E-Mail).
+    try:
+        _notify_contact_clients(db, org, touched_contacts)
+    except Exception:
         db.rollback()
 
     return new_count
 
 
-def _sync_sent(db: Session, org: Organization, threads: dict) -> None:
+def _sync_sent(db: Session, org: Organization, threads: dict,
+               cmap: dict | None = None, touched_contacts: dict | None = None) -> None:
     """Ordnet gesendete Mails (auch aus Outlook) den Konversationen zu.
     Tool-Mails bekommen ihre Graph-ID nachgetragen (Dedupe), unbekannte
-    Outlook-Mails werden als ausgehende Nachricht ergänzt."""
+    Outlook-Mails werden als ausgehende Nachricht ergänzt. Antworten auf
+    Kontakt-Mitteilungen (NK-Referenz), die direkt aus dem Postfach geschrieben
+    wurden, landen im Verlauf des Kunden."""
     for m in read_sent(org, top=50):
         subject = m.get("subject") or ""
         body_obj = m.get("body") or {}
         raw_content = body_obj.get("content", "") or m.get("bodyPreview", "")
+        if cmap is not None:
+            c = _import_contact_reply(db, org, m, cmap)
+            if c is not None:
+                if touched_contacts is not None:
+                    touched_contacts[c.id] = c
+                continue
         found = REF_RE.search(subject) or REF_RE.search(raw_content)
         if not found:
             continue
@@ -351,6 +397,104 @@ def _sync_sent(db: Session, org: Organization, threads: dict) -> None:
         if last is None or sent_at > last:
             thread.last_message_at = sent_at
             thread.last_direction = "out"
+
+
+def _contact_clients(db: Session, org: Organization) -> dict:
+    """Referenz (NK-...) -> Kunde dieser Organisation."""
+    return {c.contact_reference: c for c in db.query(Client).filter(
+        Client.organization_id == org.id, Client.contact_reference != "").all()}
+
+
+def _import_contact_reply(db: Session, org: Organization, m: dict, cmap: dict) -> Client | None:
+    """Importiert eine Postfach-ANTWORT (Re:/Aw:) mit NK-Referenz als Eintrag in den
+    Verlauf des zugehörigen Kunden. Die ursprüngliche Mitteilungs-Mail (ohne Re:)
+    wird bewusst ignoriert. Doppelte werden über die Graph-ID vermieden.
+    Gibt den betroffenen Kunden zurück (für die Benachrichtigung) oder None."""
+    subject = m.get("subject") or ""
+    body_obj = m.get("body") or {}
+    raw = body_obj.get("content", "") or m.get("bodyPreview", "")
+    found = CONTACT_REF_RE.search(subject) or CONTACT_REF_RE.search(raw)
+    if not found:
+        return None
+    if not subject.strip().lower().startswith(("re:", "aw:")):
+        return None  # nur echte Antworten, nicht die Ausgangs-Mitteilung
+    client = cmap.get(found.group(0).upper())
+    if not client:
+        return None
+    gid = m.get("id") or ""
+    if gid and db.query(ClientUpdate.id).filter(ClientUpdate.ext_message_id == gid).first():
+        return None
+    is_html = (body_obj.get("contentType", "") or "").lower() == "html"
+    text = _clean_body(raw, is_html)
+    if not text.strip():
+        return None
+    addr = ((m.get("from") or {}).get("emailAddress") or {})
+    author = addr.get("name") or addr.get("address") or (org.name or "Agentur")
+    when = _parse_dt(m.get("receivedDateTime") or m.get("sentDateTime"))
+    db.add(ClientUpdate(client_id=client.id, title="", body=text, category="message",
+                        author_name=author, ext_message_id=gid, created_at=when))
+    return client
+
+
+def _notify_contact_clients(db: Session, org: Organization, clients: dict) -> None:
+    """In-App-Hinweis + (falls erlaubt) E-Mail an die Kunden-Logins, dass eine neue
+    Antwort im Verlauf liegt. Inhalt kommt NICHT per Mail – der Kunde meldet sich an."""
+    if not clients:
+        return
+    from app.config import get_settings  # noqa: PLC0415
+    base = get_settings().public_base_url.rstrip("/")
+    for client in clients.values():
+        notify.notify_client_users(
+            db, client.id, org_id=org.id, type_="message",
+            title=f"Neue Nachricht von {org.name or 'der Agentur'}",
+            body="Es liegt eine neue Nachricht in deinem Portal.",
+            link=f"/clients/{client.id}")
+    db.commit()
+    # E-Mail nur an Kunden-Logins, die das aktiviert haben.
+    for client in clients.values():
+        recips = db.query(User).filter(
+            User.client_id == client.id, User.is_active.is_(True),
+            User.notify_contact_email.is_(True)).all()
+        for u in recips:
+            if not u.email:
+                continue
+            body = (f"Hallo,\n\ndu hast eine neue Nachricht von {org.name or 'deiner Agentur'} "
+                    f"in deinem Portal.\n\nBitte melde dich an, um sie zu lesen und zu "
+                    f"antworten:\n{base}/clients/{client.id}\n\nBeste Grüße")
+            try:
+                send_via_graph(org, u.email, f"Neue Nachricht von {org.name or 'deiner Agentur'}",
+                               render_email_html(org, body), html=True)
+            except Exception:
+                pass
+
+
+def email_contact_to_agency(org_id: str, client_id: str, ref: str, author: str, text: str) -> None:
+    """Mitteilungs-Mail an die Agentur, wenn ein Kunde im Portal schreibt – mit
+    NK-Referenz, damit eine Antwort aus dem Postfach im Verlauf landet.
+    Läuft im Hintergrund mit eigener Session."""
+    from app.database import SessionLocal  # noqa: PLC0415
+    db = SessionLocal()
+    try:
+        org = db.get(Organization, org_id)
+        client = db.get(Client, client_id)
+        if not org or not org.ms_refresh_token or not client:
+            return
+        admins = notify._agency_admin_ids(db, org_id)  # noqa: SLF001
+        emails = [u.email for u in db.query(User).filter(User.id.in_(admins)).all() if u.email]
+        if not emails:
+            return
+        subj = _subject_with_ref(f"Nachricht von {client.name}", ref)
+        body = (f"{author} hat dir über das Portal geschrieben:\n\n{text}\n\n"
+                f"Antworte einfach direkt auf diese E-Mail – deine Antwort erscheint "
+                f"automatisch im Verlauf von {client.name}.")
+        html = render_email_html(org, body, reference=ref)
+        for to in emails:
+            try:
+                send_via_graph(org, to, subj, html, html=True, reply_to=org.ms_email or "")
+            except Exception:
+                pass
+    finally:
+        db.close()
 
 
 @router.post("/sync")

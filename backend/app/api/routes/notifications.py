@@ -37,3 +37,21 @@ def read_one(note_id: str, user: User = Depends(get_current_user), db: Session =
     if note and note.user_id == user.id:
         note.read = True
         db.commit()
+
+
+@router.get("/prefs")
+def get_prefs(user: User = Depends(get_current_user)) -> dict:
+    """Benachrichtigungs-Präferenzen des eingeloggten Nutzers."""
+    return {"notify_contact_email": bool(user.notify_contact_email)}
+
+
+@router.patch("/prefs")
+def set_prefs(data: dict, user: User = Depends(get_current_user),
+              db: Session = Depends(get_db)) -> dict:
+    """Nutzer stellt selbst ein, ob er bei neuen Nachrichten eine E-Mail möchte."""
+    if "notify_contact_email" in data:
+        u = db.get(User, user.id)
+        u.notify_contact_email = bool(data["notify_contact_email"])
+        db.commit()
+        return {"notify_contact_email": u.notify_contact_email}
+    return {"notify_contact_email": bool(user.notify_contact_email)}

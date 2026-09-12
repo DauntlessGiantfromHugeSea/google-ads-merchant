@@ -10,9 +10,17 @@ export default function Updates({ clientId, isAgency }: { clientId: string; isAg
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [cat, setCat] = useState(isAgency ? "update" : "message");
+  const [emailPref, setEmailPref] = useState(true);
 
   const load = () => api.updates(clientId).then(setItems).catch(() => {});
   useEffect(() => { load(); }, [clientId]);
+  useEffect(() => { if (!isAgency) api.notifyPrefs().then((p) => setEmailPref(p.notify_contact_email)).catch(() => {}); }, [isAgency]);
+
+  const togglePref = async (on: boolean) => {
+    setEmailPref(on);
+    try { await api.setNotifyPrefs(on); toast(on ? "E-Mail-Benachrichtigung an." : "E-Mail-Benachrichtigung aus."); }
+    catch (e) { setEmailPref(!on); toast((e as Error).message, "err"); }
+  };
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +40,13 @@ export default function Updates({ clientId, isAgency }: { clientId: string; isAg
   return (
     <div className="section">
       <h2>{isAgency ? "Verlauf & Nachrichten" : "Verlauf & Kontakt"}</h2>
+
+      {!isAgency && (
+        <label className="muted" style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 12 }}>
+          <input type="checkbox" checked={emailPref} onChange={(e) => togglePref(e.target.checked)} />
+          Bei neuen Nachrichten per E-Mail benachrichtigen
+        </label>
+      )}
 
       <form className="form-light" style={{ marginBottom: 18 }} onSubmit={add}>
         <div className="row-inline">

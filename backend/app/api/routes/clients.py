@@ -387,8 +387,14 @@ def create_update(
         author_name=user.full_name or user.email,
     )
     db.add(upd)
-    # Kundennachricht -> eigener Typ "client_message" (loest E-Mail an die Agentur
-    # aus). Agentur-Eintraege bleiben "message" (nur In-App, kein Kunden-Spam).
+    # Schreibt der Kunde: feste Kontakt-Referenz (NK-...) des Kunden sicherstellen –
+    # sie kommt in die Mitteilungs-Mail, damit die Agentur per Mail antworten kann.
+    ref = ""
+    if is_client:
+        from app.api.routes.mail_threads import ensure_contact_reference  # noqa: PLC0415
+        ref = ensure_contact_reference(db, client)
+    # In-App-Hinweis an die jeweils andere Seite. E-Mails laufen separat:
+    # Kundennachricht -> dedizierte Agentur-Mail mit Referenz (siehe unten).
     notify_counterparts(
         db, author=user, org_id=user.organization_id, client_id=client_id,
         type_="client_message" if is_client else "message",
@@ -399,6 +405,12 @@ def create_update(
     )
     db.commit()
     db.refresh(upd)
+    if is_client:
+        import threading  # noqa: PLC0415
+        from app.api.routes.mail_threads import email_contact_to_agency  # noqa: PLC0415
+        threading.Thread(target=email_contact_to_agency, args=(
+            user.organization_id, client_id, ref, upd.author_name, data.body or ""),
+            daemon=True).start()
     return upd
 
 

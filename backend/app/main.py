@@ -41,6 +41,7 @@ _CLIENT_COLUMNS = {
     "webhook_confirm_enabled": "BOOLEAN DEFAULT FALSE", "webhook_confirm_subject": "VARCHAR(255) DEFAULT ''",
     "webhook_confirm_text": "TEXT DEFAULT ''", "webhook_from": "VARCHAR(255) DEFAULT ''",
     "webhook_logo_base64": "TEXT DEFAULT ''", "webhook_logo_content_type": "VARCHAR(64) DEFAULT ''",
+    "contact_reference": "VARCHAR(40) DEFAULT ''",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",
@@ -72,6 +73,10 @@ _USER_COLUMNS = {
     "invite_token": "VARCHAR(64) DEFAULT ''", "invite_expires": "TIMESTAMP",
     "totp_secret": "TEXT DEFAULT ''", "totp_enabled": "BOOLEAN DEFAULT FALSE",
     "failed_logins": "INTEGER DEFAULT 0", "locked_until": "TIMESTAMP",
+    "notify_contact_email": "BOOLEAN DEFAULT TRUE",
+}
+_UPDATE_COLUMNS = {
+    "ext_message_id": "VARCHAR(255) DEFAULT ''",
 }
 _PACKAGE_COLUMNS = {
     "unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0",
@@ -109,6 +114,7 @@ _INVOICE_COLUMNS = {
 def _ensure_schema() -> None:
     insp = inspect(engine)
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
+    _ensure_columns(insp, "client_updates", _UPDATE_COLUMNS)
     _ensure_columns(insp, "onboardings", _ONBOARDING_COLUMNS)
     _ensure_columns(insp, "time_entries", _TIME_COLUMNS)
     _ensure_columns(insp, "invoices", _INVOICE_COLUMNS)
