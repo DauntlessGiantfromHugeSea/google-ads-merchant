@@ -17,7 +17,7 @@ from app.models import Notification, User, UserRole
 EMAIL_TYPES = {
     "contract_signed", "offer_accepted", "task_assigned", "briefing_new",
     "participant_new", "approval_requested", "approval_responded", "appointment",
-    "wp_update",
+    "wp_update", "client_message",
 }
 
 

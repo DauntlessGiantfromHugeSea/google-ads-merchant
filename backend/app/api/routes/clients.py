@@ -380,16 +380,19 @@ def create_update(
     der Kunde kann ebenfalls schreiben (zwei-Wege-Kommunikation, Kategorie
     'message')."""
     client = get_scoped_client(client_id, user, db)
-    category = "message" if user.role == UserRole.client_user else data.category
+    is_client = user.role == UserRole.client_user
+    category = "message" if is_client else data.category
     upd = ClientUpdate(
         client_id=client_id, title=data.title, body=data.body, category=category,
         author_name=user.full_name or user.email,
     )
     db.add(upd)
+    # Kundennachricht -> eigener Typ "client_message" (loest E-Mail an die Agentur
+    # aus). Agentur-Eintraege bleiben "message" (nur In-App, kein Kunden-Spam).
     notify_counterparts(
         db, author=user, org_id=user.organization_id, client_id=client_id,
-        type_="message",
-        title=f"Neue Nachricht: {client.name}" if user.role != UserRole.client_user
+        type_="client_message" if is_client else "message",
+        title=f"Neue Nachricht: {client.name}" if not is_client
               else f"Nachricht von {client.name}",
         body=(data.title or data.body)[:140],
         link=f"/clients/{client_id}",
