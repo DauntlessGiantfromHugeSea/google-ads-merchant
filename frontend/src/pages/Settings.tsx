@@ -63,6 +63,21 @@ function MailSettings() {
           <button className="btn btn-ghost btn-sm" onClick={disconnect}>Trennen</button>
         </div>
       ) : (
+        <></>
+      )}
+
+      {st?.connected && (
+        <div className="row-inline" style={{ alignItems: "center", marginTop: 12 }}>
+          <button className="btn btn-ghost btn-sm" onClick={async () => {
+            if (!confirm("Allen Kunden-Logins einmalig eine Info-Mail zu den Benachrichtigungs-Einstellungen senden?")) return;
+            try { const r = await api.prefsInfoBroadcast(); toast(`Info-Mail an ${r.count} Kunden gesendet.`); }
+            catch (err) { toast((err as Error).message, "err"); }
+          }}>Kunden über Benachrichtigungen informieren</button>
+          <span className="muted" style={{ fontSize: 12 }}>Einmalige Mail: Kunde kann im Portal einstellen, ob er Kontakt-Mails möchte.</span>
+        </div>
+      )}
+
+      {!st ? null : !st.configured ? null : st.connected ? null : (
         <>
           <p className="muted" style={{ marginTop: 0 }}>Verbinde dein Microsoft-Postfach, um E-Mails direkt aus dem Tool zu senden.</p>
           <button className="btn btn-primary" onClick={connect}>Mit Microsoft anmelden</button>

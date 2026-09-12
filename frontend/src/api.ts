@@ -294,6 +294,7 @@ export const api = {
   notificationsUnread: () => request<{ count: number }>("/notifications/unread-count"),
   notificationsReadAll: () => request<void>("/notifications/read-all", { method: "POST" }),
   notificationRead: (id: string) => request<void>(`/notifications/${id}/read`, { method: "POST" }),
+  prefsInfoBroadcast: () => request<{ ok: boolean; count: number }>("/clients/prefs-info-broadcast", { method: "POST" }),
   notifyPrefs: () => request<{ notify_contact_email: boolean }>("/notifications/prefs"),
   setNotifyPrefs: (notify_contact_email: boolean) =>
     request<{ notify_contact_email: boolean }>("/notifications/prefs",

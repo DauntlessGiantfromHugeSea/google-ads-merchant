@@ -50,6 +50,7 @@ _ORG_COLUMNS = {
     "ms_refresh_token": "TEXT DEFAULT ''", "ms_email": "VARCHAR(255) DEFAULT ''",
     "monitor_token": "VARCHAR(64) DEFAULT ''", "agency_address": "TEXT DEFAULT ''",
     "wp_token": "VARCHAR(64) DEFAULT ''", "wp_secret": "TEXT DEFAULT ''",
+    "wp_digest_sent_at": "TIMESTAMP",
     "email_notifications": "BOOLEAN DEFAULT TRUE", "meeting_link": "VARCHAR(512) DEFAULT ''",
     "login_tagline": "VARCHAR(255) DEFAULT 'Reporting-Plattform für deine Kunden.'",
     "timezone": "VARCHAR(64) DEFAULT 'Europe/Berlin'",
@@ -142,6 +143,20 @@ async def _mail_sync_loop(interval_seconds: int) -> None:
             pass
 
 
+async def _wp_digest_loop() -> None:
+    """Prüft regelmäßig (alle 6 h) und verschickt je Organisation höchstens einmal
+    pro Woche eine Sammelmail mit den fälligen WordPress-Updates."""
+    import asyncio  # noqa: PLC0415
+
+    from app.api.routes.wp import run_wp_digests  # noqa: PLC0415
+    while True:
+        await asyncio.sleep(6 * 60 * 60)
+        try:
+            await asyncio.to_thread(run_wp_digests)
+        except Exception:
+            pass
+
+
 _DEFAULT_SECRET = "dev-insecure-secret-change-me-please-0123456789"
 
 
@@ -176,14 +191,15 @@ async def lifespan(app: FastAPI):
     _check_production_secrets()
     Base.metadata.create_all(bind=engine)
     _ensure_schema()
-    task = None
+    tasks = []
     minutes = getattr(_settings, "mail_sync_interval_minutes", 0) or 0
     if minutes > 0:
-        task = asyncio.create_task(_mail_sync_loop(minutes * 60))
+        tasks.append(asyncio.create_task(_mail_sync_loop(minutes * 60)))
+    tasks.append(asyncio.create_task(_wp_digest_loop()))
     try:
         yield
     finally:
-        if task:
+        for task in tasks:
             task.cancel()
 
 

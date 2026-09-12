@@ -17,7 +17,8 @@ from app.models import Notification, User, UserRole
 EMAIL_TYPES = {
     "contract_signed", "offer_accepted", "task_assigned", "briefing_new",
     "participant_new", "approval_requested", "approval_responded", "appointment",
-    "wp_update",
+    # "wp_update" bewusst NICHT hier: WP-Updates kommen als woechentliche
+    # Sammelmail (siehe app/api/routes/wp.py:run_wp_digests), nicht pro Event.
 }
 
 

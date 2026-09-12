@@ -96,6 +96,8 @@ class Organization(Base):
     # WordPress-Update-Digest-Webhook (WPMonitor o. Ä.) – ein Endpunkt fürs ganze Konto.
     wp_token: Mapped[str] = mapped_column(String(64), default="")
     wp_secret: Mapped[str] = mapped_column(Text, default="")  # optionales Signatur-Secret (verschlüsselt)
+    # Wann zuletzt die woechentliche WP-Update-Sammelmail verschickt wurde.
+    wp_digest_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     users: Mapped[list[User]] = relationship(back_populates="organization", cascade="all, delete-orphan")
     clients: Mapped[list[Client]] = relationship(back_populates="organization", cascade="all, delete-orphan")

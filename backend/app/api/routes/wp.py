@@ -277,3 +277,64 @@ async def wp_webhook(token: str, request: Request, db: Session = Depends(get_db)
                 link=(f"/clients/{cid}" if cid else "/"))
     db.commit()
     return {"ok": True, "new": added, "recovered": len(recoveries)}
+
+
+# ---------- Wöchentliche Sammelmail ----------
+def run_wp_digests() -> int:
+    """Verschickt je Organisation höchstens EINMAL pro Woche eine Sammelmail mit
+    allen aktuell fälligen WordPress-Updates (gruppiert nach Website). Läuft im
+    Hintergrund-Job mit eigener Session. Gibt die Anzahl gesendeter Mails zurück."""
+    from datetime import timedelta  # noqa: PLC0415
+
+    from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+    from app.database import SessionLocal  # noqa: PLC0415
+
+    db = SessionLocal()
+    sent = 0
+    TL = {"core": "WordPress-Core", "plugin": "Plugin", "theme": "Theme"}
+    try:
+        now = datetime.now(timezone.utc)
+        orgs = db.query(Organization).filter(
+            Organization.ms_refresh_token.isnot(None),
+            Organization.ms_refresh_token != "").all()
+        for org in orgs:
+            last = org.wp_digest_sent_at
+            if last is not None and last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+            if last is not None and (now - last) < timedelta(days=7):
+                continue  # in dieser Woche schon verschickt
+            ups = (db.query(WpUpdate).filter(WpUpdate.organization_id == org.id)
+                   .order_by(WpUpdate.site, WpUpdate.type).all())
+            if not ups:
+                continue  # nichts fällig -> keine Mail (Timer läuft nicht los)
+            # Nach Website gruppieren.
+            by_site: dict[str, list] = {}
+            for u in ups:
+                by_site.setdefault(u.site or u.host or "Unbekannte Seite", []).append(u)
+            lines = [f"aktuell sind {len(ups)} Update(s) auf {len(by_site)} Website(s) fällig:", ""]
+            for site, items in by_site.items():
+                lines.append(f"{site}:")
+                for u in items:
+                    ver = f" ({u.installed} → {u.latest})" if u.installed and u.latest else ""
+                    lines.append(f"  • {TL.get(u.type, u.type)}: {u.name}{ver}")
+                lines.append("")
+            base = get_settings().public_base_url.rstrip("/")
+            lines.append(f"Übersicht & Verwaltung: {base}/wp")
+            body = "\n".join(lines)
+            admins = notify._agency_admin_ids(db, org.id)  # noqa: SLF001
+            emails = [u.email for u in db.query(User).filter(User.id.in_(admins)).all() if u.email]
+            html = render_email_html(org, body)
+            ok = False
+            for to in emails:
+                try:
+                    send_via_graph(org, to, f"WordPress-Updates fällig ({len(ups)})", html, html=True)
+                    ok = True
+                except Exception:
+                    pass
+            if ok:
+                org.wp_digest_sent_at = now
+                db.commit()
+                sent += 1
+    finally:
+        db.close()
+    return sent

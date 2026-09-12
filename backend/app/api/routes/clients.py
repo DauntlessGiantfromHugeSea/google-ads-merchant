@@ -66,6 +66,45 @@ from app.schemas import (
 router = APIRouter(prefix="/api/clients", tags=["clients"])
 
 
+@router.post("/prefs-info-broadcast")
+def prefs_info_broadcast(user: User = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    """Schickt allen bestehenden Kunden-Logins einmalig eine Info-Mail, dass sie
+    ihre Benachrichtigungs-Einstellungen im Portal selbst festlegen können."""
+    org = db.get(Organization, user.organization_id)
+    if not org or not org.ms_refresh_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
+    recips = db.query(User).filter(
+        User.organization_id == org.id, User.role == UserRole.client_user,
+        User.is_active.is_(True)).all()
+    targets = [(u.email, u.full_name, u.client_id) for u in recips if u.email]
+
+    def _send() -> None:
+        from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+        from app.database import SessionLocal  # noqa: PLC0415
+        s = SessionLocal()
+        try:
+            o = s.get(Organization, org.id)
+            base = _settings.public_base_url.rstrip("/")
+            for email, full_name, cid in targets:
+                link = f"{base}/clients/{cid}" if cid else base
+                body = (f"Hallo{(' ' + full_name) if full_name else ''},\n\n"
+                        f"in deinem Portal kannst du jetzt selbst einstellen, ob du bei neuen "
+                        f"Nachrichten per E-Mail benachrichtigt werden möchtest. Du findest die "
+                        f"Einstellung nach dem Anmelden unter „Verlauf & Kontakt“.\n\n{link}\n\n"
+                        f"Beste Grüße")
+                try:
+                    send_via_graph(o, email, "Deine Benachrichtigungs-Einstellungen",
+                                   render_email_html(o, body), html=True)
+                except Exception:
+                    pass
+        finally:
+            s.close()
+
+    import threading  # noqa: PLC0415
+    threading.Thread(target=_send, daemon=True).start()
+    return {"ok": True, "count": len(targets)}
+
+
 @router.get("", response_model=list[ClientOut])
 def list_clients(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     q = db.query(Client).filter(Client.organization_id == user.organization_id)
@@ -543,7 +582,10 @@ def invite_client_user(
                 from app.api.routes.mail import render_email_html, send_via_graph
                 body = (f"Hallo{(' ' + data.full_name) if data.full_name else ''},\n\n"
                         f"du wurdest zum Kundenportal eingeladen. Bitte lege hier dein Passwort fest:\n\n"
-                        f"{link}\n\nDer Link ist 14 Tage gültig.\n\nBeste Grüße")
+                        f"{link}\n\nDer Link ist 14 Tage gültig.\n\n"
+                        f"Nach dem Anmelden kannst du unter „Verlauf & Kontakt“ selbst einstellen, "
+                        f"ob du bei neuen Nachrichten per E-Mail benachrichtigt werden möchtest.\n\n"
+                        f"Beste Grüße")
                 send_via_graph(org, data.email, "Deine Einladung zum Kundenportal",
                                render_email_html(org, body), html=True)
                 result["emailed"] = True
