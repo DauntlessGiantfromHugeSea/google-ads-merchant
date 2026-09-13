@@ -93,11 +93,19 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: reporting
       BACKUP_DIR: /backups
-      KEEP_DAILY: ${KEEP_DAILY:-14}
+      BACKUP_INTERVAL: ${BACKUP_INTERVAL:-3600}
+      KEEP_DAILY: ${KEEP_DAILY:-72}
       KEEP_WEEKLY: ${KEEP_WEEKLY:-8}
       # Leer lassen = kein Push; zum Aktivieren in .env.prod setzen:
       SYNOLOGY_RSYNC_TARGET: ${SYNOLOGY_RSYNC_TARGET:-}
       SYNOLOGY_SSH_PORT: ${SYNOLOGY_SSH_PORT:-22}
+      # Verschlüsselter Strato-HiDrive-Upload (WebDAV via rclone crypt):
+      STRATO_WEBDAV_URL: ${STRATO_WEBDAV_URL:-}
+      STRATO_WEBDAV_USER: ${STRATO_WEBDAV_USER:-}
+      STRATO_WEBDAV_PASS: ${STRATO_WEBDAV_PASS:-}
+      STRATO_REMOTE_PATH: ${STRATO_REMOTE_PATH:-northflow-backups}
+      STRATO_KEEP_HOURS: ${STRATO_KEEP_HOURS:-720}
+      BACKUP_CRYPT_PASSWORD: ${BACKUP_CRYPT_PASSWORD:-}
     volumes:
       - ./backups:/backups
       - ./deploy/backup/keys:/keys:ro   # optionaler SSH-Key für den Synology-Push
