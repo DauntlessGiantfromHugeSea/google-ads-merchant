@@ -99,12 +99,13 @@ services:
       # Leer lassen = kein Push; zum Aktivieren in .env.prod setzen:
       SYNOLOGY_RSYNC_TARGET: ${SYNOLOGY_RSYNC_TARGET:-}
       SYNOLOGY_SSH_PORT: ${SYNOLOGY_SSH_PORT:-22}
-      # Verschlüsselter Strato-HiDrive-Upload (WebDAV via rclone crypt):
-      STRATO_WEBDAV_URL: ${STRATO_WEBDAV_URL:-}
-      STRATO_WEBDAV_USER: ${STRATO_WEBDAV_USER:-}
-      STRATO_WEBDAV_PASS: ${STRATO_WEBDAV_PASS:-}
-      STRATO_REMOTE_PATH: ${STRATO_REMOTE_PATH:-northflow-backups}
-      STRATO_KEEP_HOURS: ${STRATO_KEEP_HOURS:-720}
+      # Verschlüsselter Upload zur Hetzner Storage Box (SFTP via rclone crypt):
+      HETZNER_SFTP_HOST: ${HETZNER_SFTP_HOST:-}
+      HETZNER_SFTP_USER: ${HETZNER_SFTP_USER:-}
+      HETZNER_SFTP_PASS: ${HETZNER_SFTP_PASS:-}
+      HETZNER_SFTP_PORT: ${HETZNER_SFTP_PORT:-23}
+      HETZNER_REMOTE_PATH: ${HETZNER_REMOTE_PATH:-northflow-backups}
+      HETZNER_KEEP_HOURS: ${HETZNER_KEEP_HOURS:-720}
       BACKUP_CRYPT_PASSWORD: ${BACKUP_CRYPT_PASSWORD:-}
     volumes:
       - ./backups:/backups

@@ -73,20 +73,22 @@ dann wie oben zurückspielen.
 | `SYNOLOGY_RSYNC_TARGET` | – | Ziel für den optionalen Push (Weg C) |
 | `SYNOLOGY_SSH_PORT` | 22 | SSH-Port der Synology |
 
-## Verschlüsseltes Cloud-Backup zu Strato HiDrive (stündlich)
+## Verschlüsseltes Cloud-Backup zur Hetzner Storage Box (stündlich)
 
-Zusätzlich zur Synology kann jede Sicherung **verschlüsselt zu Strato HiDrive**
-(WebDAV) hochgeladen werden. Verschlüsselung passiert lokal per `rclone crypt`
-(Inhalt **und** Dateinamen); der Schlüssel bleibt auf dem Server.
+Zusätzlich zur Synology kann jede Sicherung **verschlüsselt zur Hetzner Storage
+Box** (z. B. BX11, 1 TB) hochgeladen werden – Upload per **SFTP**, Verschlüsselung
+lokal per `rclone crypt` (Inhalt **und** Dateinamen); der Schlüssel bleibt auf
+dem Server.
 
-In `.env.prod` setzen:
+In `.env.prod` setzen (Host/User stehen in der Hetzner-Konsole):
 
 ```
-STRATO_WEBDAV_URL=https://webdav.hidrive.strato.com/
-STRATO_WEBDAV_USER=<HiDrive-Benutzer>
-STRATO_WEBDAV_PASS=<HiDrive-Passwort>
-STRATO_REMOTE_PATH=northflow-backups
-STRATO_KEEP_HOURS=720          # 30 Tage auf Strato behalten
+HETZNER_SFTP_HOST=u123456.your-storagebox.de
+HETZNER_SFTP_USER=u123456
+HETZNER_SFTP_PASS=<Storage-Box-Passwort>
+HETZNER_SFTP_PORT=23
+HETZNER_REMOTE_PATH=northflow-backups
+HETZNER_KEEP_HOURS=720         # 30 Tage in der Storage Box behalten
 BACKUP_CRYPT_PASSWORD=<starker Schlüssel>   # PFLICHT, sicher notieren!
 BACKUP_INTERVAL=3600           # stündlich
 ```
@@ -97,17 +99,19 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --build bac
 ```
 
 **Wichtig:**
-- `BACKUP_CRYPT_PASSWORD` **niemals** mit ins Strato laden und nicht verlieren –
-  ohne ihn lässt sich das Cloud-Backup nicht entschlüsseln.
-- Ist der Schlüssel nicht gesetzt, wird der Strato-Upload übersprungen
+- `BACKUP_CRYPT_PASSWORD` **niemals** mit in die Storage Box laden und nicht
+  verlieren – ohne ihn lässt sich das Cloud-Backup nicht entschlüsseln.
+- Ist der Schlüssel nicht gesetzt, wird der Upload übersprungen
   (keine unverschlüsselten Daten in der Cloud).
+- Tipp: In der Hetzner-Konsole SSH/SFTP für die Storage Box aktivieren; ein
+  Sub-Account nur für dieses Backup erhöht die Sicherheit.
 
-### Wiederherstellen aus dem Strato-Backup
+### Wiederherstellen aus dem Hetzner-Backup
 
 ```bash
 # im Backup-Container (rclone.conf wird beim ersten Lauf erzeugt):
-rclone --config /tmp/rclone.conf ls stratocrypt:                       # Sicherungen auflisten
-rclone --config /tmp/rclone.conf copy stratocrypt:northflow-XXODED.sql.gz /backups/restore/
+rclone --config /tmp/rclone.conf ls hetznercrypt:                      # Sicherungen auflisten
+rclone --config /tmp/rclone.conf copy hetznercrypt:northflow-XXODED.sql.gz /backups/restore/
 gunzip -c /backups/restore/northflow-*.sql.gz | \
   PGPASSWORD="$POSTGRES_PASSWORD" psql -h db -U "$POSTGRES_USER" -d "$POSTGRES_DB"
 ```
