@@ -42,7 +42,7 @@ services:
       - "8000"
     volumes:
       # Nur lesend: Admin kann die Sicherungen über Tailscale herunterladen.
-      - ./backups:/backups:ro
+      - ./backups:/backups   # Status lesen + „Jetzt sichern"-Trigger schreiben
       # Hochgeladene Dateien (Datei-Anforderungen) – groß, daher auf der Platte.
       - uploads:/data/uploads
     depends_on:

@@ -18,6 +18,7 @@ import json
 import time
 from datetime import datetime, timezone
 
+import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
@@ -384,6 +385,36 @@ def all_sites(user: User = Depends(require_agency), db: Session = Depends(get_db
             "last_snapshot_at": s.last_snapshot_at.isoformat() if s.last_snapshot_at else "",
         })
     return out
+
+
+@router.post("/import-now")
+def import_now(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    """Sofort-Import: holt den kompletten Stand über die Abruf-API des Panels
+    (/api/v1/export) und gleicht den Bestand ab (wie ein snapshot.full).
+    Nützlich für Erstbefüllung/Recovery, ohne auf den nächtlichen Push zu warten."""
+    org = db.get(Organization, user.organization_id)
+    token = settings.northlab_panel_token
+    if not token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                            "NORTHLAB_PANEL_TOKEN ist nicht gesetzt (Bearer-Token aus dem Panel).")
+    base = settings.northlab_panel_url.rstrip("/")
+    try:
+        r = httpx.get(f"{base}/api/v1/export?days=30",
+                      headers={"Authorization": f"Bearer {token}"}, timeout=60)
+    except httpx.HTTPError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Panel nicht erreichbar: {exc}") from exc
+    if r.status_code >= 300:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
+                            f"Panel-Abruf fehlgeschlagen (HTTP {r.status_code}). Token prüfen.")
+    try:
+        data = r.json()
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Panel lieferte kein gültiges JSON.") from exc
+    _apply_snapshot(db, org.id, data)
+    db.commit()
+    sites = db.query(PanelSite).filter(PanelSite.organization_id == org.id).count()
+    clients = db.query(PanelClient).filter(PanelClient.organization_id == org.id).count()
+    return {"ok": True, "sites": sites, "clients": clients}
 
 
 @router.get("/clients")

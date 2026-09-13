@@ -422,23 +422,50 @@ function Backups() {
   const toast = useToast();
   const [items, setItems] = useState<{ name: string; kind: string; size: number; modified: number }[]>([]);
   const [state, setState] = useState<"loading" | "ok" | "blocked" | "empty">("loading");
+  const [status, setStatus] = useState<import("../api").BackupStatus | null>(null);
+  const [running, setRunning] = useState(false);
 
+  const loadStatus = () => api.backupStatus().then((r) => setStatus(r.status)).catch(() => {});
   useEffect(() => {
     api.backups()
       .then((r) => { setItems(r.backups); setState(r.count ? "ok" : "empty"); })
       .catch((e) => setState((e as Error).message.includes("Tailscale") ? "blocked" : "empty"));
+    loadStatus();
   }, []);
 
   const fmtSize = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`;
   const fmtDate = (s: number) => new Date(s * 1000).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+  const fmtIso = (s: string) => s ? new Date(s).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" }) : "–";
   const dl = async (name: string) => { try { await api.downloadBackup(name); } catch (e) { toast((e as Error).message, "err"); } };
+  const badge = (v: string) => v === "ok" ? "✅ ok" : v === "error" ? "❌ Fehler" : "– aus";
+  const runNow = async () => {
+    setRunning(true);
+    try {
+      await api.backupRun();
+      toast("Sicherung gestartet – läuft im Hintergrund.");
+      // Ein paar Sekunden später Status/Liste nachladen (Dump + Upload dauern kurz).
+      setTimeout(() => { loadStatus(); api.backups().then((r) => { setItems(r.backups); setState(r.count ? "ok" : "empty"); }).catch(() => {}); }, 8000);
+    } catch (e) { toast((e as Error).message, "err"); }
+    finally { setTimeout(() => setRunning(false), 8000); }
+  };
 
   return (
     <div className="section">
-      <h2>Datensicherung</h2>
+      <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <h2>Datensicherung</h2>
+        <button className="btn btn-primary btn-sm" onClick={runNow} disabled={running}>{running ? "sichert…" : "Jetzt sichern"}</button>
+      </div>
       <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-        Nächtliche Backups der Datenbank. Download nur für Admins und nur über Tailscale (die Dumps enthalten alle Daten).
+        Stündliche Backups der Datenbank, zusätzlich verschlüsselt zur Hetzner Storage Box.
+        Download nur für Admins und nur über Tailscale (die Dumps enthalten alle Daten).
       </p>
+      <div className="card" style={{ boxShadow: "none", marginBottom: 12, fontSize: 13 }}>
+        <div><strong>Letzte Sicherung:</strong> {status ? fmtIso(status.dumped_at) : "–"}{status?.size ? ` · ${status.size}` : ""}</div>
+        <div className="muted" style={{ marginTop: 4 }}>
+          Hetzner (verschlüsselt): {status ? badge(status.hetzner) : "–"}
+          {status && status.synology !== "off" ? ` · Synology: ${badge(status.synology)}` : ""}
+        </div>
+      </div>
       {state === "loading" && <div className="muted">lädt…</div>}
       {state === "blocked" && (
         <div className="muted" style={{ fontSize: 13 }}>

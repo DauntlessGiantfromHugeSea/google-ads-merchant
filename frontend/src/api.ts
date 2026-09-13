@@ -128,6 +128,9 @@ export interface PanelSiteAdmin {
 export interface PanelClientRow {
   panel_client_id: number; name: string; contact: string; email: string; nf_client_id: string | null;
 }
+export interface BackupStatus {
+  dumped_at: string; size: string; hetzner: string; synology: string; interval: number; ok: boolean;
+}
 export interface ActivityEntry {
   id: string; occurred_at: string; author: string; source: string; text: string; client_visible: boolean;
 }
@@ -793,6 +796,9 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
   },
+  backupStatus: () => request<{ status: BackupStatus | null; latest_file: { name: string; size: number; modified: number } | null; count: number }>("/admin/backup/status"),
+  backupRun: () => request<{ ok: boolean }>("/admin/backup/run", { method: "POST" }),
+  panelImportNow: () => request<{ ok: boolean; sites: number; clients: number }>("/panel/import-now", { method: "POST" }),
 
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),
