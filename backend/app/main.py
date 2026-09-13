@@ -10,7 +10,7 @@ from app.api.routes import (
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
     panel, payments, projects, reports, requests, richdocs, secrets, seo, tasks, team,
-    timetracking, webhooks, wp,
+    timetracking, webhooks,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -146,20 +146,6 @@ async def _mail_sync_loop(interval_seconds: int) -> None:
             pass
 
 
-async def _wp_digest_loop() -> None:
-    """Prüft regelmäßig (alle 6 h) und verschickt je Organisation höchstens einmal
-    pro Woche eine Sammelmail mit den fälligen WordPress-Updates."""
-    import asyncio  # noqa: PLC0415
-
-    from app.api.routes.wp import run_wp_digests  # noqa: PLC0415
-    while True:
-        await asyncio.sleep(6 * 60 * 60)
-        try:
-            await asyncio.to_thread(run_wp_digests)
-        except Exception:
-            pass
-
-
 _DEFAULT_SECRET = "dev-insecure-secret-change-me-please-0123456789"
 
 
@@ -198,7 +184,6 @@ async def lifespan(app: FastAPI):
     minutes = getattr(_settings, "mail_sync_interval_minutes", 0) or 0
     if minutes > 0:
         tasks.append(asyncio.create_task(_mail_sync_loop(minutes * 60)))
-    tasks.append(asyncio.create_task(_wp_digest_loop()))
     try:
         yield
     finally:
@@ -285,8 +270,6 @@ app.include_router(richdocs.router)
 app.include_router(payments.router)
 app.include_router(invoices.client_router)
 app.include_router(assets.router)
-app.include_router(wp.router)
-app.include_router(wp.client_router)
 app.include_router(webhooks.router)
 app.include_router(webhooks.public_router)
 app.include_router(panel.router)

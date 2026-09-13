@@ -107,14 +107,6 @@ export interface Monitor {
   id: string; name: string; url: string; status: string; message: string;
   client_id: string | null; client_name: string; changed_at: string;
 }
-export interface WpUpdate {
-  id: string; type: string; name: string; slug: string; installed: string; latest: string;
-  site: string; host: string; url: string; first_seen: string;
-}
-export interface WpSiteRow {
-  host: string; site: string; url: string; client_id: string | null; client_name: string;
-  pending: number; last_seen: string;
-}
 export interface ClientWebhookRow {
   id: string; label: string; url: string; client_visible: boolean;
   last_event_at: string; last_text: string;
@@ -343,11 +335,6 @@ export const api = {
     request<Monitor>(`/monitoring/${id}`, { method: "PATCH", body: JSON.stringify({ client_id: clientId }) }),
   deleteMonitor: (id: string) => request<void>(`/monitoring/${id}`, { method: "DELETE" }),
   // WordPress-Updates (WPMonitor-Digest)
-  wpWebhookUrl: () => request<{ url: string; has_secret: boolean }>("/wp/webhook-url"),
-  wpSetSecret: (secret: string) => request<{ has_secret: boolean }>("/wp/secret", { method: "POST", body: JSON.stringify({ secret }) }),
-  wpClient: (cid: string) => request<{ has_site: boolean; updates: WpUpdate[] }>(`/clients/${cid}/wp`),
-  wpMarkDone: (cid: string, id: string) => request<{ ok: boolean }>(`/clients/${cid}/wp/${id}/done`, { method: "POST" }),
-  wpMarkAllDone: (cid: string) => request<{ ok: boolean; done: number }>(`/clients/${cid}/wp/done-all`, { method: "POST" }),
   webhooks: (cid: string) => request<ClientWebhookRow[]>(`/clients/${cid}/webhooks`),
   createWebhook: (cid: string, label: string, client_visible: boolean) =>
     request<ClientWebhookRow>(`/clients/${cid}/webhooks`, { method: "POST", body: JSON.stringify({ label, client_visible }) }),
@@ -368,9 +355,6 @@ export const api = {
   editActivity: (cid: string, id: string, d: { text?: string; occurred_at?: string; client_visible?: boolean }) =>
     request<ActivityEntry>(`/clients/${cid}/activity/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteActivity: (cid: string, id: string) => request<void>(`/clients/${cid}/activity/${id}`, { method: "DELETE" }),
-  wpSites: () => request<WpSiteRow[]>("/wp/sites"),
-  wpAssignSite: (host: string, clientId: string | null) =>
-    request<{ ok: boolean }>("/wp/sites/assign", { method: "POST", body: JSON.stringify({ host, client_id: clientId }) }),
 
   clientMonitors: (cid: string) => request<Monitor[]>(`/monitoring/client/${cid}`),
   clientMonitorEvents: (cid: string) => request<MonitorEvent[]>(`/monitoring/client/${cid}/events`),

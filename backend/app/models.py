@@ -1064,43 +1064,6 @@ class MailMessage(Base):
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
 
 
-class WpUpdate(Base):
-    """Ein aktuell fälliges WordPress-Update (Core/Plugin/Theme) einer Website.
-    Kommt aus dem WPMonitor-Digest; per Host dem Kunden zugeordnet (client_id
-    kann leer sein, wenn die Seite keinem Kunden zugeordnet werden konnte)."""
-
-    __tablename__ = "wp_updates"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
-    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True, index=True)
-    site: Mapped[str] = mapped_column(String(255), default="")     # Anzeigename der Seite
-    host: Mapped[str] = mapped_column(String(255), default="", index=True)
-    url: Mapped[str] = mapped_column(String(512), default="")
-    type: Mapped[str] = mapped_column(String(16), default="plugin")  # core / plugin / theme
-    slug: Mapped[str] = mapped_column(String(200), default="")
-    name: Mapped[str] = mapped_column(String(255), default="")
-    installed: Mapped[str] = mapped_column(String(40), default="")
-    latest: Mapped[str] = mapped_column(String(40), default="")
-    first_seen: Mapped[str] = mapped_column(String(40), default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-
-
-class WpSite(Base):
-    """Bekannte WordPress-Seite aus dem WPMonitor-Digest + Zuordnung zum Kunden.
-    Eine Zeile je Host. Zuordnung: automatisch per Domain, manuell überschreibbar."""
-
-    __tablename__ = "wp_sites"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
-    host: Mapped[str] = mapped_column(String(255), default="", index=True)
-    client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True)
-    site: Mapped[str] = mapped_column(String(255), default="")
-    url: Mapped[str] = mapped_column(String(512), default="")
-    last_seen: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
-
-
 class ActivityEntry(Base):
     """Protokoll je Kunde: „Was wurde wann gemacht." Manuelle Einträge (Agentur)
     und automatische Systemeinträge (z. B. WordPress-Update erledigt). Optional
