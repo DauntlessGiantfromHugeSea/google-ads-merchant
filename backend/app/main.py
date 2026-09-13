@@ -9,7 +9,7 @@ from app.api.routes import (
     activity, admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
-    payments, projects, reports, requests, richdocs, secrets, seo, tasks, team,
+    panel, payments, projects, reports, requests, richdocs, secrets, seo, tasks, team,
     timetracking, webhooks, wp,
 )
 from app.config import get_settings
@@ -289,6 +289,9 @@ app.include_router(wp.router)
 app.include_router(wp.client_router)
 app.include_router(webhooks.router)
 app.include_router(webhooks.public_router)
+app.include_router(panel.router)
+app.include_router(panel.public_router)
+app.include_router(panel.client_router)
 app.include_router(activity.router)
 
 

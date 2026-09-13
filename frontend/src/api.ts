@@ -119,6 +119,23 @@ export interface ClientWebhookRow {
   id: string; label: string; url: string; client_visible: boolean;
   last_event_at: string; last_text: string;
 }
+export interface PanelSitePublic {
+  id: number; name: string; url: string; online: boolean; uptime_status: string;
+  connected: boolean; status: string; pending_updates: number; security_score: number | null;
+  uptime_percent: number | null; downtime_seconds: number; avg_response_ms: number | null;
+  uptime_daily: { day: string; percent: number | null; downtime_seconds: number }[];
+  incidents: { started_at: string; ended_at: string; seconds: number; ongoing: boolean }[];
+  updates_applied: { type: string; name: string; from_version: string; to_version: string; at: string }[];
+}
+export interface PanelSiteAdmin {
+  id: number; name: string; url: string; status: string; uptime_status: string;
+  wp_version: string; php_version: string; security_score: number | null; pending_updates: number;
+  uptime_percent: number | null; downtime_seconds: number; panel_client_id: number | null;
+  panel_client_name: string; nf_client_id: string | null; last_snapshot_at: string;
+}
+export interface PanelClientRow {
+  panel_client_id: number; name: string; contact: string; email: string; nf_client_id: string | null;
+}
 export interface ActivityEntry {
   id: string; occurred_at: string; author: string; source: string; text: string; client_visible: boolean;
 }
@@ -340,6 +357,11 @@ export const api = {
     request<ClientWebhookRow>(`/clients/${cid}/webhooks/${wid}/rotate`, { method: "POST" }),
   deleteWebhook: (cid: string, wid: string) =>
     request<void>(`/clients/${cid}/webhooks/${wid}`, { method: "DELETE" }),
+  clientPanel: (cid: string) => request<{ linked: boolean; sites: PanelSitePublic[] }>(`/clients/${cid}/panel`),
+  panelSites: () => request<PanelSiteAdmin[]>("/panel/sites"),
+  panelClients: () => request<PanelClientRow[]>("/panel/clients"),
+  panelAssign: (pcid: number, nf_client_id: string) =>
+    request<{ ok: boolean }>(`/panel/clients/${pcid}/assign`, { method: "POST", body: JSON.stringify({ nf_client_id }) }),
   activity: (cid: string) => request<ActivityEntry[]>(`/clients/${cid}/activity`),
   addActivity: (cid: string, d: { text: string; occurred_at?: string; client_visible?: boolean }) =>
     request<ActivityEntry>(`/clients/${cid}/activity`, { method: "POST", body: JSON.stringify(d) }),

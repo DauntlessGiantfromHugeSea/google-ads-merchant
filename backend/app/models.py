@@ -17,6 +17,7 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    Integer,
     String,
     Text,
 )
@@ -1135,3 +1136,109 @@ class ClientWebhook(Base):
     last_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_text: Mapped[str] = mapped_column(String(300), default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+# ---------------------------------------------------------------------------
+# NorthLab Control Panel (panel.north-lab.de) – WordPress-Verwaltung per Webhook
+# ---------------------------------------------------------------------------
+class PanelClient(Base):
+    """Kunde, wie ihn das Control-Panel kennt (eigene stabile ID). Optional an
+    einen North-Flow-Client gekoppelt (nf_client_id), damit dessen Login im Portal
+    die eigenen Seiten sieht."""
+
+    __tablename__ = "panel_clients"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    panel_client_id: Mapped[int] = mapped_column(Integer, index=True)   # ID im Panel
+    name: Mapped[str] = mapped_column(String(255), default="")
+    contact: Mapped[str] = mapped_column(String(255), default="")
+    email: Mapped[str] = mapped_column(String(255), default="")
+    nf_client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True, index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class PanelSite(Base):
+    """Eine vom Panel verwaltete WordPress-Seite (aktueller Stand)."""
+
+    __tablename__ = "panel_sites"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    panel_site_id: Mapped[int] = mapped_column(Integer, index=True)      # ID im Panel
+    panel_client_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    name: Mapped[str] = mapped_column(String(255), default="")
+    url: Mapped[str] = mapped_column(String(512), default="")
+    status: Mapped[str] = mapped_column(String(24), default="")          # connected/error/pending
+    uptime_status: Mapped[str] = mapped_column(String(16), default="unknown")  # up/down/unknown
+    wp_version: Mapped[str] = mapped_column(String(40), default="")
+    php_version: Mapped[str] = mapped_column(String(40), default="")
+    security_score: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 0-100
+    pending_updates: Mapped[int] = mapped_column(Integer, default=0)
+    uptime_percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    downtime_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    avg_response_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_snapshot_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class PanelEvent(Base):
+    """Roh-Verlauf aller Zustellungen – zugleich Idempotenz (delivery_id UNIQUE)."""
+
+    __tablename__ = "panel_events"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    delivery_id: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    event: Mapped[str] = mapped_column(String(64), default="", index=True)
+    panel_site_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    message: Mapped[str] = mapped_column(Text, default="")
+    payload: Mapped[dict] = mapped_column(JSON, default=dict)
+    processed: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class PanelSiteUpdate(Base):
+    """Eingespieltes Update – Basis für „das haben wir für Sie getan"."""
+
+    __tablename__ = "panel_site_updates"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    panel_site_id: Mapped[int] = mapped_column(Integer, index=True)
+    type: Mapped[str] = mapped_column(String(24), default="")            # core/plugin/theme/translation
+    slug: Mapped[str] = mapped_column(String(200), default="")
+    name: Mapped[str] = mapped_column(String(255), default="")
+    from_version: Mapped[str] = mapped_column(String(40), default="")
+    to_version: Mapped[str] = mapped_column(String(40), default="")
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class PanelIncident(Base):
+    """Störung/Downtime einer Seite (ended_at leer = läuft noch)."""
+
+    __tablename__ = "panel_incidents"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    panel_site_id: Mapped[int] = mapped_column(Integer, index=True)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    seconds: Mapped[int] = mapped_column(Integer, default=0)
+    reason: Mapped[str] = mapped_column(String(255), default="")
+    source: Mapped[str] = mapped_column(String(40), default="")
+
+
+class PanelUptimeDaily(Base):
+    """Tages-Verfügbarkeit je Seite (für den Balkenverlauf)."""
+
+    __tablename__ = "panel_uptime_daily"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    panel_site_id: Mapped[int] = mapped_column(Integer, index=True)
+    day: Mapped[str] = mapped_column(String(10), default="", index=True)  # YYYY-MM-DD (UTC)
+    percent: Mapped[float | None] = mapped_column(Float, nullable=True)
+    downtime_seconds: Mapped[int] = mapped_column(Integer, default=0)

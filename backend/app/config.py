@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     microsoft_client_secret: str = ""
     microsoft_tenant: str = "common"
 
+    # NorthLab Control Panel (panel.north-lab.de): geteiltes Secret für die
+    # HMAC-Signatur der Webhooks und Bearer-Token für die Abruf-API.
+    northlab_panel_secret: str = ""
+    northlab_panel_token: str = ""
+    northlab_panel_url: str = "https://panel.north-lab.de"
+
     # E-Mail-Konversationen: Postfach automatisch alle X Minuten abgleichen
     # (0 = aus, dann nur der Button). Standard: alle 5 Minuten.
     mail_sync_interval_minutes: int = 5
