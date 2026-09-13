@@ -9,7 +9,8 @@ from app.api.routes import (
     activity, admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
-    payments, projects, reports, requests, richdocs, secrets, seo, tasks, team, timetracking, wp,
+    payments, projects, reports, requests, richdocs, secrets, seo, synology, tasks, team,
+    timetracking, wp,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -42,6 +43,8 @@ _CLIENT_COLUMNS = {
     "webhook_confirm_text": "TEXT DEFAULT ''", "webhook_from": "VARCHAR(255) DEFAULT ''",
     "webhook_logo_base64": "TEXT DEFAULT ''", "webhook_logo_content_type": "VARCHAR(64) DEFAULT ''",
     "contact_reference": "VARCHAR(40) DEFAULT ''",
+    "synology_enabled": "BOOLEAN DEFAULT FALSE", "synology_token": "VARCHAR(64) DEFAULT ''",
+    "synology_client_visible": "BOOLEAN DEFAULT TRUE",
 }
 _ORG_COLUMNS = {
     "logo_base64": "TEXT DEFAULT ''", "logo_content_type": "VARCHAR(64) DEFAULT ''",
@@ -284,6 +287,8 @@ app.include_router(invoices.client_router)
 app.include_router(assets.router)
 app.include_router(wp.router)
 app.include_router(wp.client_router)
+app.include_router(synology.router)
+app.include_router(synology.public_router)
 app.include_router(activity.router)
 
 

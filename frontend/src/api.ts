@@ -115,6 +115,9 @@ export interface WpSiteRow {
   host: string; site: string; url: string; client_id: string | null; client_name: string;
   pending: number; last_seen: string;
 }
+export interface SynologyStatus {
+  enabled: boolean; client_visible: boolean; webhook_url: string;
+}
 export interface ActivityEntry {
   id: string; occurred_at: string; author: string; source: string; text: string; client_visible: boolean;
 }
@@ -327,6 +330,12 @@ export const api = {
   wpClient: (cid: string) => request<{ has_site: boolean; updates: WpUpdate[] }>(`/clients/${cid}/wp`),
   wpMarkDone: (cid: string, id: string) => request<{ ok: boolean }>(`/clients/${cid}/wp/${id}/done`, { method: "POST" }),
   wpMarkAllDone: (cid: string) => request<{ ok: boolean; done: number }>(`/clients/${cid}/wp/done-all`, { method: "POST" }),
+  synologyStatus: (cid: string) => request<SynologyStatus>(`/synology/${cid}/status`),
+  synologyEnable: (cid: string, enabled: boolean) =>
+    request<SynologyStatus>(`/synology/${cid}/enable`, { method: "POST", body: JSON.stringify({ enabled }) }),
+  synologySettings: (cid: string, client_visible: boolean) =>
+    request<SynologyStatus>(`/synology/${cid}/settings`, { method: "POST", body: JSON.stringify({ client_visible }) }),
+  synologyRotate: (cid: string) => request<SynologyStatus>(`/synology/${cid}/rotate`, { method: "POST" }),
   activity: (cid: string) => request<ActivityEntry[]>(`/clients/${cid}/activity`),
   addActivity: (cid: string, d: { text: string; occurred_at?: string; client_visible?: boolean }) =>
     request<ActivityEntry>(`/clients/${cid}/activity`, { method: "POST", body: JSON.stringify(d) }),

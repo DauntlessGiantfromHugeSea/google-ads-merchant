@@ -27,6 +27,7 @@ import ProjectDoc from "../sections/ProjectDoc";
 import ClientTime from "../sections/ClientTime";
 import ClientInvoices from "../sections/ClientInvoices";
 import WpUpdates from "../sections/WpUpdates";
+import Synology from "../sections/Synology";
 import Activity from "../sections/Activity";
 import ErrorBoundary from "../components/ErrorBoundary";
 
@@ -158,6 +159,7 @@ export default function ClientDetail() {
               <ErrorBoundary label="SEO"><Seo clientId={id} isAgency={isAgency} /></ErrorBoundary>
               <ErrorBoundary label="Monitoring"><Monitoring clientId={id} clientName={client.name} isAgency={isAgency} /></ErrorBoundary>
               <ErrorBoundary label="WordPress-Updates"><WpUpdates clientId={id} isAgency={isAgency} /></ErrorBoundary>
+              <ErrorBoundary label="Synology"><Synology clientId={id} isAgency={isAgency} /></ErrorBoundary>
             </>
           )}
           {section === "participants" && user?.role !== "agency_member" && (

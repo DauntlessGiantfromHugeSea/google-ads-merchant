@@ -206,6 +206,12 @@ class Client(Base):
     webhook_logo_base64: Mapped[str] = mapped_column(Text, default="")
     webhook_logo_content_type: Mapped[str] = mapped_column(String(64), default="")
 
+    # Synology-NAS-Statuswebhook (pro Kunde eigene URL). Meldungen landen im
+    # Protokoll + als Benachrichtigung an die Agentur.
+    synology_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    synology_token: Mapped[str] = mapped_column(String(64), default="")
+    synology_client_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"))
     organization: Mapped[Organization] = relationship(back_populates="clients")
 
