@@ -353,17 +353,67 @@ client_router = APIRouter(prefix="/api/clients/{client_id}/panel", tags=["panel"
 def client_panel(client_id: str, user: User = Depends(get_current_user),
                  db: Session = Depends(get_db)) -> dict:
     client = get_scoped_client(client_id, user, db)
-    # Zuordnung: welche Panel-Kunden hängen an diesem North-Flow-Client?
+    sites = _sites_for_client(db, client)
+    return {"linked": bool(sites), "sites": [_site_public(db, s) for s in sites]}
+
+
+def _sites_for_client(db: Session, client) -> list:
+    """Seiten dieses Kunden: (1) direkt zugeordnet + (2) über einen zugeordneten Panel-Kunden."""
+    org_id = client.organization_id
     pcs = db.query(PanelClient).filter(
-        PanelClient.organization_id == client.organization_id,
-        PanelClient.nf_client_id == client.id).all()
+        PanelClient.organization_id == org_id, PanelClient.nf_client_id == client.id).all()
     ids = [pc.panel_client_id for pc in pcs]
-    if not ids:
-        return {"linked": False, "sites": []}
-    sites = db.query(PanelSite).filter(
-        PanelSite.organization_id == client.organization_id,
-        PanelSite.panel_client_id.in_(ids)).order_by(PanelSite.name).all()
-    return {"linked": True, "sites": [_site_public(db, s) for s in sites]}
+    q = db.query(PanelSite).filter(PanelSite.organization_id == org_id)
+    if ids:
+        q = q.filter((PanelSite.nf_client_id == client.id) | (PanelSite.panel_client_id.in_(ids)))
+    else:
+        q = q.filter(PanelSite.nf_client_id == client.id)
+    return q.order_by(PanelSite.name).all()
+
+
+@client_router.post("/report-mail")
+def report_mail(client_id: str, body: dict | None = None, user: User = Depends(require_agency),
+                db: Session = Depends(get_db)) -> dict:
+    """Schickt dem Kunden den aktuellen Website-Statusbericht als gebrandete Mail."""
+    from .mail import render_email_html, send_via_graph  # noqa: PLC0415
+    client = get_scoped_client(client_id, user, db)
+    org = db.get(Organization, client.organization_id)
+    sites = _sites_for_client(db, client)
+    if not sites:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Diesem Kunden sind keine Seiten zugeordnet.")
+    to = ((body or {}).get("to") or client.contact_email or client.billing_email or "").strip()
+    if not to:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Keine Empfänger-E-Mail hinterlegt.")
+
+    tz = getattr(org, "timezone", "") or "Europe/Berlin"
+    try:
+        from zoneinfo import ZoneInfo  # noqa: PLC0415
+        stamp = datetime.now(ZoneInfo(tz)).strftime("%d.%m.%Y %H:%M")
+    except Exception:
+        stamp = datetime.now(timezone.utc).strftime("%d.%m.%Y %H:%M")
+
+    lines = [f"Statusbericht deiner Website(s) – Stand {stamp}", ""]
+    for s in sites:
+        lines.append(f"{s.name} ({s.url})")
+        lines.append(f"  Status: {'erreichbar' if s.uptime_status == 'up' else 'nicht erreichbar' if s.uptime_status == 'down' else 'unbekannt'}")
+        if s.uptime_percent is not None:
+            lines.append(f"  Verfügbarkeit (30 Tage): {s.uptime_percent:.2f} %")
+        lines.append(f"  Offene Updates: {s.pending_updates}")
+        if s.security_score is not None:
+            lines.append(f"  Sicherheit: {s.security_score}/100")
+        recent = (db.query(PanelSiteUpdate).filter(
+            PanelSiteUpdate.organization_id == org.id, PanelSiteUpdate.panel_site_id == s.panel_site_id)
+            .order_by(PanelSiteUpdate.applied_at.desc()).limit(5).all())
+        if recent:
+            lines.append("  Zuletzt eingespielt:")
+            for u in recent:
+                ver = f" ({u.from_version} → {u.to_version})" if u.from_version and u.to_version else ""
+                lines.append(f"    • {u.name}{ver}")
+        lines.append("")
+    lines.append("Bei Fragen einfach auf diese Mail antworten.")
+    body_text = "\n".join(lines)
+    send_via_graph(org, to, "Statusbericht deiner Website(s)", render_email_html(org, body_text), html=True)
+    return {"ok": True, "to": to}
 
 
 # ---------- Interne Übersicht (Agentur, alle Kunden) ----------
@@ -377,6 +427,8 @@ def all_sites(user: User = Depends(require_agency), db: Session = Depends(get_db
     out = []
     for s in sites:
         pc = pcs.get(s.panel_client_id)
+        # Effektive Zuordnung: direkte Seiten-Zuordnung hat Vorrang, sonst über den Panel-Kunden.
+        nf = s.nf_client_id or (pc.nf_client_id if pc else None)
         out.append({
             "id": s.panel_site_id, "name": s.name, "url": s.url, "status": s.status,
             "uptime_status": s.uptime_status, "wp_version": s.wp_version, "php_version": s.php_version,
@@ -384,10 +436,29 @@ def all_sites(user: User = Depends(require_agency), db: Session = Depends(get_db
             "uptime_percent": s.uptime_percent, "downtime_seconds": s.downtime_seconds,
             "panel_client_id": s.panel_client_id,
             "panel_client_name": pc.name if pc else "",
-            "nf_client_id": pc.nf_client_id if pc else None,
+            "nf_client_id": nf,
             "last_snapshot_at": s.last_snapshot_at.isoformat() if s.last_snapshot_at else "",
         })
     return out
+
+
+@router.post("/sites/{panel_site_id}/assign")
+def assign_site(panel_site_id: int, body: dict, user: User = Depends(require_agency),
+                db: Session = Depends(get_db)) -> dict:
+    """Ordnet eine Panel-Seite direkt einem North-Flow-Kunden zu (falls das Panel
+    keine Kunden-Verknüpfung mitliefert)."""
+    org = db.get(Organization, user.organization_id)
+    s = db.query(PanelSite).filter(
+        PanelSite.organization_id == org.id, PanelSite.panel_site_id == panel_site_id).first()
+    if not s:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Seite unbekannt")
+    nf_id = (body.get("nf_client_id") or "").strip() or None
+    if nf_id and not db.query(Client.id).filter(
+            Client.id == nf_id, Client.organization_id == org.id).first():
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kunde unbekannt")
+    s.nf_client_id = nf_id
+    db.commit()
+    return {"ok": True, "nf_client_id": s.nf_client_id}
 
 
 @router.post("/import-now")

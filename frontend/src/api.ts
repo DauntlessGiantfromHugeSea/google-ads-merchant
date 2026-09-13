@@ -348,10 +348,14 @@ export const api = {
   deleteWebhook: (cid: string, wid: string) =>
     request<void>(`/clients/${cid}/webhooks/${wid}`, { method: "DELETE" }),
   clientPanel: (cid: string) => request<{ linked: boolean; sites: PanelSitePublic[] }>(`/clients/${cid}/panel`),
+  panelReportMail: (cid: string, to?: string) =>
+    request<{ ok: boolean; to: string }>(`/clients/${cid}/panel/report-mail`, { method: "POST", body: JSON.stringify(to ? { to } : {}) }),
   panelSites: () => request<PanelSiteAdmin[]>("/panel/sites"),
   panelClients: () => request<PanelClientRow[]>("/panel/clients"),
   panelAssign: (pcid: number, nf_client_id: string) =>
     request<{ ok: boolean }>(`/panel/clients/${pcid}/assign`, { method: "POST", body: JSON.stringify({ nf_client_id }) }),
+  panelAssignSite: (sid: number, nf_client_id: string) =>
+    request<{ ok: boolean }>(`/panel/sites/${sid}/assign`, { method: "POST", body: JSON.stringify({ nf_client_id }) }),
   activity: (cid: string) => request<ActivityEntry[]>(`/clients/${cid}/activity`),
   addActivity: (cid: string, d: { text: string; occurred_at?: string; client_visible?: boolean }) =>
     request<ActivityEntry>(`/clients/${cid}/activity`, { method: "POST", body: JSON.stringify(d) }),

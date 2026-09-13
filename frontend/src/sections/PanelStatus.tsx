@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { PanelSitePublic, api } from "../api";
+import { useToast } from "../toast";
 
 const fmtDur = (s: number) => {
   if (!s) return "0 Min.";
@@ -78,9 +79,18 @@ function SiteCard({ s }: { s: PanelSitePublic }) {
 }
 
 export default function PanelStatus({ clientId, isAgency }: { clientId: string; isAgency: boolean }) {
+  const toast = useToast();
   const [data, setData] = useState<{ linked: boolean; sites: PanelSitePublic[] } | null>(null);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => { api.clientPanel(clientId).then(setData).catch(() => setData({ linked: false, sites: [] })); }, [clientId]);
+
+  const sendReport = async () => {
+    setSending(true);
+    try { const r = await api.panelReportMail(clientId); toast(`Statusbericht an ${r.to} gesendet.`); }
+    catch (e) { toast((e as Error).message, "err"); }
+    finally { setSending(false); }
+  };
 
   if (!data) return null;
   if (!data.linked) {
@@ -95,7 +105,10 @@ export default function PanelStatus({ clientId, isAgency }: { clientId: string; 
 
   return (
     <div className="section">
-      <h2>Website-Status</h2>
+      <div className="row-inline" style={{ justifyContent: "space-between", alignItems: "center" }}>
+        <h2>Website-Status</h2>
+        {isAgency && <button className="btn btn-ghost btn-sm" onClick={sendReport} disabled={sending}>{sending ? "sendet…" : "Statusbericht per Mail"}</button>}
+      </div>
       <p className="muted" style={{ marginTop: 0 }}>Live-Stand deiner Website(s): Verfügbarkeit, Updates und Sicherheit.</p>
       {data.sites.map((s) => <SiteCard key={s.id} s={s} />)}
     </div>

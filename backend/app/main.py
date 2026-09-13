@@ -82,6 +82,9 @@ _USER_COLUMNS = {
 _UPDATE_COLUMNS = {
     "ext_message_id": "VARCHAR(255) DEFAULT ''",
 }
+_PANEL_SITE_COLUMNS = {
+    "nf_client_id": "VARCHAR(36)",
+}
 _PACKAGE_COLUMNS = {
     "unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0",
     "category": "VARCHAR(80) DEFAULT ''",
@@ -119,6 +122,7 @@ def _ensure_schema() -> None:
     insp = inspect(engine)
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
     _ensure_columns(insp, "client_updates", _UPDATE_COLUMNS)
+    _ensure_columns(insp, "panel_sites", _PANEL_SITE_COLUMNS)
     _ensure_columns(insp, "onboardings", _ONBOARDING_COLUMNS)
     _ensure_columns(insp, "time_entries", _TIME_COLUMNS)
     _ensure_columns(insp, "invoices", _INVOICE_COLUMNS)

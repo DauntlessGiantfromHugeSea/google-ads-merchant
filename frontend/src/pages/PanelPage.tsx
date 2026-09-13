@@ -24,6 +24,11 @@ export default function PanelPage() {
     try { await api.panelAssign(pcid, nf); toast("Zuordnung gespeichert."); }
     catch (e) { toast((e as Error).message, "err"); load(); }
   };
+  const assignSite = async (sid: number, nf: string) => {
+    setSites((arr) => arr.map((x) => x.id === sid ? { ...x, nf_client_id: nf || null } : x));
+    try { await api.panelAssignSite(sid, nf); toast("Seite zugeordnet."); }
+    catch (e) { toast((e as Error).message, "err"); load(); }
+  };
 
   const totalPending = useMemo(() => sites.reduce((n, s) => n + (s.pending_updates || 0), 0), [sites]);
   const clientOpts = [...clients].sort((a, b) => a.name.localeCompare(b.name));
@@ -33,6 +38,7 @@ export default function PanelPage() {
       <div className="page-head"><h1 style={{ marginBottom: 2 }}>Website-Verwaltung</h1>
         <div className="muted" style={{ fontSize: 13 }}>NorthLab Control Panel · {sites.length} Seiten · {totalPending} offene Updates</div></div>
 
+      {pClients.length > 0 && (
       <div className="section">
         <h2>Kunden-Zuordnung</h2>
         <p className="muted" style={{ marginTop: 0 }}>Ordne jeden Panel-Kunden einem Kunden im Tool zu – nur dann sieht dessen Login die eigenen Seiten.</p>
@@ -54,9 +60,11 @@ export default function PanelPage() {
           </div>
         )}
       </div>
+      )}
 
       <div className="section">
         <h2>Alle Seiten</h2>
+        <p className="muted" style={{ marginTop: 0 }}>Ordne jede Seite direkt einem Kunden zu – dann sieht dessen Login die Seite unter „Website-Status".</p>
         {!loaded ? <div className="muted">Lädt…</div> : sites.length === 0 ? (
           <div className="empty">Noch keine Seiten empfangen. Sobald das Panel den ersten Snapshot sendet, erscheinen sie hier.</div>
         ) : (
@@ -69,8 +77,12 @@ export default function PanelPage() {
                 {sites.map((s) => (
                   <tr key={s.id}>
                     <td><strong>{s.name}</strong><div className="muted" style={{ fontSize: 11 }}>{s.url}</div></td>
-                    <td>{s.panel_client_name || <span className="muted">—</span>}
-                      {!s.nf_client_id && <span className="muted" style={{ fontSize: 11 }}> (nicht zugeordnet)</span>}</td>
+                    <td>
+                      <select className="select" value={s.nf_client_id || ""} onChange={(e) => assignSite(s.id, e.target.value)}>
+                        <option value="">— nicht zugeordnet —</option>
+                        {clientOpts.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </td>
                     <td><span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                       <span style={{ width: 9, height: 9, borderRadius: 999, background: dot(s.uptime_status), display: "inline-block" }} />
                       {s.status || s.uptime_status}</span></td>

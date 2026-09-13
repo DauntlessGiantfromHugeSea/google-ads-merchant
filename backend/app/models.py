@@ -1130,6 +1130,9 @@ class PanelSite(Base):
     organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
     panel_site_id: Mapped[int] = mapped_column(Integer, index=True)      # ID im Panel
     panel_client_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
+    # Direkte Zuordnung Seite -> North-Flow-Kunde (falls das Panel keine
+    # Kunden-Verknüpfung mitliefert). Vorrang vor der Panel-Kunden-Zuordnung.
+    nf_client_id: Mapped[str | None] = mapped_column(ForeignKey("clients.id"), nullable=True, index=True)
     name: Mapped[str] = mapped_column(String(255), default="")
     url: Mapped[str] = mapped_column(String(512), default="")
     status: Mapped[str] = mapped_column(String(24), default="")          # connected/error/pending
