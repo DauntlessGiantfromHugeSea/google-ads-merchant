@@ -1116,3 +1116,22 @@ class ActivityEntry(Base):
     text: Mapped[str] = mapped_column(Text, default="")
     client_visible: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class ClientWebhook(Base):
+    """Generischer, benannter Eingangs-Webhook je Kunde. Beliebige Dienste
+    (Synology, Uptime-Monitor, Contact-Form-Plugins, eigene Skripte …) posten
+    hierher; jede Meldung wird als Protokoll-Eintrag gespeichert und die Agentur
+    benachrichtigt. Ersetzt bespoke Einzel-Webhooks durch EIN erweiterbares System."""
+
+    __tablename__ = "client_webhooks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"), index=True)
+    label: Mapped[str] = mapped_column(String(120), default="")           # z. B. "Synology-NAS"
+    token: Mapped[str] = mapped_column(String(64), default="", index=True)
+    client_visible: Mapped[bool] = mapped_column(Boolean, default=True)   # Protokoll für Kunde sichtbar
+    last_event_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_text: Mapped[str] = mapped_column(String(300), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

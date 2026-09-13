@@ -9,8 +9,8 @@ from app.api.routes import (
     activity, admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
-    payments, projects, reports, requests, richdocs, secrets, seo, synology, tasks, team,
-    timetracking, wp,
+    payments, projects, reports, requests, richdocs, secrets, seo, tasks, team,
+    timetracking, webhooks, wp,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -287,8 +287,8 @@ app.include_router(invoices.client_router)
 app.include_router(assets.router)
 app.include_router(wp.router)
 app.include_router(wp.client_router)
-app.include_router(synology.router)
-app.include_router(synology.public_router)
+app.include_router(webhooks.router)
+app.include_router(webhooks.public_router)
 app.include_router(activity.router)
 
 
