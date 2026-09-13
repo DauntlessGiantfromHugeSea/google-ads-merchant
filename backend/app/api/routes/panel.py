@@ -270,8 +270,11 @@ async def webhook(request: Request, background: BackgroundTasks, db: Session = D
     except (TypeError, ValueError) as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Zeitstempel fehlt/ungültig") from exc
 
+    # Delivery-ID ist optional (manche Panels senden keine) -> dann dient der
+    # Body-Hash als Idempotenz-Schlüssel: Wiederholungen desselben Pakets haben
+    # denselben Body und werden so ebenfalls nur einmal verarbeitet.
     if not delivery:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Delivery-ID fehlt")
+        delivery = "body:" + hashlib.sha256(raw).hexdigest()
 
     # d) Idempotenz: schon gesehen -> 200, nichts erneut tun
     if db.query(PanelEvent.id).filter(PanelEvent.delivery_id == delivery).first():
