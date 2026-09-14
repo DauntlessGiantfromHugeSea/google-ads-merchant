@@ -12,9 +12,11 @@ import secrets as pysecrets
 import shutil
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from sqlalchemy.orm import Session
+from starlette.background import BackgroundTask
 
 from app.api.deps import get_db, require_agency
 from app.config import get_settings
@@ -263,10 +265,12 @@ def verify(token: str, body: dict, db: Session = Depends(get_db)) -> dict:
     s.code_expires = None
     db.commit()
     access = create_access_token(s.id, {"k": "share"})
+    # Der externe Link wird NICHT herausgegeben – der Download läuft server-seitig
+    # über North Flow, damit Öffnungslimit/Ablauf wirklich greifen.
     return {"access": access,
             "files": [{"idx": i, "name": f.get("name", ""), "size": f.get("size", 0),
                        "content_type": f.get("content_type", "")} for i, f in enumerate(s.files or [])],
-            "link_url": s.link_url, "link_password": s.link_password}
+            "has_link": bool(s.link_url)}
 
 
 def _share_from_access(token: str, request: Request, db: Session) -> FileShare:
@@ -292,3 +296,45 @@ def download(token: str, idx: int, request: Request, db: Session = Depends(get_d
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Datei nicht mehr vorhanden.")
     return FileResponse(f["path"], media_type=f.get("content_type") or "application/octet-stream",
                         filename=f.get("name") or "datei")
+
+
+def _nc_url(link: str) -> str:
+    """Nextcloud-Freigabe-Link -> direkter Download-URL (Datei oder ZIP)."""
+    u = (link or "").strip().rstrip("/")
+    if "/s/" in u and not u.endswith("/download"):
+        u += "/download"
+    return u
+
+
+def _nc_token(link: str) -> str:
+    m = re.search(r"/s/([A-Za-z0-9]+)", link or "")
+    return m.group(1) if m else ""
+
+
+@public_router.get("/{token}/link")
+def link_download(token: str, request: Request, db: Session = Depends(get_db)):
+    """Streamt die Datei(en) server-seitig von der externen Quelle (z. B. Nextcloud)
+    an den verifizierten Empfänger – der Link selbst bleibt verborgen, damit
+    Öffnungslimit/Ablauf greifen."""
+    s = _share_from_access(token, request, db)
+    if not s.link_url:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Kein Link hinterlegt.")
+    url = _nc_url(s.link_url)
+    auth = (_nc_token(s.link_url) or "anonymous", s.link_password) if s.link_password else None
+    try:
+        cm = httpx.stream("GET", url, follow_redirects=True, timeout=None, auth=auth)
+        resp = cm.__enter__()
+    except httpx.HTTPError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Quelle nicht erreichbar: {exc}") from exc
+    ctype = resp.headers.get("content-type", "")
+    if resp.status_code >= 300 or ctype.startswith("text/html"):
+        cm.__exit__(None, None, None)
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
+                            "Download von der Quelle fehlgeschlagen – Link oder Passwort prüfen.")
+    cd = resp.headers.get("content-disposition", "")
+    m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', cd)
+    fname = m.group(1) if m else ((s.title or "dateien").strip().replace(" ", "_") or "dateien") + ".zip"
+    return StreamingResponse(
+        resp.iter_bytes(), media_type=ctype or "application/octet-stream",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
+        background=BackgroundTask(cm.__exit__, None, None, None))

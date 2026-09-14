@@ -67,8 +67,8 @@ export default function FileShares() {
           <div className="field"><label>… oder Link für große Dateien (z. B. Nextcloud) – optional</label>
             <input className="input" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://cloud.deine-domain.de/s/abc123" /></div>
           {linkUrl.trim() && (
-            <div className="field"><label>Passwort der Nextcloud-Freigabe (optional)</label>
-              <input className="input" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="wird dem Empfänger nach Verifizierung angezeigt" /></div>
+            <div className="field"><label>Passwort der Nextcloud-Freigabe (falls gesetzt)</label>
+              <input className="input" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="nur serverseitig – der Empfänger sieht Link & Passwort nie" /></div>
           )}
           <div className="field"><label>Titel (optional)</label>
             <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Vertragsunterlagen" /></div>

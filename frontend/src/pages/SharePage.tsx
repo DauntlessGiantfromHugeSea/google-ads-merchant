@@ -30,7 +30,7 @@ export default function SharePage() {
   const [code, setCode] = useState("");
   const [access, setAccess] = useState("");
   const [files, setFiles] = useState<ShareFile[]>([]);
-  const [link, setLink] = useState<{ url: string; password: string }>({ url: "", password: "" });
+  const [hasLink, setHasLink] = useState(false);
   const [logoOk, setLogoOk] = useState(true);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -46,12 +46,18 @@ export default function SharePage() {
     e.preventDefault(); setBusy(true); setMsg("");
     try {
       const r = await api.shareVerify(token, email.trim(), code.trim());
-      setAccess(r.access); setFiles(r.files); setLink({ url: r.link_url || "", password: r.link_password || "" }); setStep("files");
+      setAccess(r.access); setFiles(r.files); setHasLink(r.has_link); setStep("files");
     } catch (err) { setMsg((err as Error).message); } finally { setBusy(false); }
   };
   const download = async (f: ShareFile) => {
     try { await api.shareDownload(token, f.idx, access, f.name); }
     catch { setMsg("Download fehlgeschlagen – ggf. ist die Freigabe abgelaufen."); }
+  };
+  const [dl, setDl] = useState(false);
+  const downloadLink = async () => {
+    setDl(true); setMsg("");
+    try { await api.shareLinkDownload(token, access); }
+    catch (err) { setMsg((err as Error).message); } finally { setDl(false); }
   };
 
   const Frame = ({ children }: { children: React.ReactNode }) => (
@@ -97,13 +103,10 @@ export default function SharePage() {
       {step === "files" && (
         <div>
           <p style={S.p}>Verifiziert ✓ — deine Dateien:</p>
-          {link.url && (
-            <div style={{ marginBottom: files.length ? 16 : 0 }}>
-              <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, marginTop: 0, display: "block", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}>Dateien öffnen ↗</a>
-              {link.password && (
-                <p style={{ ...S.p, margin: "10px 0 0" }}>Passwort für die Freigabe: <strong style={{ color: C.ink }}>{link.password}</strong></p>
-              )}
-            </div>
+          {hasLink && (
+            <button onClick={downloadLink} disabled={dl} style={{ ...S.btn, marginTop: 0, marginBottom: files.length ? 16 : 0, opacity: dl ? .6 : 1 }}>
+              {dl ? "lädt…" : "Dateien herunterladen"}
+            </button>
           )}
           {files.map((f) => (
             <div key={f.idx} style={S.row}>

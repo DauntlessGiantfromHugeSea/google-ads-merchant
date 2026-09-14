@@ -366,12 +366,20 @@ export const api = {
   shareRequestCode: (token: string, email: string) =>
     request<{ sent: boolean }>(`/share/${token}/request-code`, { method: "POST", body: JSON.stringify({ email }) }),
   shareVerify: (token: string, email: string, code: string) =>
-    request<{ access: string; files: ShareFile[]; link_url: string; link_password: string }>(`/share/${token}/verify`, { method: "POST", body: JSON.stringify({ email, code }) }),
+    request<{ access: string; files: ShareFile[]; has_link: boolean }>(`/share/${token}/verify`, { method: "POST", body: JSON.stringify({ email, code }) }),
   async shareDownload(token: string, idx: number, access: string, name: string) {
     const res = await fetch(`/api/share/${token}/files/${idx}`, { headers: { Authorization: `Bearer ${access}` } });
     if (!res.ok) throw new Error("Download fehlgeschlagen");
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+  },
+  async shareLinkDownload(token: string, access: string) {
+    const res = await fetch(`/api/share/${token}/link`, { headers: { Authorization: `Bearer ${access}` } });
+    if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.detail || "Download fehlgeschlagen"); }
+    const cd = res.headers.get("Content-Disposition") || "";
+    const m = /filename="?([^"]+)"?/.exec(cd);
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = m ? m[1] : "dateien"; a.click(); URL.revokeObjectURL(url);
   },
   panelSites: () => request<PanelSiteAdmin[]>("/panel/sites"),
   panelClients: () => request<PanelClientRow[]>("/panel/clients"),
