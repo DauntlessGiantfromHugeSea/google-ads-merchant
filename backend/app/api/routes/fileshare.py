@@ -96,6 +96,7 @@ def _out(s: FileShare) -> dict:
         "expires_at": _aware(s.expires_at).isoformat() if s.expires_at else "",
         "closed": _gone(s), "file_count": len(s.files or []),
         "files": [{"name": f.get("name", ""), "size": f.get("size", 0)} for f in (s.files or [])],
+        "has_link": bool(s.link_url), "link_url": s.link_url,
         "url": _public_url(s.token), "created_at": _aware(s.created_at).isoformat() if s.created_at else "",
     }
 
@@ -117,22 +118,27 @@ async def create_share(
     expires_hours: int = Form(168),
     title: str = Form(""),
     notify: bool = Form(True),
-    files: list[UploadFile] = File(...),
+    link_url: str = Form(""),
+    link_password: str = Form(""),
+    files: list[UploadFile] | None = File(None),
     user: User = Depends(require_agency),
     db: Session = Depends(get_db),
 ) -> dict:
     allowed = (allowed_email or "").strip().lower()
     if not _EMAIL_RE.match(allowed):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte eine gültige Empfänger-E-Mail angeben.")
-    if not files:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte mindestens eine Datei wählen.")
+    files = [f for f in (files or []) if f and f.filename]
+    link = (link_url or "").strip()
+    if not files and not link:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte Dateien wählen oder einen Link angeben.")
     max_opens = max(0, int(max_opens))
     expires_hours = max(1, int(expires_hours))
 
     share = FileShare(
         organization_id=user.organization_id, created_by=(user.full_name or user.email),
         title=(title or "").strip()[:255], token=pysecrets.token_urlsafe(24),
-        allowed_email=allowed, max_opens=max_opens,
+        allowed_email=allowed, max_opens=max_opens, link_url=link[:1024],
+        link_password=(link_password or "").strip()[:255],
         expires_at=_now() + timedelta(hours=expires_hours))
     db.add(share)
     db.flush()  # id für den Ordner
@@ -259,7 +265,8 @@ def verify(token: str, body: dict, db: Session = Depends(get_db)) -> dict:
     access = create_access_token(s.id, {"k": "share"})
     return {"access": access,
             "files": [{"idx": i, "name": f.get("name", ""), "size": f.get("size", 0),
-                       "content_type": f.get("content_type", "")} for i, f in enumerate(s.files or [])]}
+                       "content_type": f.get("content_type", "")} for i, f in enumerate(s.files or [])],
+            "link_url": s.link_url, "link_password": s.link_password}
 
 
 def _share_from_access(token: str, request: Request, db: Session) -> FileShare:

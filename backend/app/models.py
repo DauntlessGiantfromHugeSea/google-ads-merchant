@@ -1233,6 +1233,10 @@ class FileShare(Base):
     code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     files: Mapped[list] = mapped_column(JSON, default=list)               # [{name,content_type,size,path}]
+    # Alternativ/zusätzlich: externer Freigabe-Link (z. B. Nextcloud) hinter der
+    # Verifizierung – für große Dateien, die nicht durch die App geladen werden.
+    link_url: Mapped[str] = mapped_column(String(1024), default="")
+    link_password: Mapped[str] = mapped_column(String(255), default="")
     last_access: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # Dateien gelöscht
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

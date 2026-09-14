@@ -135,6 +135,7 @@ export interface ShareRow {
   id: string; title: string; allowed_email: string; max_opens: number; opens: number;
   expires_at: string; closed: boolean; file_count: number;
   files: { name: string; size: number }[]; url: string; created_at: string;
+  has_link: boolean; link_url: string;
 }
 export interface ShareFile { idx: number; name: string; size: number; content_type: string; }
 export interface ActivityEntry {
@@ -365,7 +366,7 @@ export const api = {
   shareRequestCode: (token: string, email: string) =>
     request<{ sent: boolean }>(`/share/${token}/request-code`, { method: "POST", body: JSON.stringify({ email }) }),
   shareVerify: (token: string, email: string, code: string) =>
-    request<{ access: string; files: ShareFile[] }>(`/share/${token}/verify`, { method: "POST", body: JSON.stringify({ email, code }) }),
+    request<{ access: string; files: ShareFile[]; link_url: string; link_password: string }>(`/share/${token}/verify`, { method: "POST", body: JSON.stringify({ email, code }) }),
   async shareDownload(token: string, idx: number, access: string, name: string) {
     const res = await fetch(`/api/share/${token}/files/${idx}`, { headers: { Authorization: `Bearer ${access}` } });
     if (!res.ok) throw new Error("Download fehlgeschlagen");

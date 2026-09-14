@@ -85,6 +85,9 @@ _UPDATE_COLUMNS = {
 _PANEL_SITE_COLUMNS = {
     "nf_client_id": "VARCHAR(36)",
 }
+_SHARE_COLUMNS = {
+    "link_url": "VARCHAR(1024) DEFAULT ''", "link_password": "VARCHAR(255) DEFAULT ''",
+}
 _PACKAGE_COLUMNS = {
     "unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0",
     "category": "VARCHAR(80) DEFAULT ''",
@@ -123,6 +126,7 @@ def _ensure_schema() -> None:
     _ensure_columns(insp, "clients", _CLIENT_COLUMNS)
     _ensure_columns(insp, "client_updates", _UPDATE_COLUMNS)
     _ensure_columns(insp, "panel_sites", _PANEL_SITE_COLUMNS)
+    _ensure_columns(insp, "file_shares", _SHARE_COLUMNS)
     _ensure_columns(insp, "onboardings", _ONBOARDING_COLUMNS)
     _ensure_columns(insp, "time_entries", _TIME_COLUMNS)
     _ensure_columns(insp, "invoices", _INVOICE_COLUMNS)

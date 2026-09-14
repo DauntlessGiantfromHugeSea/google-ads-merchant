@@ -4,6 +4,24 @@ import { ShareFile, api } from "../api";
 
 const fmtSize = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1e3))} KB`;
 
+const C = {
+  navy: "#1c2140", coral: "#c4553f", pink: "#f8836b",
+  ink: "#15161a", muted: "#6b6b72", border: "#ececf1",
+};
+const S = {
+  page: { minHeight: "100vh", display: "grid", placeItems: "center", padding: 20, background: "#0f1017", fontFamily: "system-ui, -apple-system, Segoe UI, Arial, sans-serif" } as React.CSSProperties,
+  card: { width: "100%", maxWidth: 460, background: "#fff", borderRadius: 18, overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,.45)" } as React.CSSProperties,
+  banner: { background: `linear-gradient(120deg, ${C.navy}, ${C.coral} 70%, ${C.pink})`, padding: "26px 24px", textAlign: "center" } as React.CSSProperties,
+  body: { padding: "26px 28px", color: C.ink } as React.CSSProperties,
+  h: { margin: "0 0 8px", color: C.navy, fontSize: 21, fontWeight: 700 } as React.CSSProperties,
+  p: { color: C.muted, fontSize: 14, lineHeight: 1.6, margin: "0 0 16px" } as React.CSSProperties,
+  input: { width: "100%", padding: "12px 14px", border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 15, boxSizing: "border-box", background: "#fbfbfd", color: C.ink } as React.CSSProperties,
+  btn: { width: "100%", padding: "12px 16px", border: 0, borderRadius: 10, background: C.coral, color: "#fff", fontSize: 15, fontWeight: 600, cursor: "pointer", marginTop: 12 } as React.CSSProperties,
+  link: { background: "transparent", border: 0, color: C.muted, fontSize: 13, cursor: "pointer", marginTop: 10, display: "block", width: "100%" } as React.CSSProperties,
+  row: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, padding: "11px 0", borderBottom: `1px solid ${C.border}` } as React.CSSProperties,
+  small: { padding: "8px 12px", border: 0, borderRadius: 8, background: C.navy, color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" } as React.CSSProperties,
+};
+
 export default function SharePage() {
   const { token = "" } = useParams();
   const [info, setInfo] = useState<{ title: string; closed: boolean } | null>(null);
@@ -12,6 +30,8 @@ export default function SharePage() {
   const [code, setCode] = useState("");
   const [access, setAccess] = useState("");
   const [files, setFiles] = useState<ShareFile[]>([]);
+  const [link, setLink] = useState<{ url: string; password: string }>({ url: "", password: "" });
+  const [logoOk, setLogoOk] = useState(true);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -19,70 +39,84 @@ export default function SharePage() {
 
   const requestCode = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setMsg("");
-    try {
-      await api.shareRequestCode(token, email.trim());
-      setStep("code");
-      setMsg("Falls die Adresse berechtigt ist, wurde ein 6-stelliger Code an sie gesendet.");
-    } catch (err) { setMsg((err as Error).message); }
-    finally { setBusy(false); }
+    try { await api.shareRequestCode(token, email.trim()); setStep("code"); setMsg("Falls die Adresse berechtigt ist, wurde ein Code an sie gesendet."); }
+    catch (err) { setMsg((err as Error).message); } finally { setBusy(false); }
   };
   const verify = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setMsg("");
     try {
       const r = await api.shareVerify(token, email.trim(), code.trim());
-      setAccess(r.access); setFiles(r.files); setStep("files");
-    } catch (err) { setMsg((err as Error).message); }
-    finally { setBusy(false); }
+      setAccess(r.access); setFiles(r.files); setLink({ url: r.link_url || "", password: r.link_password || "" }); setStep("files");
+    } catch (err) { setMsg((err as Error).message); } finally { setBusy(false); }
   };
   const download = async (f: ShareFile) => {
     try { await api.shareDownload(token, f.idx, access, f.name); }
     catch { setMsg("Download fehlgeschlagen – ggf. ist die Freigabe abgelaufen."); }
   };
 
-  const card: React.CSSProperties = { maxWidth: 440, margin: "8vh auto", background: "#fff", borderRadius: 16, border: "1px solid #e8e8ee", padding: 28, fontFamily: "system-ui, sans-serif", color: "#15161a" };
+  const Frame = ({ children }: { children: React.ReactNode }) => (
+    <div style={S.page}><div style={S.card}>
+      <div style={S.banner}>
+        {logoOk
+          ? <img src="/api/branding/logo" alt="" onError={() => setLogoOk(false)} style={{ maxHeight: 44, maxWidth: "70%", display: "inline-block" }} />
+          : <div style={{ color: "#fff", fontWeight: 700, letterSpacing: 1, fontSize: 18 }}>Dateifreigabe</div>}
+      </div>
+      <div style={S.body}>{children}</div>
+    </div></div>
+  );
 
-  if (!info) return <div style={card}>Lädt…</div>;
+  if (!info) return <Frame><p style={S.p}>Lädt…</p></Frame>;
   if (info.closed) return (
-    <div style={card}>
-      <h2 style={{ marginTop: 0 }}>Nicht mehr verfügbar</h2>
-      <p style={{ color: "#6b6b72" }}>Diese Dateifreigabe ist abgelaufen oder wurde bereits (maximal oft) geöffnet.</p>
-    </div>
+    <Frame>
+      <h1 style={S.h}>Nicht mehr verfügbar</h1>
+      <p style={S.p}>Diese Dateifreigabe ist abgelaufen oder wurde bereits (maximal oft) geöffnet.</p>
+    </Frame>
   );
 
   return (
-    <div style={card}>
-      <h2 style={{ marginTop: 0 }}>{info.title || "Sichere Dateifreigabe"}</h2>
+    <Frame>
+      <h1 style={S.h}>{info.title || "Sichere Dateifreigabe"}</h1>
 
       {step === "email" && (
         <form onSubmit={requestCode}>
-          <p style={{ color: "#6b6b72", marginTop: 0 }}>Zum Öffnen bitte deine E-Mail-Adresse bestätigen. Du erhältst einen Code an diese Adresse.</p>
-          <input className="input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="deine@mail.de" style={{ width: "100%", padding: 10, marginBottom: 10 }} />
-          <button className="btn btn-primary" disabled={busy} style={{ width: "100%" }}>{busy ? "…" : "Code anfordern"}</button>
+          <p style={S.p}>Zum Öffnen bitte deine E-Mail-Adresse bestätigen. Du bekommst einen Code an genau diese Adresse.</p>
+          <input style={S.input} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="deine@mail.de" />
+          <button style={{ ...S.btn, opacity: busy ? .6 : 1 }} disabled={busy}>{busy ? "…" : "Code anfordern"}</button>
         </form>
       )}
 
       {step === "code" && (
         <form onSubmit={verify}>
-          <p style={{ color: "#6b6b72", marginTop: 0 }}>Gib den 6-stelligen Code ein, den wir an <strong>{email}</strong> gesendet haben.</p>
-          <input className="input" inputMode="numeric" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" style={{ width: "100%", padding: 10, marginBottom: 10, letterSpacing: 4, textAlign: "center", fontSize: 18 }} />
-          <button className="btn btn-primary" disabled={busy} style={{ width: "100%" }}>{busy ? "…" : "Öffnen"}</button>
-          <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8 }} onClick={() => setStep("email")}>zurück</button>
+          <p style={S.p}>Gib den 6-stelligen Code ein, den wir an <strong style={{ color: C.ink }}>{email}</strong> gesendet haben.</p>
+          <input style={{ ...S.input, letterSpacing: 6, textAlign: "center", fontSize: 20 }} inputMode="numeric" required value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" />
+          <button style={{ ...S.btn, opacity: busy ? .6 : 1 }} disabled={busy}>{busy ? "…" : "Öffnen"}</button>
+          <button type="button" style={S.link} onClick={() => { setStep("email"); setMsg(""); }}>← andere E-Mail</button>
         </form>
       )}
 
       {step === "files" && (
         <div>
-          <p style={{ color: "#6b6b72", marginTop: 0 }}>Verifiziert. Deine Dateien:</p>
+          <p style={S.p}>Verifiziert ✓ — deine Dateien:</p>
+          {link.url && (
+            <div style={{ marginBottom: files.length ? 16 : 0 }}>
+              <a href={link.url} target="_blank" rel="noopener noreferrer" style={{ ...S.btn, marginTop: 0, display: "block", textAlign: "center", textDecoration: "none", boxSizing: "border-box" }}>Dateien öffnen ↗</a>
+              {link.password && (
+                <p style={{ ...S.p, margin: "10px 0 0" }}>Passwort für die Freigabe: <strong style={{ color: C.ink }}>{link.password}</strong></p>
+              )}
+            </div>
+          )}
           {files.map((f) => (
-            <div key={f.idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: "1px solid #eee" }}>
-              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name} <span style={{ color: "#9aa0a6", fontSize: 12 }}>({fmtSize(f.size)})</span></span>
-              <button className="btn btn-primary btn-sm" onClick={() => download(f)}>laden</button>
+            <div key={f.idx} style={S.row}>
+              <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 14 }}>
+                {f.name} <span style={{ color: "#9aa0a6", fontSize: 12 }}>({fmtSize(f.size)})</span>
+              </span>
+              <button style={S.small} onClick={() => download(f)}>laden</button>
             </div>
           ))}
         </div>
       )}
 
-      {msg && <p style={{ color: "#6b6b72", fontSize: 13, marginTop: 12 }}>{msg}</p>}
-    </div>
+      {msg && <p style={{ ...S.p, margin: "14px 0 0", fontSize: 13 }}>{msg}</p>}
+    </Frame>
   );
 }

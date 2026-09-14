@@ -13,6 +13,8 @@ export default function FileShares() {
   const [maxOpens, setMaxOpens] = useState(1);
   const [hours, setHours] = useState(168);
   const [notify, setNotify] = useState(true);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
   const [files, setFiles] = useState<FileList | null>(null);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -22,7 +24,8 @@ export default function FileShares() {
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!files || files.length === 0) { toast("Bitte Dateien wählen.", "err"); return; }
+    const hasFiles = files && files.length > 0;
+    if (!hasFiles && !linkUrl.trim()) { toast("Bitte Dateien wählen oder einen Link angeben.", "err"); return; }
     if (!email.trim()) { toast("Bitte Empfänger-E-Mail angeben.", "err"); return; }
     setBusy(true);
     try {
@@ -32,10 +35,12 @@ export default function FileShares() {
       fd.append("expires_hours", String(hours));
       fd.append("title", title.trim());
       fd.append("notify", String(notify));
-      Array.from(files).forEach((f) => fd.append("files", f));
+      fd.append("link_url", linkUrl.trim());
+      fd.append("link_password", linkPassword.trim());
+      if (hasFiles) Array.from(files).forEach((f) => fd.append("files", f));
       const r = await api.createShare(fd);
       setRows((x) => [r, ...x]);
-      setTitle(""); setEmail(""); setFiles(null); if (fileRef.current) fileRef.current.value = "";
+      setTitle(""); setEmail(""); setLinkUrl(""); setLinkPassword(""); setFiles(null); if (fileRef.current) fileRef.current.value = "";
       navigator.clipboard?.writeText(r.url).catch(() => {});
       toast("Freigabe erstellt – Link kopiert." + (notify ? " Empfänger benachrichtigt." : ""));
     } catch (err) { toast((err as Error).message, "err"); }
@@ -52,13 +57,19 @@ export default function FileShares() {
   return (
     <>
       <div className="page-head"><h1>Dateifreigabe</h1>
-        <div className="muted" style={{ fontSize: 13 }}>Dateien sicher teilen – nur für eine bestimmte Mail, per Code, limitiert auf Öffnungen & Dauer.</div></div>
+        <div className="muted" style={{ fontSize: 13 }}>Dateien sicher teilen – nur für eine bestimmte Mail, per Code, limitiert auf Öffnungen & Dauer. Für sehr große Dateien einen Nextcloud-Link hinterlegen (statt Upload).</div></div>
 
       <div className="section">
         <h2>Neue Freigabe</h2>
         <form className="form-light" onSubmit={create}>
           <div className="field"><label>Dateien</label>
             <input ref={fileRef} className="input" type="file" multiple onChange={(e) => setFiles(e.target.files)} /></div>
+          <div className="field"><label>… oder Link für große Dateien (z. B. Nextcloud) – optional</label>
+            <input className="input" value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} placeholder="https://cloud.deine-domain.de/s/abc123" /></div>
+          {linkUrl.trim() && (
+            <div className="field"><label>Passwort der Nextcloud-Freigabe (optional)</label>
+              <input className="input" value={linkPassword} onChange={(e) => setLinkPassword(e.target.value)} placeholder="wird dem Empfänger nach Verifizierung angezeigt" /></div>
+          )}
           <div className="field"><label>Titel (optional)</label>
             <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="z. B. Vertragsunterlagen" /></div>
           <div className="field"><label>Empfänger-E-Mail (nur diese darf öffnen)</label>
@@ -91,7 +102,7 @@ export default function FileShares() {
                   <strong>{s.title || "Dateifreigabe"}</strong>
                   <span className={`status-badge ${s.closed ? "st-pausiert" : "st-aktiv"}`} style={{ marginLeft: 8 }}>{s.closed ? "abgelaufen" : "aktiv"}</span>
                   <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-                    {s.file_count} Datei(en) · nur {s.allowed_email} · {s.opens}/{s.max_opens === 0 ? "∞" : s.max_opens} geöffnet · bis {fmt(s.expires_at)}
+                    {s.has_link ? "Link-Freigabe" : `${s.file_count} Datei(en)`} · nur {s.allowed_email} · {s.opens}/{s.max_opens === 0 ? "∞" : s.max_opens} geöffnet · bis {fmt(s.expires_at)}
                   </div>
                   {!s.closed && <input className="input form-light" readOnly value={s.url} onFocus={(e) => e.currentTarget.select()} style={{ marginTop: 4, fontSize: 12 }} />}
                 </div>
