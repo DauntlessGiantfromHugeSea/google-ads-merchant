@@ -1208,3 +1208,31 @@ class PanelUptimeDaily(Base):
     day: Mapped[str] = mapped_column(String(10), default="", index=True)  # YYYY-MM-DD (UTC)
     percent: Mapped[float | None] = mapped_column(Float, nullable=True)
     downtime_seconds: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class FileShare(Base):
+    """Sichere Dateifreigabe: mehrere Dateien, nur für eine vorab definierte
+    Empfänger-Mail (Code-Verifizierung), limitiert auf Öffnungen und Dauer.
+    Nach Ablauf/Aufbrauch werden die Dateien vom Server gelöscht."""
+
+    __tablename__ = "file_shares"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    title: Mapped[str] = mapped_column(String(255), default="")
+    token: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+
+    allowed_email: Mapped[str] = mapped_column(String(255), default="")   # nur diese Mail darf öffnen
+    max_opens: Mapped[int] = mapped_column(Integer, default=1)            # 0 = unbegrenzt
+    opens: Mapped[int] = mapped_column(Integer, default=0)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Verifizierungs-Code (an die erlaubte Mail gesendet)
+    code: Mapped[str] = mapped_column(String(12), default="")
+    code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    files: Mapped[list] = mapped_column(JSON, default=list)               # [{name,content_type,size,path}]
+    last_access: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # Dateien gelöscht
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

@@ -131,6 +131,12 @@ export interface PanelClientRow {
 export interface BackupStatus {
   dumped_at: string; size: string; hetzner: string; synology: string; interval: number; ok: boolean;
 }
+export interface ShareRow {
+  id: string; title: string; allowed_email: string; max_opens: number; opens: number;
+  expires_at: string; closed: boolean; file_count: number;
+  files: { name: string; size: number }[]; url: string; created_at: string;
+}
+export interface ShareFile { idx: number; name: string; size: number; content_type: string; }
 export interface ActivityEntry {
   id: string; occurred_at: string; author: string; source: string; text: string; client_visible: boolean;
 }
@@ -350,6 +356,22 @@ export const api = {
   clientPanel: (cid: string) => request<{ linked: boolean; sites: PanelSitePublic[] }>(`/clients/${cid}/panel`),
   panelReportMail: (cid: string, to?: string) =>
     request<{ ok: boolean; to: string }>(`/clients/${cid}/panel/report-mail`, { method: "POST", body: JSON.stringify(to ? { to } : {}) }),
+  // Dateifreigabe (Agentur)
+  shares: () => request<ShareRow[]>("/shares"),
+  createShare: (fd: FormData) => request<ShareRow>("/shares", { method: "POST", body: fd }),
+  deleteShare: (id: string) => request<void>(`/shares/${id}`, { method: "DELETE" }),
+  // Dateifreigabe (öffentlich)
+  shareInfo: (token: string) => request<{ title: string; closed: boolean; file_count?: number }>(`/share/${token}`),
+  shareRequestCode: (token: string, email: string) =>
+    request<{ sent: boolean }>(`/share/${token}/request-code`, { method: "POST", body: JSON.stringify({ email }) }),
+  shareVerify: (token: string, email: string, code: string) =>
+    request<{ access: string; files: ShareFile[] }>(`/share/${token}/verify`, { method: "POST", body: JSON.stringify({ email, code }) }),
+  async shareDownload(token: string, idx: number, access: string, name: string) {
+    const res = await fetch(`/api/share/${token}/files/${idx}`, { headers: { Authorization: `Bearer ${access}` } });
+    if (!res.ok) throw new Error("Download fehlgeschlagen");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+  },
   panelSites: () => request<PanelSiteAdmin[]>("/panel/sites"),
   panelClients: () => request<PanelClientRow[]>("/panel/clients"),
   panelAssign: (pcid: number, nf_client_id: string) =>

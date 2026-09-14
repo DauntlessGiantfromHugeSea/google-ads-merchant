@@ -31,6 +31,8 @@ const Briefe = lazy(() => import("./pages/Briefe"));
 const Upload = lazy(() => import("./pages/Upload"));
 const AiTransparency = lazy(() => import("./pages/AiTransparency"));
 const PanelPage = lazy(() => import("./pages/PanelPage"));
+const FileShares = lazy(() => import("./pages/FileShares"));
+const SharePage = lazy(() => import("./pages/SharePage"));
 
 function Splash() {
   return <div className="boot-splash"><div className="boot-spinner" /></div>;
@@ -100,6 +102,7 @@ export default function App() {
         <Route path="/einladung/:token" element={<SetPassword />} />
         <Route path="/angebot/:token" element={<Angebot />} />
         <Route path="/upload/:token" element={<Upload />} />
+        <Route path="/freigabe/:token" element={<SharePage />} />
         <Route path="/vertrag/:token" element={<Vertrag />} />
         <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
         <Route path="/" element={user ? <Shell><Dashboard /></Shell> : <Navigate to="/login" />} />
@@ -118,6 +121,7 @@ export default function App() {
         <Route path="/monitoring" element={user && user.role !== "client_user" ? <Shell><MonitoringPage /></Shell> : <Navigate to="/" />} />
         <Route path="/seo" element={user && user.role !== "client_user" ? <Shell><SeoPage /></Shell> : <Navigate to="/" />} />
         <Route path="/panel" element={user && user.role !== "client_user" ? <Shell><PanelPage /></Shell> : <Navigate to="/" />} />
+        <Route path="/freigaben" element={user && user.role !== "client_user" ? <Shell><FileShares /></Shell> : <Navigate to="/" />} />
         <Route path="/projects" element={<Navigate to="/planner" />} />
         <Route path="/tasks" element={<Navigate to="/planner" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
@@ -204,6 +208,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               ]} />
               <NavGroup label="Inhalte" go={go} items={[
                 { label: "Dateien", path: "/dateien" },
+                { label: "Dateifreigabe", path: "/freigaben" },
                 { label: "Briefe & Reports", path: "/briefe" },
                 { label: "Formulare", path: "/forms" },
               ]} />

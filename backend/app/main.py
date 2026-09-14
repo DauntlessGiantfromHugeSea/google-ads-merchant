@@ -9,7 +9,7 @@ from app.api.routes import (
     activity, admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
-    panel, payments, projects, reports, requests, richdocs, secrets, seo, tasks, team,
+    fileshare, panel, payments, projects, reports, requests, richdocs, secrets, seo, tasks, team,
     timetracking, webhooks,
 )
 from app.config import get_settings
@@ -150,6 +150,26 @@ async def _mail_sync_loop(interval_seconds: int) -> None:
             pass
 
 
+async def _share_cleanup_loop() -> None:
+    """Löscht regelmäßig abgelaufene/aufgebrauchte Dateifreigaben vom Server."""
+    import asyncio  # noqa: PLC0415
+
+    def _sweep() -> None:
+        from app.api.routes.fileshare import cleanup_shares  # noqa: PLC0415
+        from app.database import SessionLocal  # noqa: PLC0415
+        db = SessionLocal()
+        try:
+            cleanup_shares(db)
+        finally:
+            db.close()
+    while True:
+        await asyncio.sleep(15 * 60)
+        try:
+            await asyncio.to_thread(_sweep)
+        except Exception:
+            pass
+
+
 _DEFAULT_SECRET = "dev-insecure-secret-change-me-please-0123456789"
 
 
@@ -188,6 +208,7 @@ async def lifespan(app: FastAPI):
     minutes = getattr(_settings, "mail_sync_interval_minutes", 0) or 0
     if minutes > 0:
         tasks.append(asyncio.create_task(_mail_sync_loop(minutes * 60)))
+    tasks.append(asyncio.create_task(_share_cleanup_loop()))
     try:
         yield
     finally:
@@ -277,6 +298,8 @@ app.include_router(invoices.client_router)
 app.include_router(assets.router)
 app.include_router(webhooks.router)
 app.include_router(webhooks.public_router)
+app.include_router(fileshare.router)
+app.include_router(fileshare.public_router)
 app.include_router(panel.router)
 app.include_router(panel.public_router)
 app.include_router(panel.client_router)
