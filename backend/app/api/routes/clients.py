@@ -24,9 +24,11 @@ from app.models import (
     Document,
     GoogleCredential,
     IntakeForm,
+    MailThread,
     Milestone,
     MonitorEvent,
     MonitorStatus,
+    Notification,
     Offer,
     OfferItem,
     Organization,
@@ -629,6 +631,13 @@ def revoke_client_access(client_id: str, user_id: str,
     get_scoped_client(client_id, user, db)
     u = db.get(User, user_id)
     if u and u.client_id == client_id and u.role == UserRole.client_user:
+        # Abhängige Zeilen lösen, sonst blockiert der Fremdschlüssel das Löschen
+        # (z. B. Benachrichtigungen, die für offene/abgelaufene Einladungen anfielen).
+        db.query(Notification).filter(Notification.user_id == u.id).delete(synchronize_session=False)
+        db.query(Todo).filter(Todo.assignee_id == u.id).update(
+            {Todo.assignee_id: None}, synchronize_session=False)
+        db.query(MailThread).filter(MailThread.created_by == u.id).update(
+            {MailThread.created_by: None}, synchronize_session=False)
         db.delete(u)
         db.commit()
 
