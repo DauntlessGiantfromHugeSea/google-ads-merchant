@@ -326,17 +326,21 @@ def remind_invoice(invoice_id: str, user: User = Depends(require_agency), db: Se
     if not to:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Für den Kunden ist keine E-Mail hinterlegt.")
     org = db.get(Organization, user.organization_id)
+    attachments = ([{"name": inv.filename or f"Rechnung-{inv.number or inv.id[:6]}.pdf",
+                     "contentType": inv.content_type or "application/pdf",
+                     "contentBytes": inv.data_base64}] if inv.data_base64 else None)
+    anhang_hinweis = "\nDie Rechnung finden Sie noch einmal im Anhang." if attachments else ""
     body = (f"Sehr geehrte Damen und Herren,\n\n"
             f"unsere Rechnung {inv.number or ''} über {inv.amount:.2f} {inv.currency} "
             f"(fällig am {inv.due_date or '–'}) ist noch offen.\n"
             f"Wir bitten um Ausgleich. Falls sich Ihre Zahlung überschnitten hat, "
-            f"betrachten Sie diese Erinnerung als gegenstandslos.\n\n"
+            f"betrachten Sie diese Erinnerung als gegenstandslos.{anhang_hinweis}\n\n"
             f"Freundliche Grüße")
     send_via_graph(org, to=to, subject=f"Zahlungserinnerung Rechnung {inv.number or ''}".strip(),
-                   body=render_email_html(org, body), html=True)
+                   body=render_email_html(org, body), html=True, attachments=attachments)
     inv.reminded_at = datetime.now(timezone.utc)
     db.commit()
-    return {"ok": True, "to": to}
+    return {"ok": True, "to": to, "attached": bool(attachments)}
 
 
 # ---------- Kundenportal (Agentur + der Kunde selbst) ----------
