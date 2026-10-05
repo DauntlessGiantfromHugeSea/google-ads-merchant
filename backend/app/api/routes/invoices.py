@@ -329,13 +329,13 @@ def remind_invoice(invoice_id: str, user: User = Depends(require_agency), db: Se
     attachments = ([{"name": inv.filename or f"Rechnung-{inv.number or inv.id[:6]}.pdf",
                      "contentType": inv.content_type or "application/pdf",
                      "contentBytes": inv.data_base64}] if inv.data_base64 else None)
-    anhang_hinweis = "\nDie Rechnung finden Sie noch einmal im Anhang." if attachments else ""
-    body = (f"Sehr geehrte Damen und Herren,\n\n"
+    anhang_hinweis = "\nDie Rechnung findest du noch einmal im Anhang." if attachments else ""
+    body = (f"Hallo,\n\n"
             f"unsere Rechnung {inv.number or ''} über {inv.amount:.2f} {inv.currency} "
             f"(fällig am {inv.due_date or '–'}) ist noch offen.\n"
-            f"Wir bitten um Ausgleich. Falls sich Ihre Zahlung überschnitten hat, "
-            f"betrachten Sie diese Erinnerung als gegenstandslos.{anhang_hinweis}\n\n"
-            f"Freundliche Grüße")
+            f"Wir bitten dich um Ausgleich. Falls sich deine Zahlung überschnitten hat, "
+            f"betrachte diese Erinnerung als gegenstandslos.{anhang_hinweis}\n\n"
+            f"Viele Grüße")
     send_via_graph(org, to=to, subject=f"Zahlungserinnerung Rechnung {inv.number or ''}".strip(),
                    body=render_email_html(org, body), html=True, attachments=attachments)
     inv.reminded_at = datetime.now(timezone.utc)
