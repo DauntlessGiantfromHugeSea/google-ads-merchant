@@ -19,8 +19,10 @@ def require_tailnet(request: Request) -> None:
     """Wenn TAILSCALE_GUARD aktiv: nur Zugriffe aus dem Tailscale-Netz erlauben."""
     if not get_settings().tailscale_guard:
         return
+    # Rechten (letzten) XFF-Eintrag nehmen: den fügt der vertrauenswürdige Reverse-
+    # Proxy (Caddy) hinzu. Der linke Eintrag ist client-kontrolliert und spoofbar.
     fwd = request.headers.get("x-forwarded-for", "")
-    ip = (fwd.split(",")[0].strip() if fwd else "") or (request.client.host if request.client else "")
+    ip = (fwd.split(",")[-1].strip() if fwd else "") or (request.client.host if request.client else "")
     try:
         addr = ipaddress.ip_address(ip)
     except ValueError:

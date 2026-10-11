@@ -239,7 +239,10 @@ def verlauf_pdf(client_id: str, user: User = Depends(require_agency), db: Sessio
 def client_anleitung(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     get_scoped_client(client_id, user, db)
     doc = _get_or_create(client_id, user.organization_id, db)
-    return {"sections": doc.sections or {}, "status": doc.status, "updated_at": doc.updated_at}
+    # NUR die Anleitung-Gruppe an den Kunden geben – Technik/SEO/SEA bleiben intern.
+    allowed = {i["id"]: (doc.sections or {}).get(i["id"], "")
+               for i in _anleitung_sections(doc.sections or {}, only_group="Anleitung")}
+    return {"sections": allowed, "status": doc.status, "updated_at": doc.updated_at}
 
 
 @router.get("/anleitung.pdf")

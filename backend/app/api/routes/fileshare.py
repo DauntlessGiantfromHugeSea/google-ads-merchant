@@ -8,9 +8,13 @@ Dateien vom Server gelöscht.
 """
 import os
 import re
+import hmac
+import ipaddress
 import secrets as pysecrets
 import shutil
+import socket
 from datetime import datetime, timedelta, timezone
+from urllib.parse import urljoin, urlparse
 
 import httpx
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -231,6 +235,7 @@ def request_code(token: str, body: dict, db: Session = Depends(get_db)) -> dict:
     if email and email == s.allowed_email:
         s.code = f"{pysecrets.randbelow(1000000):06d}"
         s.code_expires = _now() + timedelta(minutes=15)
+        s.code_attempts = 0
         db.commit()
         from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
         org = db.get(Organization, s.organization_id)
@@ -256,12 +261,22 @@ def verify(token: str, body: dict, db: Session = Depends(get_db)) -> dict:
     email = (body.get("email") or "").strip().lower()
     code = (body.get("code") or "").strip()
     exp = _aware(s.code_expires)
-    if email != s.allowed_email or not s.code or code != s.code or not exp or _now() > exp:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "E-Mail oder Code stimmt nicht (oder Code abgelaufen).")
+    if not s.code or not exp or _now() > exp:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte zuerst einen Code anfordern (oder Code abgelaufen).")
+    if s.code_attempts >= 5:
+        s.code = ""; s.code_expires = None; db.commit()
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                            "Zu viele Fehlversuche. Bitte einen neuen Code anfordern.")
+    ok = (email == s.allowed_email) and hmac.compare_digest(code, s.code)
+    if not ok:
+        s.code_attempts += 1
+        db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "E-Mail oder Code stimmt nicht.")
     # Öffnung verbrauchen
     s.opens += 1
     s.last_access = _now()
     s.code = ""
+    s.code_attempts = 0
     s.code_expires = None
     db.commit()
     access = create_access_token(s.id, {"k": "share"})
@@ -277,8 +292,9 @@ def _share_from_access(token: str, request: Request, db: Session) -> FileShare:
     s = db.query(FileShare).filter(FileShare.token == token).first()
     if not s or _gone(s):
         raise HTTPException(status.HTTP_410_GONE, "Diese Freigabe ist nicht mehr verfügbar.")
+    # Nur Authorization-Header (kein ?t=): Token soll nicht in Logs/Referer landen.
     auth = request.headers.get("authorization", "")
-    jwt = auth[7:] if auth.lower().startswith("bearer ") else request.query_params.get("t", "")
+    jwt = auth[7:] if auth.lower().startswith("bearer ") else ""
     payload = decode_access_token(jwt) if jwt else None
     if not payload or payload.get("sub") != s.id or payload.get("k") != "share":
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Nicht verifiziert.")
@@ -311,30 +327,69 @@ def _nc_token(link: str) -> str:
     return m.group(1) if m else ""
 
 
+def _assert_public_url(url: str) -> None:
+    """SSRF-Schutz: nur http/https nach außen; interne/Metadaten-Adressen sperren.
+    Die Ziel-URL ist frei wählbar (link_url) – ohne das könnte der Server interne
+    Dienste oder Cloud-Metadaten (169.254.169.254) abrufen."""
+    p = urlparse(url)
+    if p.scheme not in ("http", "https"):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nur http/https-Links erlaubt.")
+    host = p.hostname
+    if not host:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ungültiger Link.")
+    try:
+        infos = socket.getaddrinfo(host, p.port or (443 if p.scheme == "https" else 80),
+                                   proto=socket.IPPROTO_TCP)
+    except OSError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Host nicht auflösbar.") from exc
+    for info in infos:
+        ip = ipaddress.ip_address(info[4][0])
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved
+                or ip.is_multicast or ip.is_unspecified):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST,
+                                "Ziel-Adresse nicht erlaubt (interne/Metadaten-Adresse).")
+
+
 @public_router.get("/{token}/link")
 def link_download(token: str, request: Request, db: Session = Depends(get_db)):
     """Streamt die Datei(en) server-seitig von der externen Quelle (z. B. Nextcloud)
     an den verifizierten Empfänger – der Link selbst bleibt verborgen, damit
-    Öffnungslimit/Ablauf greifen."""
+    Öffnungslimit/Ablauf greifen. Redirects werden pro Hop auf interne Adressen geprüft."""
     s = _share_from_access(token, request, db)
     if not s.link_url:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Kein Link hinterlegt.")
     url = _nc_url(s.link_url)
     auth = (_nc_token(s.link_url) or "anonymous", s.link_password) if s.link_password else None
+    client = httpx.Client(follow_redirects=False, timeout=30.0)
     try:
-        cm = httpx.stream("GET", url, follow_redirects=True, timeout=None, auth=auth)
-        resp = cm.__enter__()
+        resp = None
+        for _ in range(6):  # Redirects selbst verfolgen, jeden Hop prüfen
+            _assert_public_url(url)
+            if resp is not None:
+                resp.close()
+            resp = client.send(client.build_request("GET", url, auth=auth), stream=True)
+            if resp.is_redirect and resp.headers.get("location"):
+                url = str(resp.next_request.url) if resp.next_request else urljoin(url, resp.headers["location"])
+                continue
+            break
+        ctype = resp.headers.get("content-type", "")
+        if resp.status_code >= 300 or ctype.startswith("text/html"):
+            resp.close(); client.close()
+            raise HTTPException(status.HTTP_502_BAD_GATEWAY,
+                                "Download von der Quelle fehlgeschlagen – Link oder Passwort prüfen.")
+    except HTTPException:
+        client.close()
+        raise
     except httpx.HTTPError as exc:
+        client.close()
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Quelle nicht erreichbar: {exc}") from exc
-    ctype = resp.headers.get("content-type", "")
-    if resp.status_code >= 300 or ctype.startswith("text/html"):
-        cm.__exit__(None, None, None)
-        raise HTTPException(status.HTTP_502_BAD_GATEWAY,
-                            "Download von der Quelle fehlgeschlagen – Link oder Passwort prüfen.")
     cd = resp.headers.get("content-disposition", "")
     m = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', cd)
     fname = m.group(1) if m else ((s.title or "dateien").strip().replace(" ", "_") or "dateien") + ".zip"
+
+    def _close() -> None:
+        resp.close(); client.close()
     return StreamingResponse(
         resp.iter_bytes(), media_type=ctype or "application/octet-stream",
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},
-        background=BackgroundTask(cm.__exit__, None, None, None))
+        background=BackgroundTask(_close))

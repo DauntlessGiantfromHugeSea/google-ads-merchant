@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_admin, require_agency
+from app.api.deps import require_admin, require_agency
 from app.config import get_settings
 from app.core.crypto import decrypt, encrypt
 from app.core.security import create_access_token, decode_access_token
@@ -171,13 +171,13 @@ def read_sent(org, top: int = 50) -> list[dict]:
 
 
 @router.get("/status", response_model=MailStatus)
-def status_(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+def status_(user: User = Depends(require_agency), db: Session = Depends(get_db)):
     org = db.get(Organization, user.organization_id)
     return MailStatus(connected=bool(org.ms_refresh_token), email=org.ms_email, configured=_cfg())
 
 
 @router.get("/connect")
-def connect(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+def connect(user: User = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
     if not _cfg():
         raise HTTPException(status.HTTP_400_BAD_REQUEST,
                             "Microsoft ist nicht konfiguriert (MICROSOFT_CLIENT_ID/SECRET fehlen).")
@@ -243,7 +243,7 @@ def send(data: MailSend, user: User = Depends(require_agency), db: Session = Dep
 
 
 @router.get("/preview")
-def preview(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+def preview(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
     """Gerenderte Design-Mail als HTML (für die Vorschau im Tool)."""
     org = db.get(Organization, user.organization_id)
     body = ("Hallo,\n\ndies ist eine Beispiel-Nachricht. So sehen deine E-Mails "
@@ -252,7 +252,7 @@ def preview(user: User = Depends(get_current_user), db: Session = Depends(get_db
 
 
 @router.post("/test")
-def test_mail(user: User = Depends(get_current_user), db: Session = Depends(get_db)) -> dict:
+def test_mail(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
     """Sendet eine gebrandete Testmail an die verbundene Adresse."""
     org = db.get(Organization, user.organization_id)
     to = org.ms_email

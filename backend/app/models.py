@@ -807,6 +807,7 @@ class Offer(Base):
     # E-Mail-Verifizierung der Annahme (Code an die hinterlegte Kunden-Adresse).
     accept_code: Mapped[str] = mapped_column(String(16), default="")
     accept_code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    accept_attempts: Mapped[int] = mapped_column(Integer, default=0)   # Brute-Force-Schutz
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -865,6 +866,7 @@ class Contract(Base):
     # E-Mail-Verifizierung der Unterschrift
     sign_code: Mapped[str] = mapped_column(String(16), default="")
     sign_code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sign_attempts: Mapped[int] = mapped_column(Integer, default=0)   # Brute-Force-Schutz
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
@@ -1231,6 +1233,7 @@ class FileShare(Base):
     # Verifizierungs-Code (an die erlaubte Mail gesendet)
     code: Mapped[str] = mapped_column(String(12), default="")
     code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    code_attempts: Mapped[int] = mapped_column(Integer, default=0)   # Brute-Force-Schutz
 
     files: Mapped[list] = mapped_column(JSON, default=list)               # [{name,content_type,size,path}]
     # Alternativ/zusätzlich: externer Freigabe-Link (z. B. Nextcloud) hinter der

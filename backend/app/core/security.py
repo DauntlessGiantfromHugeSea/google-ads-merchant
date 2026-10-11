@@ -27,7 +27,12 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd.verify(plain, hashed)
+    # Niemals werfen (z. B. bei beschädigtem Hash) – sonst entsteht ein 500/Timing-
+    # Orakel beim Login. Ungültiger/zerstörter Hash -> einfach "passt nicht".
+    try:
+        return _pwd.verify(plain, hashed)
+    except Exception:
+        return False
 
 
 def create_access_token(subject: str, extra: dict | None = None) -> str:

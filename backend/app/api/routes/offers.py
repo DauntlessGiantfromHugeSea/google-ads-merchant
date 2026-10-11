@@ -1,4 +1,5 @@
 """Angebote: erstellen, PDF (Briefpapier), per Mail senden, online ansehen/annehmen."""
+import hmac
 import io
 import secrets as pysecrets
 from datetime import datetime, timedelta, timezone
@@ -269,6 +270,7 @@ def request_accept_code(token: str, db: Session = Depends(get_db)) -> dict:
     code = f"{pysecrets.randbelow(1000000):06d}"
     offer.accept_code = code
     offer.accept_code_expires = datetime.now(timezone.utc) + timedelta(minutes=15)
+    offer.accept_attempts = 0
     from app.api.routes.mail import render_email_html, send_via_graph
     body = (f"Guten Tag,\n\nzur verbindlichen Annahme von Angebot {offer.number} lautet dein "
             f"Bestätigungscode:\n\n    {code}\n\nDer Code ist 15 Minuten gültig. Wenn du das Angebot "
@@ -298,7 +300,13 @@ def accept_offer(token: str, data: OfferAccept, db: Session = Depends(get_db)) -
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte zuerst einen Bestätigungscode anfordern.")
         if not exp or exp < now:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Der Code ist abgelaufen. Bitte neu anfordern.")
-        if (data.code or "").strip() != offer.accept_code:
+        if offer.accept_attempts >= 5:
+            offer.accept_code = ""; offer.accept_code_expires = None; db.commit()
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                                "Zu viele Fehlversuche. Bitte einen neuen Code anfordern.")
+        if not hmac.compare_digest((data.code or "").strip(), offer.accept_code):
+            offer.accept_attempts += 1
+            db.commit()
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code ungültig.")
         verified_email = _client_email(client)
     elif target:
@@ -321,6 +329,7 @@ def accept_offer(token: str, data: OfferAccept, db: Session = Depends(get_db)) -
     offer.accepted_at = datetime.now(timezone.utc)
     offer.accept_code = ""
     offer.accept_code_expires = None
+    offer.accept_attempts = 0
     if client and client.status == "lead":
         client.status = "aktiv"
     if client:

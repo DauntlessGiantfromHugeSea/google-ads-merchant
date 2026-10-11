@@ -1,5 +1,6 @@
 """Verträge je Kunde – online digital unterschreibbar (einfache elektronische
 Signatur: gezeichnete/getippte Unterschrift + E-Mail-Verifizierung + Audit)."""
+import hmac
 import io
 import re
 import secrets as pysecrets
@@ -193,6 +194,7 @@ def _finalize_sign(contract: Contract, name: str, email: str, signature: str, ip
     contract.signed_at = datetime.now(timezone.utc)
     contract.sign_code = ""
     contract.sign_code_expires = None
+    contract.sign_attempts = 0
     _complete_if_done(contract)
     both = bool(contract.agency_signed_at)
     notify_users(db, _agency_user_ids(db, contract.organization_id),
@@ -336,10 +338,20 @@ def _access_ok(c: Contract, client, db, code: str, email: str) -> bool:
 
 
 def _verify_access(c: Contract, client, db, code: str, email: str) -> None:
-    if not _access_ok(c, client, db, code, email):
-        if _mail_ready(c, client, db):
+    if _mail_ready(c, client, db):
+        exp = _aware(c.sign_code_expires)
+        if not c.sign_code or not exp or exp < datetime.now(timezone.utc):
             raise HTTPException(status.HTTP_403_FORBIDDEN,
                                 "Bitte bestätige zuerst deine E-Mail (Code anfordern).")
+        if (c.sign_attempts or 0) >= 5:
+            c.sign_code = ""; c.sign_code_expires = None; db.commit()
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                                "Zu viele Fehlversuche. Bitte einen neuen Code anfordern.")
+        if not hmac.compare_digest((code or "").strip(), c.sign_code):
+            c.sign_attempts = (c.sign_attempts or 0) + 1; db.commit()
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Code ungültig.")
+        return
+    if not _access_ok(c, client, db, code, email):
         raise HTTPException(status.HTTP_403_FORBIDDEN,
                             "Die E-Mail-Adresse stimmt nicht mit der hinterlegten Adresse überein.")
 
@@ -417,6 +429,7 @@ def request_code(token: str, db: Session = Depends(get_db)) -> dict:
     code = f"{pysecrets.randbelow(1000000):06d}"
     c.sign_code = code
     c.sign_code_expires = datetime.now(timezone.utc) + timedelta(minutes=15)
+    c.sign_attempts = 0
     from app.api.routes.mail import render_email_html, send_via_graph
     body = (f"Guten Tag,\n\nzum Ansehen und Unterschreiben von Vertrag {c.number} lautet dein "
             f"Bestätigungscode:\n\n    {code}\n\nDer Code ist 15 Minuten gültig.")
@@ -443,7 +456,12 @@ def sign_contract(token: str, data: ContractSign, request: Request, db: Session 
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Bitte zuerst einen Bestätigungscode anfordern.")
         if not exp or exp < now:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Der Code ist abgelaufen. Bitte neu anfordern.")
-        if (data.code or "").strip() != c.sign_code:
+        if (c.sign_attempts or 0) >= 5:
+            c.sign_code = ""; c.sign_code_expires = None; db.commit()
+            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS,
+                                "Zu viele Fehlversuche. Bitte einen neuen Code anfordern.")
+        if not hmac.compare_digest((data.code or "").strip(), c.sign_code):
+            c.sign_attempts = (c.sign_attempts or 0) + 1; db.commit()
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Code ungültig.")
         verified_email = _client_email(client)
     elif target:

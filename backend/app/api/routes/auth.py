@@ -25,7 +25,10 @@ _MAX_FAILED_LOGINS = 5
 _LOCK_MINUTES = 15
 # Fester Dummy-Hash, um die Antwortzeit bei unbekannter E-Mail anzugleichen
 # (erschwert das Erraten gültiger Adressen über Timing).
-_DUMMY_HASH = "$2b$12$" + "z" * 53
+# Echter bcrypt-Hash (bei Import einmal berechnet): garantiert gültig, damit der
+# Vergleich bei unbekannter E-Mail eine vollständige bcrypt-Berechnung macht
+# (Timing-Parität) und niemals wegen eines ungültigen Hashes wirft.
+_DUMMY_HASH = hash_password("north-flow-login-timing-dummy")
 
 
 def _aware(dt: datetime | None) -> datetime | None:

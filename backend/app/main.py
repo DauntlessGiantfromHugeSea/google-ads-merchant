@@ -63,6 +63,7 @@ _CONTRACT_COLUMNS = {
     "agency_signer_name": "VARCHAR(255) DEFAULT ''", "agency_signature_image": "TEXT DEFAULT ''",
     "agency_signed_at": "TIMESTAMP", "services": "JSON DEFAULT '[]'",
     "signed_place": "VARCHAR(255) DEFAULT ''", "agency_signed_place": "VARCHAR(255) DEFAULT ''",
+    "sign_attempts": "INTEGER DEFAULT 0",
 }
 _TODO_COLUMNS = {
     "priority": "VARCHAR(16) DEFAULT 'normal'", "assignee": "VARCHAR(255) DEFAULT ''",
@@ -87,6 +88,7 @@ _PANEL_SITE_COLUMNS = {
 }
 _SHARE_COLUMNS = {
     "link_url": "VARCHAR(1024) DEFAULT ''", "link_password": "VARCHAR(255) DEFAULT ''",
+    "code_attempts": "INTEGER DEFAULT 0",
 }
 _PACKAGE_COLUMNS = {
     "unit": "VARCHAR(32) DEFAULT 'Stunden'", "unit_price": "DOUBLE PRECISION DEFAULT 0",
@@ -94,7 +96,7 @@ _PACKAGE_COLUMNS = {
 }
 _OFFER_COLUMNS = {
     "accepted_email": "VARCHAR(255) DEFAULT ''", "accept_code": "VARCHAR(16) DEFAULT ''",
-    "accept_code_expires": "TIMESTAMP",
+    "accept_code_expires": "TIMESTAMP", "accept_attempts": "INTEGER DEFAULT 0",
 }
 
 
@@ -177,11 +179,17 @@ async def _share_cleanup_loop() -> None:
 _DEFAULT_SECRET = "dev-insecure-secret-change-me-please-0123456789"
 
 
+def _is_production() -> bool:
+    """Produktion robust erkennen (unabhängig von Groß-/Kleinschreibung/Leerzeichen),
+    damit der Secret-Guard nicht bei 'Production'/' prod ' etc. still ausfällt."""
+    return (_settings.app_env or "").strip().lower() in ("production", "prod")
+
+
 def _check_production_secrets() -> None:
     """Verhindert den Start in Produktion mit unsicheren Standard-Schlüsseln.
     Ein bekannter/zu kurzer SECRET_KEY erlaubt das Fälschen von Login-Tokens
     (vollständige Kontoübernahme) – daher hart abbrechen."""
-    if _settings.app_env != "production":
+    if not _is_production():
         return
     problems = []
     sk = _settings.secret_key or ""
@@ -221,7 +229,7 @@ async def lifespan(app: FastAPI):
 
 
 # Docs/OpenAPI in Produktion abschalten (keine Schema-Preisgabe).
-_is_prod = _settings.app_env == "production"
+_is_prod = _is_production()
 app = FastAPI(
     title="Agentur-Reporting-Plattform", version="0.1.0", lifespan=lifespan,
     docs_url=None if _is_prod else "/docs",
