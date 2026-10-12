@@ -9,8 +9,8 @@ from app.api.routes import (
     activity, admin_backup, ads_activity, appointments, assets, auth, branding, briefings, clients, contracts,
     credentials, dashboard, documents, embeds, filerequests, intake, invoices, kpis, launch, mail,
     mail_threads, monitoring, notifications, offers, onboarding, org, packages, participants, projectdoc,
-    fileshare, panel, payments, projects, reports, requests, richdocs, secrets, seo, tasks, team,
-    timetracking, webhooks,
+    fileshare, panel, payments, projects, reports, requests, richdocs, secrets, seo, standing,
+    tasks, team, timetracking, webhooks,
 )
 from app.config import get_settings
 from app.database import Base, engine
@@ -308,6 +308,7 @@ app.include_router(filerequests.public_router)
 app.include_router(richdocs.router)
 app.include_router(payments.router)
 app.include_router(invoices.client_router)
+app.include_router(standing.router)
 app.include_router(assets.router)
 app.include_router(webhooks.router)
 app.include_router(webhooks.public_router)

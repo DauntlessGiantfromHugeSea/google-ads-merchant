@@ -133,6 +133,15 @@ export interface ContractRow {
   status: string; signer_name: string; signer_email: string;
   signed_at: string; agency_signed_at: string; created_at: string;
 }
+export interface StandingOrder {
+  id: string; client_id: string; client_name: string; title: string; amount: number;
+  currency: string; interval: string; due_day: number; start_date: string; active: boolean; created_at: string;
+}
+export interface StandingCharge {
+  id: string; client_id: string; client_name: string; order_id: string; title: string;
+  period: string; due_date: string; amount: number; currency: string; status: string;
+  overdue: boolean; paid_at: string;
+}
 export interface BackupStatus {
   dumped_at: string; size: string; hetzner: string; synology: string; interval: number; ok: boolean;
 }
@@ -362,7 +371,6 @@ export const api = {
   clientPanel: (cid: string) => request<{ linked: boolean; sites: PanelSitePublic[] }>(`/clients/${cid}/panel`),
   panelReportMail: (cid: string, to?: string) =>
     request<{ ok: boolean; to: string }>(`/clients/${cid}/panel/report-mail`, { method: "POST", body: JSON.stringify(to ? { to } : {}) }),
-  // Verträge – Agentur-Gesamtübersicht (alle Kunden)
   allContracts: () => request<ContractRow[]>("/contracts-all"),
   async downloadContractOverviewPdf(cid: string, number: string) {
     const res = await fetch(`/api/contracts-all/${cid}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
@@ -370,6 +378,14 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = `Vertrag-${number || cid}.pdf`; a.click(); URL.revokeObjectURL(url);
   },
+  // Daueraufträge (offene Posten, kein Versand)
+  standingOrders: () => request<StandingOrder[]>("/standing/orders"),
+  createStandingOrder: (d: Partial<StandingOrder>) => request<StandingOrder>("/standing/orders", { method: "POST", body: JSON.stringify(d) }),
+  patchStandingOrder: (id: string, d: Partial<StandingOrder>) => request<StandingOrder>(`/standing/orders/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
+  deleteStandingOrder: (id: string) => request<void>(`/standing/orders/${id}`, { method: "DELETE" }),
+  standingCharges: (status = "open") => request<{ charges: StandingCharge[]; open_total: number; open_count: number }>(`/standing/charges?status_=${status}`),
+  markChargePaid: (id: string) => request<{ ok: boolean }>(`/standing/charges/${id}/paid`, { method: "POST" }),
+  markChargeOpen: (id: string) => request<{ ok: boolean }>(`/standing/charges/${id}/open`, { method: "POST" }),
   // Dateifreigabe (Agentur)
   shares: () => request<ShareRow[]>("/shares"),
   createShare: (fd: FormData) => request<ShareRow>("/shares", { method: "POST", body: fd }),

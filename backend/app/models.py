@@ -1243,3 +1243,42 @@ class FileShare(Base):
     last_access: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # Dateien gelöscht
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class StandingOrder(Base):
+    """Dauerauftrag je Kunde: erzeugt periodisch einen fälligen Posten (offen),
+    der im Überblick erscheint, bis er als bezahlt markiert wird. Kein Versand."""
+
+    __tablename__ = "standing_orders"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"), index=True)
+    title: Mapped[str] = mapped_column(String(255), default="")
+    amount: Mapped[float] = mapped_column(Float, default=0.0)
+    currency: Mapped[str] = mapped_column(String(8), default="EUR")
+    interval: Mapped[str] = mapped_column(String(12), default="monthly")  # monthly/quarterly/yearly
+    due_day: Mapped[int] = mapped_column(Integer, default=1)              # Tag im Monat (1-28)
+    start_date: Mapped[str] = mapped_column(String(10), default="")       # YYYY-MM-DD (ab wann)
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_by: Mapped[str] = mapped_column(String(255), default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+
+
+class StandingCharge(Base):
+    """Ein fälliger Posten aus einem Dauerauftrag (eine Periode). offen/bezahlt."""
+
+    __tablename__ = "standing_charges"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("clients.id"), index=True)
+    order_id: Mapped[str] = mapped_column(ForeignKey("standing_orders.id"), index=True)
+    period: Mapped[str] = mapped_column(String(7), default="", index=True)  # YYYY-MM (eindeutig je Auftrag)
+    due_date: Mapped[str] = mapped_column(String(10), default="")           # YYYY-MM-DD
+    title: Mapped[str] = mapped_column(String(255), default="")
+    amount: Mapped[float] = mapped_column(Float, default=0.0)
+    currency: Mapped[str] = mapped_column(String(8), default="EUR")
+    status: Mapped[str] = mapped_column(String(8), default="open", index=True)  # open/paid
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
