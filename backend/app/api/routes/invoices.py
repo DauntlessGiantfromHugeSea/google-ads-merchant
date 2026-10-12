@@ -181,6 +181,32 @@ def update_invoice(invoice_id: str, data: InvoiceUpdate,
     return _out(inv, db)
 
 
+@router.post("/{invoice_id}/cancel")
+def cancel_invoice(invoice_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    """Rechnung stornieren und den Kunden per Mail informieren."""
+    inv = db.get(Invoice, invoice_id)
+    if not inv or inv.organization_id != user.organization_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Rechnung nicht gefunden")
+    inv.status = "storniert"
+    inv.paid_at = None
+    db.commit()
+    client = db.get(Client, inv.client_id) if inv.client_id else None
+    to = (inv.recipient_email or (client.billing_email or client.contact_email if client else "") or "").strip()
+    org = db.get(Organization, user.organization_id)
+    mailed = False
+    if to and org and org.ms_refresh_token:
+        body = (f"Hallo,\n\nunsere Rechnung {inv.number or ''} über {inv.amount:.2f} {inv.currency} "
+                f"wurde storniert und ist damit gegenstandslos. Falls du dazu bereits eine "
+                f"Zahlungsaufforderung erhalten hast, kannst du diese ignorieren.\n\nViele Grüße")
+        try:
+            send_via_graph(org, to=to, subject=f"Storno Rechnung {inv.number or ''}".strip(),
+                           body=render_email_html(org, body), html=True)
+            mailed = True
+        except Exception:
+            pass
+    return {"ok": True, "status": inv.status, "mailed": mailed, "to": to}
+
+
 @router.delete("/{invoice_id}", status_code=204)
 def delete_invoice(invoice_id: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
     inv = db.get(Invoice, invoice_id)

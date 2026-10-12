@@ -59,6 +59,11 @@ export default function Invoices() {
   };
   const setStatus = async (inv: Invoice, status: string) => { try { await api.updateInvoice(inv.id, { status }); load(); } catch (e) { toast((e as Error).message, "err"); } };
   const remind = async (inv: Invoice) => { try { const r = await api.remindInvoice(inv.id); toast(`Erinnerung an ${r.to} gesendet.`); } catch (e) { toast((e as Error).message, "err"); } };
+  const cancel = async (inv: Invoice) => {
+    if (!confirm(`Rechnung ${inv.number || ""} stornieren? Der Kunde wird per Mail informiert.`)) return;
+    try { const r = await api.cancelInvoice(inv.id); load(); toast(r.mailed ? `Storniert – Storno-Mail an ${r.to} gesendet.` : "Storniert (keine Mail versendet – keine Adresse/Postfach)."); }
+    catch (e) { toast((e as Error).message, "err"); }
+  };
   const del = async (inv: Invoice) => { if (!confirm(`Rechnung ${inv.number || ""} löschen?`)) return; await api.deleteInvoice(inv.id); load(); };
   const upReceipt = async (inv: Invoice, file: File) => { try { await api.uploadReceipt(inv.id, file); load(); toast("Beleg gespeichert."); } catch (e) { toast((e as Error).message, "err"); } };
 
@@ -151,7 +156,7 @@ export default function Invoices() {
                                   ? <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "bezahlt")}>bezahlt</button>
                                   : <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "offen")}>offen</button>}
                                 {inv.overdue && <button className="btn btn-ghost btn-sm" onClick={() => remind(inv)}>erinnern</button>}
-                                <button className="btn btn-ghost btn-sm" onClick={() => { if (confirm(`Rechnung ${inv.number || ""} stornieren?`)) setStatus(inv, "storniert"); }}>stornieren</button>
+                                <button className="btn btn-ghost btn-sm" onClick={() => cancel(inv)}>stornieren</button>
                               </>}
                           {inv.has_file && <button className="btn btn-ghost btn-sm" onClick={() => api.downloadInvoiceFile(inv.id, inv.filename)}>Rechnung</button>}
                           {inv.has_receipt

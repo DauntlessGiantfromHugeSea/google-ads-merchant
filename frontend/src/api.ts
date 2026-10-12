@@ -662,6 +662,7 @@ export const api = {
     request<Invoice>(`/invoices/${id}`, { method: "PATCH", body: JSON.stringify(d) }),
   deleteInvoice: (id: string) => request<void>(`/invoices/${id}`, { method: "DELETE" }),
   remindInvoice: (id: string) => request<{ ok: boolean; to: string }>(`/invoices/${id}/remind`, { method: "POST" }),
+  cancelInvoice: (id: string) => request<{ ok: boolean; status: string; mailed: boolean; to: string }>(`/invoices/${id}/cancel`, { method: "POST" }),
   async downloadInvoiceFile(id: string, filename: string) {
     const res = await fetch(`/api/invoices/${id}/file`, { headers: { Authorization: `Bearer ${auth.token}` } });
     if (!res.ok) throw new Error("Download fehlgeschlagen");
