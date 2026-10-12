@@ -184,6 +184,49 @@ def _complete_if_done(c: Contract) -> None:
         c.status = "sent"
 
 
+def _maybe_send_signed(db: Session, c: Contract) -> None:
+    """Sobald BEIDE Seiten unterschrieben haben: die unterschriebene PDF einmalig
+    an Agentur und Kunde verschicken."""
+    if not (c.agency_signed_at and c.signed_at) or c.signed_mail_at:
+        return
+    import base64  # noqa: PLC0415
+
+    from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+    from app.models import UserRole  # noqa: PLC0415
+    org = db.get(Organization, c.organization_id)
+    if not org or not org.ms_refresh_token:
+        return
+    client = db.get(Client, c.client_id) if c.client_id else None
+    recips: set[str] = set()
+    if (org.agency_contact_email or "").strip():
+        recips.add(org.agency_contact_email.strip())
+    else:
+        for u in db.query(User).filter(User.organization_id == org.id,
+                                       User.role == UserRole.agency_admin, User.is_active.is_(True)).all():
+            if u.email:
+                recips.add(u.email)
+    client_to = (c.signer_email or (client.billing_email or client.contact_email if client else "") or "").strip()
+    if client_to:
+        recips.add(client_to)
+    recips = {r for r in recips if r}
+    if not recips:
+        return
+    data = pdf.render_contract_pdf(_pdf_payload(c, (org.timezone or "Europe/Berlin")))
+    att = [{"name": f"Vertrag-{c.number}.pdf".replace(" ", "_"), "contentType": "application/pdf",
+            "contentBytes": base64.b64encode(data).decode()}]
+    body = (f"Hallo,\n\nder Vertrag {c.number} wurde von beiden Seiten unterschrieben. "
+            f"Die vollständig unterschriebene Fassung findest du im Anhang.\n\nViele Grüße")
+    html = render_email_html(org, body)
+    for to in recips:
+        try:
+            send_via_graph(org, to, f"Unterschriebener Vertrag {c.number}".strip(), html,
+                           html=True, attachments=att)
+        except Exception:
+            pass
+    c.signed_mail_at = datetime.now(timezone.utc)
+    db.commit()
+
+
 def _finalize_sign(contract: Contract, name: str, email: str, signature: str, ip: str, db: Session, place: str = "") -> None:
     """Unterschrift des Kunden."""
     contract.signer_name = name[:255]
@@ -314,6 +357,7 @@ def sign_inapp(client_id: str, cid: str, data: ContractSign, request: Request,
         _finalize_agency_sign(c, aname, sig, data.place)
     db.commit()
     db.refresh(c)
+    _maybe_send_signed(db, c)
     return _out(c)
 
 
@@ -483,6 +527,7 @@ def sign_contract(token: str, data: ContractSign, request: Request, db: Session 
           or (request.client.host if request.client else ""))
     _finalize_sign(c, data.name, verified_email, data.signature_image, ip, db, data.place)
     db.commit()
+    _maybe_send_signed(db, c)
     return {"ok": True}
 
 

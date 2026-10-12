@@ -602,6 +602,16 @@ export const api = {
     const url = URL.createObjectURL(await res.blob());
     const a = document.createElement("a"); a.href = url; a.download = `Vertrag-${number}.pdf`.replace(/\s+/g, "_"); a.click(); URL.revokeObjectURL(url);
   },
+  async openContractPdf(cid: string, id: string) {
+    const res = await fetch(`/api/clients/${cid}/contracts/${id}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    window.open(URL.createObjectURL(await res.blob()), "_blank");
+  },
+  async openContractOverviewPdf(cid: string) {
+    const res = await fetch(`/api/contracts-all/${cid}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF fehlgeschlagen");
+    window.open(URL.createObjectURL(await res.blob()), "_blank");
+  },
   publicContract: (token: string) => request<any>(`/contracts/${token}`),
   revealContract: (token: string, d: { code?: string; email?: string }) =>
     request<any>(`/contracts/${token}/reveal`, { method: "POST", body: JSON.stringify(d) }),

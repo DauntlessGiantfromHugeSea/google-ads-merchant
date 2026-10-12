@@ -262,6 +262,7 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
             </div>
             <div className="row-inline" style={{ alignItems: "center" }}>
               <span className={`status-badge ${stCls(c.status)}`}>{ST[c.status] || c.status}</span>
+              <button className="btn btn-ghost btn-sm" onClick={() => api.openContractPdf(clientId, c.id).catch((e) => toast((e as Error).message, "err"))}>öffnen</button>
               <button className="btn btn-ghost btn-sm" onClick={() => api.downloadContractPdf(clientId, c.id, c.number)}>PDF</button>
               {isAgency && <button className="btn btn-ghost btn-sm" onClick={() => copyLink(c)}>Link</button>}
               {isAgency && !c.agency_signed_at && !c.signed_at && <button className="btn btn-ghost btn-sm" onClick={() => startEdit(c)}>bearbeiten</button>}

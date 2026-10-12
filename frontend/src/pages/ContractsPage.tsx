@@ -67,8 +67,9 @@ export default function ContractsPage() {
                     <td>{c.status === "signed" ? `${fmt(c.signed_at)}${c.signer_name ? ` · ${c.signer_name}` : ""}` : "–"}</td>
                     <td className="muted">{fmt(c.created_at)}</td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => api.openContractOverviewPdf(c.id).catch((e) => toast((e as Error).message, "err"))}>öffnen</button>
                       <button className="btn btn-ghost btn-sm" onClick={() => pdf(c)}>PDF</button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/clients/${c.client_id}?tab=vertrieb`)}>öffnen</button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => navigate(`/clients/${c.client_id}?tab=vertrieb`)}>Kunde</button>
                     </td>
                   </tr>
                 ))}

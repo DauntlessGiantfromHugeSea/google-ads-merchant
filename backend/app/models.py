@@ -871,6 +871,7 @@ class Contract(Base):
     sign_code: Mapped[str] = mapped_column(String(16), default="")
     sign_code_expires: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sign_attempts: Mapped[int] = mapped_column(Integer, default=0)   # Brute-Force-Schutz
+    signed_mail_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # Versand der vollst. unterschriebenen PDF
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
