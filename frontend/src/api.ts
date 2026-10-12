@@ -866,6 +866,9 @@ export const api = {
 
   getAgencyContact: () => request<AgencyContact>("/org/contact"),
   setAgencyContact: (d: AgencyContact) => request<AgencyContact>("/org/contact", { method: "PATCH", body: JSON.stringify(d) }),
+  getOrgSignature: () => request<{ signature_image: string; signer_name: string }>("/org/signature"),
+  setOrgSignature: (d: { signature_image?: string; signer_name?: string }) =>
+    request<{ signature_image: string; signer_name: string }>("/org/signature", { method: "PATCH", body: JSON.stringify(d) }),
 
   createSecret: (d: { ciphertext: string; iv: string; views_left: number; note: string; ttl_hours: number }) =>
     request<{ id: string; views_left: number }>("/secrets", { method: "POST", body: JSON.stringify(d) }),

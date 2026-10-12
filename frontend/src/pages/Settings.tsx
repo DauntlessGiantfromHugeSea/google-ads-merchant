@@ -282,6 +282,44 @@ function AgencyContactForm() {
   );
 }
 
+function SignatureSettings() {
+  const toast = useToast();
+  const [img, setImg] = useState("");
+  const [name, setName] = useState("");
+
+  useEffect(() => { api.getOrgSignature().then((r) => { setImg(r.signature_image); setName(r.signer_name); }).catch(() => {}); }, []);
+
+  const pick = (file: File) => {
+    const r = new FileReader();
+    r.onload = () => setImg(String(r.result || ""));
+    r.readAsDataURL(file);
+  };
+  const save = async () => {
+    try { const r = await api.setOrgSignature({ signature_image: img, signer_name: name.trim() }); setImg(r.signature_image); setName(r.signer_name); toast("Unterschrift gespeichert."); }
+    catch (e) { toast((e as Error).message, "err"); }
+  };
+  const remove = async () => { try { await api.setOrgSignature({ signature_image: "" }); setImg(""); toast("Unterschrift entfernt."); } catch (e) { toast((e as Error).message, "err"); } };
+
+  return (
+    <div className="section">
+      <h2>Unterschrift</h2>
+      <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
+        Lade dein Unterschriftsbild hoch (PNG/JPG, am besten mit transparentem Hintergrund). Beim Unterschreiben von Verträgen wird es als deine Unterschrift genutzt – du kannst aber jederzeit auch selbst zeichnen.
+      </p>
+      <div className="field form-light"><label>Name (Unterzeichner)</label>
+        <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Daniel Muster" /></div>
+      <div className="field form-light"><label>Unterschriftsbild</label>
+        <input className="input" type="file" accept="image/png,image/jpeg" onChange={(e) => { const f = e.target.files?.[0]; if (f) pick(f); }} /></div>
+      {img && <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: 10, display: "inline-block", marginTop: 4 }}>
+        <img src={img} alt="Unterschrift" style={{ maxHeight: 70, maxWidth: 260 }} /></div>}
+      <div className="row-inline" style={{ marginTop: 10 }}>
+        <button className="btn btn-primary btn-sm" onClick={save}>Speichern</button>
+        {img && <button className="btn btn-ghost btn-sm" onClick={remove}>Entfernen</button>}
+      </div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const [bust, setBust] = useState(Date.now());
   const [busy, setBusy] = useState(false);
@@ -354,6 +392,7 @@ export default function Settings() {
       <PublicAssets />
       <Packages />
       <AgencyContactForm />
+      <SignatureSettings />
       <Backups />
       <Team />
     </>

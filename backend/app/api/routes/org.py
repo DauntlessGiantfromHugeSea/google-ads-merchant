@@ -38,3 +38,30 @@ def set_contact(data: AgencyContact, user: User = Depends(require_admin), db: Se
     org.timezone = (data.timezone or "Europe/Berlin").strip()
     db.commit()
     return data
+
+
+from fastapi import HTTPException, status  # noqa: E402
+from app.api.deps import require_agency  # noqa: E402
+
+
+@router.get("/signature")
+def get_signature(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> dict:
+    """Gespeicherte Agentur-Unterschrift (Bild + Name) für Vertragsunterschriften."""
+    org = db.get(Organization, user.organization_id)
+    return {"signature_image": org.default_signature_image or "",
+            "signer_name": org.default_signer_name or ""}
+
+
+@router.patch("/signature")
+def set_signature(data: dict, user: User = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    org = db.get(Organization, user.organization_id)
+    if "signer_name" in data:
+        org.default_signer_name = (data.get("signer_name") or "").strip()[:255]
+    if "signature_image" in data:
+        sig = (data.get("signature_image") or "").strip()
+        if sig and (not sig.startswith("data:image/") or "," not in sig or len(sig) > 2_000_000):
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ungültiges Bild (PNG/JPEG als Data-URL, max. ~1,5 MB).")
+        org.default_signature_image = sig
+    db.commit()
+    return {"signature_image": org.default_signature_image or "",
+            "signer_name": org.default_signer_name or ""}

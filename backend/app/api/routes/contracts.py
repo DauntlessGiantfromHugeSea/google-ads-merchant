@@ -306,7 +306,12 @@ def sign_inapp(client_id: str, cid: str, data: ContractSign, request: Request,
     else:
         if c.agency_signed_at:
             return _out(c)
-        _finalize_agency_sign(c, name, data.signature_image, data.place)
+        # Fallback auf die gespeicherte Agentur-Unterschrift, wenn nichts gezeichnet/hochgeladen wurde.
+        org = db.get(Organization, c.organization_id)
+        sig = data.signature_image or (org.default_signature_image if org else "")
+        aname = (data.name or (org.default_signer_name if org else "")
+                 or user.full_name or user.email)
+        _finalize_agency_sign(c, aname, sig, data.place)
     db.commit()
     db.refresh(c)
     return _out(c)

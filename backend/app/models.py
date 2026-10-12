@@ -76,6 +76,10 @@ class Organization(Base):
     agency_contact_email: Mapped[str] = mapped_column(String(255), default="")
     agency_contact_phone: Mapped[str] = mapped_column(String(64), default="")
     agency_contact_note: Mapped[str] = mapped_column(Text, default="")
+    # Gespeicherte Agentur-Unterschrift (einmal hochladen, bei Vertragsunterschrift
+    # genutzt – optional, man kann auch selbst zeichnen).
+    default_signature_image: Mapped[str] = mapped_column(Text, default="")  # PNG/JPEG data-URL
+    default_signer_name: Mapped[str] = mapped_column(String(255), default="")
     # Postanschrift der Agentur (für Verträge, Parteien-Block)
     agency_address: Mapped[str] = mapped_column(Text, default="")
     # E-Mail-Benachrichtigungen bei wichtigen Ereignissen (über Microsoft-Mail)

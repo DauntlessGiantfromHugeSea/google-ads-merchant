@@ -57,6 +57,7 @@ _ORG_COLUMNS = {
     "email_notifications": "BOOLEAN DEFAULT TRUE", "meeting_link": "VARCHAR(512) DEFAULT ''",
     "login_tagline": "VARCHAR(255) DEFAULT 'Reporting-Plattform für deine Kunden.'",
     "timezone": "VARCHAR(64) DEFAULT 'Europe/Berlin'",
+    "default_signature_image": "TEXT DEFAULT ''", "default_signer_name": "VARCHAR(255) DEFAULT ''",
 }
 _CONTRACT_COLUMNS = {
     "provider_block": "TEXT DEFAULT ''", "client_block": "TEXT DEFAULT ''",

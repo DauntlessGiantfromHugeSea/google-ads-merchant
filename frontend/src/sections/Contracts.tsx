@@ -279,7 +279,16 @@ export default function Contracts({ clientId, isAgency }: { clientId: string; is
                 <div className="field" style={{ flex: 1 }}><label>Ort</label>
                   <input className="input" value={sigPlace} onChange={(e) => setSigPlace(e.target.value)} placeholder="z.B. Essen" /></div>
               </div>
-              <div className="field"><label>Unterschrift (Dienstleister) – zeichnen oder Bild hochladen</label>
+              <div className="field"><label>Unterschrift (Dienstleister)</label>
+                <div className="row-inline" style={{ marginBottom: 6 }}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={async () => {
+                    try { const r = await api.getOrgSignature(); if (!r.signature_image) { toast("Noch keine Unterschrift hinterlegt (Einstellungen → Unterschrift)."); return; } setSig(r.signature_image); if (r.signer_name && !sigName) setSigName(r.signer_name); toast("Gespeicherte Unterschrift geladen."); }
+                    catch (e) { toast((e as Error).message, "err"); }
+                  }}>Gespeicherte Unterschrift verwenden</button>
+                  <span className="muted" style={{ fontSize: 12 }}>oder unten selbst zeichnen / Bild hochladen</span>
+                </div>
+                {sig && <div style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: 8, padding: 8, display: "inline-block", marginBottom: 6 }}>
+                  <img src={sig} alt="Unterschrift" style={{ maxHeight: 60, maxWidth: 240 }} /></div>}
                 <SignaturePad onChange={setSig} allowUpload /></div>
               <button type="button" className="btn btn-primary btn-sm" onClick={() => doAgencySign(c)}>Verbindlich unterschreiben</button>
             </div>

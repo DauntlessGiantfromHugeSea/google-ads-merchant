@@ -144,9 +144,15 @@ export default function Invoices() {
                         <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>{eur(inv.amount, inv.currency)}</td>
                         <td><span className={`inv-badge ${b.cls}`}>{b.label}</span></td>
                         <td><div className="inv-actions">
-                          {inv.status !== "bezahlt" ? <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "bezahlt")}>bezahlt</button>
-                            : <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "offen")}>offen</button>}
-                          {inv.overdue && <button className="btn btn-ghost btn-sm" onClick={() => remind(inv)}>erinnern</button>}
+                          {inv.status === "storniert"
+                            ? <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "offen")}>reaktivieren</button>
+                            : <>
+                                {inv.status !== "bezahlt"
+                                  ? <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "bezahlt")}>bezahlt</button>
+                                  : <button className="btn btn-ghost btn-sm" onClick={() => setStatus(inv, "offen")}>offen</button>}
+                                {inv.overdue && <button className="btn btn-ghost btn-sm" onClick={() => remind(inv)}>erinnern</button>}
+                                <button className="btn btn-ghost btn-sm" onClick={() => { if (confirm(`Rechnung ${inv.number || ""} stornieren?`)) setStatus(inv, "storniert"); }}>stornieren</button>
+                              </>}
                           {inv.has_file && <button className="btn btn-ghost btn-sm" onClick={() => api.downloadInvoiceFile(inv.id, inv.filename)}>Rechnung</button>}
                           {inv.has_receipt
                             ? <button className="btn btn-ghost btn-sm" onClick={() => api.downloadReceipt(inv.id, inv.receipt_filename)}>Beleg ✓</button>
