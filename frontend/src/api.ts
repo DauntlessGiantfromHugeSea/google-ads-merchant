@@ -128,6 +128,11 @@ export interface PanelSiteAdmin {
 export interface PanelClientRow {
   panel_client_id: number; name: string; contact: string; email: string; nf_client_id: string | null;
 }
+export interface ContractRow {
+  id: string; client_id: string; client_name: string; number: string; title: string;
+  status: string; signer_name: string; signer_email: string;
+  signed_at: string; agency_signed_at: string; created_at: string;
+}
 export interface BackupStatus {
   dumped_at: string; size: string; hetzner: string; synology: string; interval: number; ok: boolean;
 }
@@ -357,6 +362,14 @@ export const api = {
   clientPanel: (cid: string) => request<{ linked: boolean; sites: PanelSitePublic[] }>(`/clients/${cid}/panel`),
   panelReportMail: (cid: string, to?: string) =>
     request<{ ok: boolean; to: string }>(`/clients/${cid}/panel/report-mail`, { method: "POST", body: JSON.stringify(to ? { to } : {}) }),
+  // Verträge – Agentur-Gesamtübersicht (alle Kunden)
+  allContracts: () => request<ContractRow[]>("/contracts-all"),
+  async downloadContractOverviewPdf(cid: string, number: string) {
+    const res = await fetch(`/api/contracts-all/${cid}/pdf`, { headers: { Authorization: `Bearer ${auth.token}` } });
+    if (!res.ok) throw new Error("PDF konnte nicht geladen werden");
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a"); a.href = url; a.download = `Vertrag-${number || cid}.pdf`; a.click(); URL.revokeObjectURL(url);
+  },
   // Dateifreigabe (Agentur)
   shares: () => request<ShareRow[]>("/shares"),
   createShare: (fd: FormData) => request<ShareRow>("/shares", { method: "POST", body: fd }),

@@ -32,6 +32,7 @@ const Upload = lazy(() => import("./pages/Upload"));
 const AiTransparency = lazy(() => import("./pages/AiTransparency"));
 const PanelPage = lazy(() => import("./pages/PanelPage"));
 const FileShares = lazy(() => import("./pages/FileShares"));
+const ContractsPage = lazy(() => import("./pages/ContractsPage"));
 const SharePage = lazy(() => import("./pages/SharePage"));
 
 function Splash() {
@@ -122,6 +123,7 @@ export default function App() {
         <Route path="/seo" element={user && user.role !== "client_user" ? <Shell><SeoPage /></Shell> : <Navigate to="/" />} />
         <Route path="/panel" element={user && user.role !== "client_user" ? <Shell><PanelPage /></Shell> : <Navigate to="/" />} />
         <Route path="/freigaben" element={user && user.role !== "client_user" ? <Shell><FileShares /></Shell> : <Navigate to="/" />} />
+        <Route path="/vertraege" element={user && user.role !== "client_user" ? <Shell><ContractsPage /></Shell> : <Navigate to="/" />} />
         <Route path="/projects" element={<Navigate to="/planner" />} />
         <Route path="/tasks" element={<Navigate to="/planner" />} />
         <Route path="/forms" element={user && user.role !== "client_user" ? <Shell><Forms /></Shell> : <Navigate to="/" />} />
@@ -200,6 +202,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <NavGroup label="Vertrieb" go={go} items={[
                 { label: "CRM / Pipeline", path: "/crm" },
                 { label: "Sales / Gap-Analyse", path: "/sales" },
+                { label: "Verträge", path: "/vertraege" },
                 { label: "Rechnungen", path: "/rechnungen" },
               ]} />
               <NavGroup label="Arbeit" go={go} items={[

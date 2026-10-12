@@ -479,3 +479,37 @@ def sign_contract(token: str, data: ContractSign, request: Request, db: Session 
     _finalize_sign(c, data.name, verified_email, data.signature_image, ip, db, data.place)
     db.commit()
     return {"ok": True}
+
+
+# ---------- Agentur-Gesamtübersicht (alle Kunden, auch bestehende Verträge) ----------
+overview_router = APIRouter(prefix="/api/contracts-all", tags=["contracts"])
+
+
+@overview_router.get("")
+def list_all_contracts(user: User = Depends(require_agency), db: Session = Depends(get_db)) -> list[dict]:
+    """Alle Verträge der Agentur über alle Kunden hinweg – für die zentrale Übersicht."""
+    org_id = user.organization_id
+    rows = (db.query(Contract).filter(Contract.organization_id == org_id)
+            .order_by(Contract.created_at.desc()).all())
+    names = {c.id: c.name for c in db.query(Client).filter(Client.organization_id == org_id).all()}
+    return [{
+        "id": c.id, "client_id": c.client_id, "client_name": names.get(c.client_id, ""),
+        "number": c.number, "title": c.title, "status": c.status,
+        "signer_name": c.signer_name, "signer_email": c.signer_email,
+        "signed_at": c.signed_at.isoformat() if c.signed_at else "",
+        "agency_signed_at": c.agency_signed_at.isoformat() if c.agency_signed_at else "",
+        "created_at": c.created_at.isoformat() if c.created_at else "",
+    } for c in rows]
+
+
+@overview_router.get("/{cid}/pdf")
+def overview_contract_pdf(cid: str, user: User = Depends(require_agency), db: Session = Depends(get_db)):
+    """Vertrags-PDF per Vertrags-ID (org-geprüft) – für die Gesamtübersicht."""
+    c = db.get(Contract, cid)
+    if not c or c.organization_id != user.organization_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Vertrag nicht gefunden")
+    org = db.get(Organization, c.organization_id)
+    data = pdf.render_contract_pdf(_pdf_payload(c, (org.timezone if org else None) or "Europe/Berlin"))
+    fn = f"Vertrag-{c.number}.pdf".replace(" ", "_")
+    return StreamingResponse(io.BytesIO(data), media_type="application/pdf",
+                             headers={"Content-Disposition": f'attachment; filename="{fn}"'})
