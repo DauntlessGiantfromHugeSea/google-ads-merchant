@@ -112,7 +112,30 @@ def list_clients(user: User = Depends(get_current_user), db: Session = Depends(g
     q = db.query(Client).filter(Client.organization_id == user.organization_id)
     if user.role == UserRole.client_user:
         q = q.filter(Client.id == user.client_id)
-    return q.all()
+    rows = q.all()
+    # Bestehende Kunden ohne Nummer nachrüsten.
+    if user.role != UserRole.client_user:
+        changed = False
+        for c in rows:
+            if not c.customer_number:
+                _ensure_customer_number(db, c); changed = True
+        if changed:
+            db.commit()
+    return rows
+
+
+def _ensure_customer_number(db: Session, client: Client) -> str:
+    """Vergibt eine eindeutige 5-stellige Kundennummer (je Organisation)."""
+    if client.customer_number:
+        return client.customer_number
+    for _ in range(50):
+        n = f"{10000 + pysecrets.randbelow(90000)}"
+        if not db.query(Client.id).filter(
+                Client.organization_id == client.organization_id,
+                Client.customer_number == n).first():
+            client.customer_number = n
+            return n
+    return client.customer_number
 
 
 @router.post("", response_model=ClientOut, status_code=201)
@@ -125,6 +148,7 @@ def create_client(
         notes=data.notes,
         organization_id=user.organization_id,
     )
+    _ensure_customer_number(db, client)
     db.add(client)
     db.commit()
     db.refresh(client)
@@ -133,7 +157,10 @@ def create_client(
 
 @router.get("/{client_id}", response_model=ClientOut)
 def get_client(client_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return get_scoped_client(client_id, user, db)
+    client = get_scoped_client(client_id, user, db)
+    if user.role != UserRole.client_user and not client.customer_number:
+        _ensure_customer_number(db, client); db.commit()
+    return client
 
 
 @router.delete("/{client_id}", status_code=204)

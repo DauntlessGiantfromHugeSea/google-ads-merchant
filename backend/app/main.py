@@ -21,6 +21,7 @@ _settings = get_settings()
 # neue Tabellen an, keine neuen Spalten). Idempotent beim Start nachgezogen.
 _CLIENT_COLUMNS = {
     "contact_person": "VARCHAR(255) DEFAULT ''", "phone": "VARCHAR(64) DEFAULT ''",
+    "customer_number": "VARCHAR(5) DEFAULT ''",
     "website": "VARCHAR(512) DEFAULT ''", "address": "TEXT DEFAULT ''",
     "contract_package": "VARCHAR(255) DEFAULT ''", "contract_status": "VARCHAR(64) DEFAULT ''",
     "contract_start": "VARCHAR(10) DEFAULT ''", "contract_end": "VARCHAR(10) DEFAULT ''",

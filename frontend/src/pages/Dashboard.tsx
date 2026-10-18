@@ -79,7 +79,7 @@ export default function Dashboard() {
   };
 
   const filtered = useMemo(() => clients.filter((c) =>
-    (!q || c.name.toLowerCase().includes(q.toLowerCase()) || c.tags.toLowerCase().includes(q.toLowerCase()))
+    (!q || c.name.toLowerCase().includes(q.toLowerCase()) || c.tags.toLowerCase().includes(q.toLowerCase()) || (c.customer_number || "").includes(q))
     && (!filter || c.status === filter)
     && (showArchived ? c.archived : !c.archived)
   ), [clients, q, filter, showArchived]);
@@ -342,7 +342,7 @@ export default function Dashboard() {
                 <div className="avatar">{initials(c.name) || "?"}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ marginBottom: 2 }}>{c.name}</h3>
-                  <div className="meta ellip">{c.contract_package || c.contact_email || "—"}</div>
+                  <div className="meta ellip">{c.customer_number ? `#${c.customer_number} · ` : ""}{c.contract_package || c.contact_email || "—"}</div>
                 </div>
                 <span className={statusClass(c.status)}>{c.status || "aktiv"}</span>
               </div>

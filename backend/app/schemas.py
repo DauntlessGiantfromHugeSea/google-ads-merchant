@@ -73,6 +73,7 @@ class ClientCreate(BaseModel):
 class ClientOut(BaseModel):
     id: str
     name: str
+    customer_number: str = ""
     notes: str
     onboarding_completed: bool
     created_at: datetime

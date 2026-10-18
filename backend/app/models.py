@@ -147,6 +147,7 @@ class Client(Base):
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    customer_number: Mapped[str] = mapped_column(String(5), default="", index=True)  # 5 zufällige Ziffern
     notes: Mapped[str] = mapped_column(Text, default="")
     onboarding_completed: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

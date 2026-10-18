@@ -120,6 +120,7 @@ export default function ClientDetail() {
       <div className="client-layout">
         <nav className="client-nav">
           <div className="client-name">{client.name}</div>
+          {client.customer_number && <div className="muted" style={{ fontSize: 12, margin: "-4px 0 8px" }}>Kundennr. {client.customer_number}</div>}
           {(isAdmin || (client.participants_enabled && user?.role !== "agency_member")
             ? [...NAV.slice(0, 5), TEILNEHMER_TAB, ...NAV.slice(5)] : NAV)
             .filter((n) => n.key !== "onboarding" || isAgency)  // Onboarding bleibt intern

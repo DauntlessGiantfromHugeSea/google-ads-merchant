@@ -52,7 +52,7 @@ export interface Notification {
   read: boolean; client_id: string | null; created_at: string;
 }
 export interface Client {
-  id: string; name: string; notes: string;
+  id: string; name: string; customer_number: string; notes: string;
   onboarding_completed: boolean; created_at: string;
   status: string; tags: string; archived: boolean;
   contact_email: string; contact_person: string; phone: string; website: string; address: string;
