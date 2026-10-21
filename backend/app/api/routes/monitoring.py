@@ -315,32 +315,34 @@ async def import_history(monitor_id: str, request: Request,
     events = body.get("events") if isinstance(body, dict) else body
     if not isinstance(events, list):
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Erwartet eine Liste von Ereignissen.")
-    parsed: list[tuple[datetime, str]] = []
+    parsed: list[tuple[datetime, str, str]] = []
     for e in events:
         if not isinstance(e, dict):
             continue
         at = _parse_import_time(e.get("time") or e.get("at") or e.get("timestamp"))
         stt = _norm_import_status(e.get("status"))
+        msg = str(e.get("msg") or e.get("message") or "")[:2000]
         if at and stt:
-            parsed.append((at, stt))
+            parsed.append((at, stt, msg))
     if not parsed:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Keine gültigen Ereignisse gefunden.")
     parsed.sort(key=lambda x: x[0])
     tmin, tmax = parsed[0][0], parsed[-1][0]
     # auf Statuswechsel reduzieren
-    transitions: list[tuple[datetime, str]] = []
+    transitions: list[tuple[datetime, str, str]] = []
     last = None
-    for at, stt in parsed:
+    for at, stt, msg in parsed:
         if stt != last:
-            transitions.append((at, stt))
+            transitions.append((at, stt, msg))
             last = stt
     # idempotent: vorhandene Ereignisse dieses Monitors im Zeitraum entfernen
     db.query(MonitorEvent).filter(
         MonitorEvent.organization_id == mon.organization_id, MonitorEvent.name == mon.name,
         MonitorEvent.created_at >= tmin, MonitorEvent.created_at <= tmax).delete(synchronize_session=False)
-    for at, stt in transitions:
+    for at, stt, msg in transitions:
         db.add(MonitorEvent(organization_id=mon.organization_id, client_id=mon.client_id,
-                            name=mon.name, url=mon.url, status=stt, message="(Import)", created_at=at))
+                            name=mon.name, url=mon.url, status=stt, message=(msg or "(Import)"),
+                            created_at=at))
     db.commit()
     return {"imported": len(transitions), "events_seen": len(parsed),
             "from": tmin.isoformat(), "to": tmax.isoformat()}
