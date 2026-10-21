@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_scoped_client, require_agency
+from app.api.deps import get_current_user, get_scoped_client, require_admin, require_agency
 from app.config import get_settings
 from app.database import get_db
 from app.models import (
@@ -264,3 +264,83 @@ def assign_monitor(monitor_id: str, data: dict, user: User = Depends(require_age
     names = {c.id: c.name for c in db.query(Client).filter(Client.organization_id == user.organization_id).all()}
     return MonitorOut(id=mon.id, name=mon.name, url=mon.url, status=mon.status, message=mon.message,
                       client_id=mon.client_id, client_name=names.get(mon.client_id or "", ""), changed_at=mon.changed_at)
+
+
+# ---------- Historien-Import (z. B. Uptime-Kuma-Heartbeats der letzten 90 Tage) ----------
+def _norm_import_status(raw) -> str:
+    if raw in (1, "1", "up", True):
+        return "up"
+    if raw in (0, "0", "down", False):
+        return "down"
+    if raw in (3, "3", "maintenance"):
+        return "up"   # Wartung zählt nicht als Ausfall
+    if raw in (2, "2", "pending"):
+        return "pending"
+    return ""
+
+
+def _parse_import_time(v) -> datetime | None:
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        ts = float(v)
+        if ts > 1e12:      # Millisekunden
+            ts /= 1000.0
+        try:
+            return datetime.fromtimestamp(ts, tz=timezone.utc)
+        except (OverflowError, OSError, ValueError):
+            return None
+    s = str(v).strip()
+    try:
+        dt = datetime.fromisoformat(s.replace("Z", "+00:00").replace(" ", "T", 1))
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+@router.post("/{monitor_id}/import")
+async def import_history(monitor_id: str, request: Request,
+                         user: User = Depends(require_admin), db: Session = Depends(get_db)) -> dict:
+    """Importiert historische Statusdaten (z. B. Uptime-Kuma-Heartbeats) für einen
+    vorhandenen Monitor. Erwartet JSON: eine Liste oder {"events": [...]}, je Eintrag
+    {"status": 1|0|"up"|"down", "time": "..."} (ISO oder Unix-Zeit). Reduziert auf
+    Statuswechsel und ist je importiertem Zeitraum idempotent."""
+    mon = db.get(MonitorStatus, monitor_id)
+    if not mon or mon.organization_id != user.organization_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Monitor nicht gefunden")
+    try:
+        body = await request.json()
+    except Exception as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Ungültiges JSON.") from exc
+    events = body.get("events") if isinstance(body, dict) else body
+    if not isinstance(events, list):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Erwartet eine Liste von Ereignissen.")
+    parsed: list[tuple[datetime, str]] = []
+    for e in events:
+        if not isinstance(e, dict):
+            continue
+        at = _parse_import_time(e.get("time") or e.get("at") or e.get("timestamp"))
+        stt = _norm_import_status(e.get("status"))
+        if at and stt:
+            parsed.append((at, stt))
+    if not parsed:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Keine gültigen Ereignisse gefunden.")
+    parsed.sort(key=lambda x: x[0])
+    tmin, tmax = parsed[0][0], parsed[-1][0]
+    # auf Statuswechsel reduzieren
+    transitions: list[tuple[datetime, str]] = []
+    last = None
+    for at, stt in parsed:
+        if stt != last:
+            transitions.append((at, stt))
+            last = stt
+    # idempotent: vorhandene Ereignisse dieses Monitors im Zeitraum entfernen
+    db.query(MonitorEvent).filter(
+        MonitorEvent.organization_id == mon.organization_id, MonitorEvent.name == mon.name,
+        MonitorEvent.created_at >= tmin, MonitorEvent.created_at <= tmax).delete(synchronize_session=False)
+    for at, stt in transitions:
+        db.add(MonitorEvent(organization_id=mon.organization_id, client_id=mon.client_id,
+                            name=mon.name, url=mon.url, status=stt, message="(Import)", created_at=at))
+    db.commit()
+    return {"imported": len(transitions), "events_seen": len(parsed),
+            "from": tmin.isoformat(), "to": tmax.isoformat()}

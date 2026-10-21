@@ -358,6 +358,8 @@ export const api = {
   assignMonitor: (id: string, clientId: string | null) =>
     request<Monitor>(`/monitoring/${id}`, { method: "PATCH", body: JSON.stringify({ client_id: clientId }) }),
   deleteMonitor: (id: string) => request<void>(`/monitoring/${id}`, { method: "DELETE" }),
+  importMonitorHistory: (id: string, events: unknown[]) =>
+    request<{ imported: number; events_seen: number; from: string; to: string }>(`/monitoring/${id}/import`, { method: "POST", body: JSON.stringify({ events }) }),
   // WordPress-Updates (WPMonitor-Digest)
   webhooks: (cid: string) => request<ClientWebhookRow[]>(`/clients/${cid}/webhooks`),
   createWebhook: (cid: string, label: string, client_visible: boolean) =>

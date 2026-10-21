@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useToast } from "../toast";
 import { Client, Monitor, api } from "../api";
 
 const label = (s: string) => s === "down" ? "offline" : s === "up" ? "online" : "wartet";
 
 export default function MonitoringPage() {
   const navigate = useNavigate();
+  const toast = useToast();
   const [monitors, setMonitors] = useState<Monitor[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [q, setQ] = useState("");
@@ -24,6 +26,16 @@ export default function MonitoringPage() {
     setMonitors((ms) => ms.map((x) => (x.id === m.id ? upd : x)));
   };
   const del = async (m: Monitor) => { if (!confirm(`Monitor „${m.name}“ löschen?`)) return; await api.deleteMonitor(m.id); load(); };
+  const importHistory = async (m: Monitor, file: File) => {
+    try {
+      const data = JSON.parse(await file.text());
+      const events = Array.isArray(data) ? data : (data.events || data.heartbeats || []);
+      if (!Array.isArray(events) || events.length === 0) { toast("Keine Ereignisse in der Datei gefunden.", "err"); return; }
+      const r = await api.importMonitorHistory(m.id, events);
+      toast(`Importiert: ${r.imported} Statuswechsel (${r.events_seen} Punkte) · ${r.from.slice(0, 10)} bis ${r.to.slice(0, 10)}.`);
+      load();
+    } catch (e) { toast(`Import fehlgeschlagen: ${(e as Error).message}`, "err"); }
+  };
 
   return (
     <>
@@ -60,6 +72,8 @@ export default function MonitoringPage() {
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
               <span className={`status-badge ${m.status === "down" ? "st-pausiert" : m.status === "up" ? "st-aktiv" : "st-beendet"}`}>{label(m.status)}</span>
+              <label className="btn btn-ghost btn-sm" style={{ cursor: "pointer" }} title="Historische Uptime-Daten (JSON) importieren">Historie
+                <input type="file" accept="application/json,.json" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) importHistory(m, f); e.currentTarget.value = ""; }} /></label>
               <button className="del" onClick={() => del(m)}>löschen</button>
             </div>
           </div>
