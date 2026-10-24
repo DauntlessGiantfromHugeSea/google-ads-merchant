@@ -25,6 +25,7 @@ export default function Participants({ clientId, clientName, isAgency }:
   const [nEmail, setNEmail] = useState("");
   const [incFields, setIncFields] = useState(false);
   const [incLink, setIncLink] = useState(true);
+  const [nIntro, setNIntro] = useState("");
   const [cEnabled, setCEnabled] = useState(false);
   const [cSubject, setCSubject] = useState("");
   const [cText, setCText] = useState("");
@@ -36,11 +37,11 @@ export default function Participants({ clientId, clientName, isAgency }:
     api.participants(clientId).then(setList).catch(() => {});
   };
   useEffect(() => { load(); }, [clientId]);
-  useEffect(() => { if (status) { setNEnabled(status.notify_enabled); setNAgency(status.notify_agency); setNClient(status.notify_client); setNEmail(status.notify_email); setIncFields(status.include_fields); setIncLink(status.include_link); } }, [status?.notify_enabled, status?.notify_agency, status?.notify_client, status?.notify_email, status?.include_fields, status?.include_link]);
+  useEffect(() => { if (status) { setNEnabled(status.notify_enabled); setNAgency(status.notify_agency); setNClient(status.notify_client); setNEmail(status.notify_email); setIncFields(status.include_fields); setIncLink(status.include_link); setNIntro(status.intro || ""); } }, [status?.notify_enabled, status?.notify_agency, status?.notify_client, status?.notify_email, status?.include_fields, status?.include_link, status?.intro]);
   useEffect(() => { if (status) { setCEnabled(status.confirm_enabled); setCSubject(status.confirm_subject); setCText(status.confirm_text); setCFrom(status.from_addr); } }, [status?.confirm_enabled, status?.confirm_subject, status?.confirm_text, status?.from_addr]);
 
   const enable = async (on: boolean) => { setStatus(await api.enableParticipants(clientId, on)); toast(on ? "Webhook aktiv." : "Deaktiviert."); };
-  const saveNotify = async () => { setStatus(await api.setWebhookNotify(clientId, { notify_enabled: nEnabled, notify_agency: nAgency, notify_client: nClient, notify_email: nEmail.trim(), include_fields: incFields, include_link: incLink })); toast("Benachrichtigung gespeichert."); };
+  const saveNotify = async () => { setStatus(await api.setWebhookNotify(clientId, { notify_enabled: nEnabled, notify_agency: nAgency, notify_client: nClient, notify_email: nEmail.trim(), include_fields: incFields, include_link: incLink, intro: nIntro.trim() })); toast("Benachrichtigung gespeichert."); };
   const saveConfirm = async () => { setStatus(await api.setWebhookConfirm(clientId, { confirm_enabled: cEnabled, confirm_subject: cSubject.trim(), confirm_text: cText, from_addr: cFrom.trim() })); toast("Bestätigung gespeichert."); };
   const uploadLogo = async (file: File) => { try { setStatus(await api.uploadConfirmLogo(clientId, file)); setLogoV((v) => v + 1); toast("Logo hochgeladen."); } catch (e) { toast((e as Error).message, "err"); } };
   const removeLogo = async () => { setStatus(await api.deleteConfirmLogo(clientId)); toast("Logo entfernt."); };
@@ -110,6 +111,9 @@ export default function Participants({ clientId, clientName, isAgency }:
                     </label>
                     <div className="field" style={{ marginTop: 6 }}><label>Zusätzliche E-Mail (optional)</label>
                       <input className="input form-light" type="email" value={nEmail} onChange={(e) => setNEmail(e.target.value)} placeholder="z. B. eingang@…" /></div>
+                    <div className="field" style={{ marginTop: 6 }}><label>Eigene Einleitung (optional)</label>
+                      <textarea className="input form-light" rows={2} value={nIntro} onChange={(e) => setNIntro(e.target.value)} placeholder="z. B. „Neue Anfrage über das Kontaktformular auf deiner Website.“" />
+                      <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>Erscheint ganz oben in der Mail, damit der Empfänger weiß, worum es geht.</div></div>
                     <div className="muted" style={{ fontSize: 12, margin: "8px 0 4px" }}>Inhalt der Mail:</div>
                     <label className="ki-check">
                       <input type="checkbox" checked={incFields} onChange={(e) => setIncFields(e.target.checked)} />

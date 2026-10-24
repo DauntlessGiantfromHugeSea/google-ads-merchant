@@ -204,6 +204,7 @@ class Client(Base):
     webhook_notify_email: Mapped[str] = mapped_column(String(255), default="")    # feste Zusatzadresse
     webhook_include_fields: Mapped[bool] = mapped_column(Boolean, default=False)  # alle Felder in die Mail
     webhook_include_link: Mapped[bool] = mapped_column(Boolean, default=True)     # Link zum Eintrag
+    webhook_intro: Mapped[str] = mapped_column(Text, default="")                  # eigene Einleitung in der Mail
     # Webhook: automatische Bestätigungsmail an den Anmelder (eigenes Logo/Absender).
     webhook_confirm_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     webhook_confirm_subject: Mapped[str] = mapped_column(String(255), default="")

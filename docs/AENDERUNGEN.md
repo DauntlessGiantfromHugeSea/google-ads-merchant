@@ -286,6 +286,31 @@ SECRET_KEY=$(openssl rand -hex 48)
 
 ---
 
+## Webhook-Mail „Neuer Eintrag": eigene Einleitung
+
+**Was:** Pro Kunde lässt sich jetzt ein eigener Einleitungssatz für die
+Benachrichtigungs-Mail hinterlegen, die beim Eingang eines Webhook-/Formular-Eintrags
+verschickt wird. Dieser Satz steht ganz oben in der Mail, damit die empfangende Person
+sofort weiß, worum es geht (z. B. „Neue Anfrage über das Kontaktformular auf deiner
+Website.").
+
+**Dateien:**
+- `backend/app/models.py` – `Client.webhook_intro` (`Text`, Default `""`).
+- `backend/app/main.py` – Migration `"webhook_intro": "TEXT DEFAULT ''"` in `_CLIENT_COLUMNS`.
+- `backend/app/schemas.py` – `ParticipantsStatus.intro`.
+- `backend/app/api/routes/participants.py` – `_status()` gibt `intro` zurück; `/notify`
+  nimmt `intro` entgegen (gekürzt auf 2000 Zeichen); `_mail_new_entry(..., intro)` stellt
+  den Satz der Mail voran; der Webhook-Handler übergibt `client.webhook_intro`.
+- `frontend/src/api.ts` – `ParticipantsStatus.intro` + `setWebhookNotify` sendet `intro`.
+- `frontend/src/sections/Participants.tsx` – Textfeld „Eigene Einleitung (optional)" im
+  Kasten „E-Mail bei neuem Eintrag".
+
+**Wie:** Leerer Einleitungssatz = Mail wie bisher. Ist ein Satz gesetzt, wird er als erste
+Zeile (plus Leerzeile) vor den Standardtext gestellt. Der Wert wird serverseitig getrimmt
+und begrenzt gespeichert.
+
+---
+
 ## Anhang: alle Commits chronologisch anzeigen
 
 ```bash

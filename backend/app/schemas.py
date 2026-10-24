@@ -613,6 +613,7 @@ class ParticipantsStatus(BaseModel):
     notify_email: str = ""
     include_fields: bool = False
     include_link: bool = True
+    intro: str = ""
     confirm_enabled: bool = False
     confirm_subject: str = ""
     confirm_text: str = ""

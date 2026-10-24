@@ -99,6 +99,7 @@ def _status(client: Client, request: Request, db: Session) -> ParticipantsStatus
         notify_agency=bool(client.webhook_notify_agency),
         notify_client=bool(client.webhook_notify_client), notify_email=client.webhook_notify_email or "",
         include_fields=bool(client.webhook_include_fields), include_link=bool(client.webhook_include_link),
+        intro=client.webhook_intro or "",
         confirm_enabled=bool(client.webhook_confirm_enabled),
         confirm_subject=client.webhook_confirm_subject or "",
         confirm_text=client.webhook_confirm_text or "",
@@ -139,6 +140,8 @@ def set_notify(client_id: str, request: Request, data: dict,
         client.webhook_include_fields = bool(data.get("include_fields"))
     if "include_link" in data:
         client.webhook_include_link = bool(data.get("include_link"))
+    if "intro" in data:
+        client.webhook_intro = (data.get("intro") or "").strip()[:2000]
     db.commit()
     db.refresh(client)
     return _status(client, request, db)
@@ -359,7 +362,8 @@ async def webhook(token: str, request: Request, db: Session = Depends(get_db)) -
     if recipients:
         threading.Thread(target=_mail_new_entry, args=(
             client.organization_id, client.id, client.name, form_name, name, email, data,
-            recipients, bool(client.webhook_include_fields), bool(client.webhook_include_link)),
+            recipients, bool(client.webhook_include_fields), bool(client.webhook_include_link),
+            client.webhook_intro or ""),
             daemon=True).start()
     # Automatische Bestätigung an den Anmelder (eigenes Logo/Absender).
     if client.webhook_confirm_enabled and email and _looks_email(email):
@@ -404,7 +408,7 @@ def _send_confirmation(org_id: str, client_id: str, client_name: str, to_email: 
 
 def _mail_new_entry(org_id: str, client_id: str, client_name: str, form_name: str, name: str,
                     email: str, data: dict, recipients: list[str],
-                    include_fields: bool, include_link: bool) -> None:
+                    include_fields: bool, include_link: bool, intro: str = "") -> None:
     """Info-Mail „Neuer Eintrag" an die konfigurierten Empfänger (eigene Session).
     Optional mit allen Formularfeldern und dem Link zum Eintrag."""
     from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
@@ -417,6 +421,8 @@ def _mail_new_entry(org_id: str, client_id: str, client_name: str, form_name: st
         if not org or not org.ms_refresh_token:
             return
         lines = [f"Neuer Eintrag über das Formular{f' „{form_name}“' if form_name else ''} bei {client_name}."]
+        if (intro or "").strip():
+            lines = [intro.strip(), ""] + lines
         base_details = " · ".join([x for x in [name, email] if x])
         if base_details:
             lines += ["", base_details]
