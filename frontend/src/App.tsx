@@ -225,7 +225,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               ]} />
             </>
           )}
-          <NotificationBell />
+          {isAgency && <NotificationBell />}
           {/* Alles Sekundäre im Nutzer-Menü */}
           <div className="user-menu">
             <button className="user-btn" onClick={() => setUserMenu((v) => !v)} aria-label="Konto">
