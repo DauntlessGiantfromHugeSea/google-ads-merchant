@@ -311,6 +311,30 @@ und begrenzt gespeichert.
 
 ---
 
+## Fix: Microsoft-Mailversand lief nach 90 Tagen tot (rotierter Refresh-Token)
+
+**Problem:** Der Mailversand über Microsoft stoppte „plötzlich" mit
+`AADSTS700082: The refresh token has expired due to inactivity`. Ursache: Microsoft
+gibt bei **jedem** Token-Refresh einen **neuen** Refresh-Token mit frischem
+90-Tage-Fenster zurück. Der Code hat diesen neuen Token verworfen und immer den
+ursprünglichen weiterbenutzt – dadurch lief das 90-Tage-Inaktivitätsfenster ab dem
+Datum der Erst-Anmeldung ab, unabhängig davon, wie oft gesendet wurde.
+
+**Fix:** `_access_token(...)` nimmt jetzt optional die `org` entgegen und speichert
+einen zurückgegebenen rotierten Refresh-Token verschlüsselt (`_persist_refresh`) –
+über eine **isolierte** DB-Session, damit die Transaktion des Aufrufers nicht berührt
+wird, und best-effort (ein Speicherfehler bricht den Versand nie ab). Das In-Memory-
+Objekt wird mitgezogen, damit Folge-Sends in derselben Anfrage den neuen Token nutzen.
+`send_via_graph` und der Posteingang-Abgleich übergeben `org`.
+
+**Datei:** `backend/app/api/routes/mail.py`.
+
+**Einmalig nötig:** Das bereits abgelaufene Konto muss **einmal neu verbunden**
+werden (Einstellungen → Microsoft-Konto). Danach hält die Verbindung durch die
+Rotation dauerhaft.
+
+---
+
 ## Anhang: alle Commits chronologisch anzeigen
 
 ```bash

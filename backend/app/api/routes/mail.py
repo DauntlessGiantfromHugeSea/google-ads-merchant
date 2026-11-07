@@ -42,10 +42,38 @@ def _token_url() -> str:
     return f"https://login.microsoftonline.com/{settings.microsoft_tenant}/oauth2/v2.0/token"
 
 
-def _access_token(refresh_token: str, scope: str = SCOPE_SEND) -> str:
+def _persist_refresh(org, new_refresh: str) -> None:
+    """Speichert den von Microsoft rotierten Refresh-Token verschlüsselt.
+    WICHTIG: Microsoft gibt bei jedem Refresh einen neuen Refresh-Token mit
+    frischem 90-Tage-Fenster zurück. Ohne Speichern läuft das Konto nach 90
+    Tagen ab Erst-Anmeldung ab (AADSTS700082 – "expired due to inactivity"),
+    egal wie oft gesendet wird. Isolierte Session, damit die Transaktion des
+    Aufrufers nicht berührt wird; best-effort, bricht den Versand nie ab."""
+    if not new_refresh or org is None or not getattr(org, "id", None):
+        return
+    enc = encrypt(new_refresh)
+    try:
+        from app.database import SessionLocal  # noqa: PLC0415
+        with SessionLocal() as s:
+            o = s.get(Organization, org.id)
+            if o is not None:
+                o.ms_refresh_token = enc
+                s.commit()
+    except Exception:  # noqa: BLE001 – Speichern ist best-effort
+        return
+    # In-Memory-Objekt mitziehen, damit Folge-Sends in derselben Anfrage den
+    # neuen Token nutzen (statt erneut den alten, der jetzt rotiert sein kann).
+    try:
+        org.ms_refresh_token = enc
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _access_token(refresh_token: str, scope: str = SCOPE_SEND, org=None) -> str:
     """Holt frisch einen Access-Token per Refresh-Token. Fehler werden als
     saubere HTTPException gemeldet (kein 500). `scope` bestimmt, welche
-    Berechtigung angefragt wird – Versand braucht nur Mail.Send."""
+    Berechtigung angefragt wird – Versand braucht nur Mail.Send. Wenn `org`
+    übergeben ist, wird ein rotierter Refresh-Token gespeichert."""
     try:
         r = httpx.post(_token_url(), data={
             "client_id": settings.microsoft_client_id,
@@ -60,9 +88,11 @@ def _access_token(refresh_token: str, scope: str = SCOPE_SEND) -> str:
     if r.status_code >= 300:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY,
                             f"Microsoft-Anmeldung abgelaufen – bitte Konto neu verbinden. ({r.text[:150]})")
-    token = r.json().get("access_token")
+    data = r.json()
+    token = data.get("access_token")
     if not token:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, "Kein Access-Token von Microsoft erhalten.")
+    _persist_refresh(org, data.get("refresh_token", ""))
     return token
 
 
@@ -112,7 +142,7 @@ def send_via_graph(org, to: str, subject: str, body: str, html: bool = False,
     sonst lehnt Exchange ab). reply_to: Antwortadresse (immer erlaubt)."""
     if not org or not org.ms_refresh_token:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
-    access = _access_token(decrypt(org.ms_refresh_token))
+    access = _access_token(decrypt(org.ms_refresh_token), org=org)
     msg: dict = {
         "subject": subject,
         "body": {"contentType": "HTML" if html else "Text", "content": body},
@@ -141,7 +171,7 @@ def _read_folder(org, folder: str, order_field: str, select: str, top: int) -> l
     if not org or not org.ms_refresh_token:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
     try:
-        access = _access_token(decrypt(org.ms_refresh_token), SCOPE_FULL)
+        access = _access_token(decrypt(org.ms_refresh_token), SCOPE_FULL, org=org)
     except HTTPException as exc:
         raise HTTPException(status.HTTP_403_FORBIDDEN,
                             "Für den Posteingang-Abgleich fehlt die Leseberechtigung. Bitte das "
