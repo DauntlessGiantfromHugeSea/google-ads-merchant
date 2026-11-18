@@ -124,6 +124,9 @@ _INVOICE_COLUMNS = {
     "receipt_filename": "VARCHAR(512) DEFAULT ''", "receipt_content_type": "VARCHAR(128) DEFAULT ''",
     "receipt_base64": "TEXT DEFAULT ''", "recipient_email": "VARCHAR(255) DEFAULT ''",
 }
+_STANDING_CHARGE_COLUMNS = {
+    "reminded_at": "TIMESTAMP NULL",
+}
 
 
 def _ensure_schema() -> None:
@@ -142,6 +145,7 @@ def _ensure_schema() -> None:
     _ensure_columns(insp, "projects", _PROJECT_COLUMNS)
     _ensure_columns(insp, "users", _USER_COLUMNS)
     _ensure_columns(insp, "service_packages", _PACKAGE_COLUMNS)
+    _ensure_columns(insp, "standing_charges", _STANDING_CHARGE_COLUMNS)
 
 
 async def _mail_sync_loop(interval_seconds: int) -> None:

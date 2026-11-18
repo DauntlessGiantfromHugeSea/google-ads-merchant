@@ -140,7 +140,7 @@ export interface StandingOrder {
 export interface StandingCharge {
   id: string; client_id: string; client_name: string; order_id: string; title: string;
   period: string; due_date: string; amount: number; currency: string; status: string;
-  overdue: boolean; paid_at: string;
+  overdue: boolean; paid_at: string; reminded_at: string;
 }
 export interface BackupStatus {
   dumped_at: string; size: string; hetzner: string; synology: string; interval: number; ok: boolean;
@@ -388,6 +388,7 @@ export const api = {
   standingCharges: (status = "open") => request<{ charges: StandingCharge[]; open_total: number; open_count: number }>(`/standing/charges?status_=${status}`),
   markChargePaid: (id: string) => request<{ ok: boolean }>(`/standing/charges/${id}/paid`, { method: "POST" }),
   markChargeOpen: (id: string) => request<{ ok: boolean }>(`/standing/charges/${id}/open`, { method: "POST" }),
+  remindCharge: (id: string) => request<{ ok: boolean; to: string }>(`/standing/charges/${id}/remind`, { method: "POST" }),
   // Dateifreigabe (Agentur)
   shares: () => request<ShareRow[]>("/shares"),
   createShare: (fd: FormData) => request<ShareRow>("/shares", { method: "POST", body: fd }),

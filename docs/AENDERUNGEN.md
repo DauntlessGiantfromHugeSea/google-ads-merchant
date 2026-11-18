@@ -335,6 +335,29 @@ Rotation dauerhaft.
 
 ---
 
+## Daueraufträge: offene Posten anmahnen (Zahlungserinnerung per Mail)
+
+**Was:** Offene Posten eines Dauerauftrags lassen sich jetzt direkt im Überblick
+anmahnen. Ein Klick auf „anmahnen" schickt dem Kunden eine Zahlungserinnerung per
+Mail (Titel, Betrag, Fälligkeit) über das verbundene Microsoft-Konto. Kein PDF-Anhang,
+da ein Dauerauftrag bewusst keine versendete Rechnung ist. Nach dem Senden steht der
+Button auf „erneut mahnen" und zeigt im Tooltip das Datum der letzten Mahnung.
+
+**Dateien:**
+- `backend/app/models.py` – `StandingCharge.reminded_at`.
+- `backend/app/main.py` – Migration `_STANDING_CHARGE_COLUMNS` (`reminded_at TIMESTAMP NULL`).
+- `backend/app/api/routes/standing.py` – `POST /api/standing/charges/{id}/remind`
+  (nur offene Posten, nutzt die Kunden-Mail `billing_email`/`contact_email`); `reminded_at`
+  zusätzlich im Charges-Listing.
+- `frontend/src/api.ts` – `remindCharge(id)` + `StandingCharge.reminded_at`.
+- `frontend/src/pages/StandingPage.tsx` – „anmahnen"-Button mit Bestätigung und Tooltip.
+
+**Wie:** Der Endpoint lehnt bereits bezahlte Posten ab und meldet sauber, wenn keine
+Kunden-Mail hinterlegt oder kein Microsoft-Konto verbunden ist. Der Ton ist „du" wie bei
+der Rechnungs-Erinnerung.
+
+---
+
 ## Anhang: alle Commits chronologisch anzeigen
 
 ```bash

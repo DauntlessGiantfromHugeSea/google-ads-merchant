@@ -1288,4 +1288,5 @@ class StandingCharge(Base):
     currency: Mapped[str] = mapped_column(String(8), default="EUR")
     status: Mapped[str] = mapped_column(String(8), default="open", index=True)  # open/paid
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    reminded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)  # zuletzt angemahnt
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)

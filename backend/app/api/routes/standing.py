@@ -156,6 +156,7 @@ def list_charges(status_: str = "open", user: User = Depends(require_agency),
         "amount": c.amount, "currency": c.currency, "status": c.status,
         "overdue": c.status == "open" and bool(c.due_date) and c.due_date <= today,
         "paid_at": c.paid_at.isoformat() if c.paid_at else "",
+        "reminded_at": c.reminded_at.isoformat() if c.reminded_at else "",
     } for c in rows]
     open_total = sum(c.amount for c in rows if c.status == "open")
     return {"charges": items, "open_total": open_total,
@@ -182,3 +183,37 @@ def mark_open(charge_id: str, user: User = Depends(require_agency), db: Session 
     c.paid_at = None
     db.commit()
     return {"ok": True}
+
+
+@router.post("/charges/{charge_id}/remind")
+def remind_charge(charge_id: str, user: User = Depends(require_agency),
+                  db: Session = Depends(get_db)) -> dict:
+    """Zahlungserinnerung für einen offenen Dauerauftrags-Posten per Mail.
+    Kein PDF-Anhang – ein Dauerauftrag ist keine versendete Rechnung."""
+    from app.models import Organization  # noqa: PLC0415
+    from app.api.routes.mail import render_email_html, send_via_graph  # noqa: PLC0415
+
+    c = db.get(StandingCharge, charge_id)
+    if not c or c.organization_id != user.organization_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Posten nicht gefunden")
+    if c.status != "open":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Nur offene Posten können angemahnt werden.")
+    client = db.get(Client, c.client_id) if c.client_id else None
+    to = ((client.billing_email or client.contact_email if client else "") or "").strip()
+    if not to:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Für den Kunden ist keine E-Mail hinterlegt.")
+    org = db.get(Organization, user.organization_id)
+    if not org or not org.ms_refresh_token:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Kein Microsoft-Konto verbunden.")
+    titel = c.title or "unsere wiederkehrende Leistung"
+    body = (f"Hallo,\n\n"
+            f"die Zahlung für {titel} über {c.amount:.2f} {c.currency} "
+            f"(fällig am {c.due_date or '–'}) ist noch offen.\n"
+            f"Wir bitten dich um Ausgleich. Falls sich deine Zahlung überschnitten hat, "
+            f"betrachte diese Erinnerung als gegenstandslos.\n\n"
+            f"Viele Grüße")
+    send_via_graph(org, to=to, subject=f"Zahlungserinnerung · {titel}".strip(),
+                   body=render_email_html(org, body), html=True)
+    c.reminded_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"ok": True, "to": to}

@@ -36,6 +36,11 @@ export default function StandingPage() {
   const delOrder = async (o: StandingOrder) => { if (!confirm(`Dauerauftrag „${o.title}" löschen? Offene Posten verschwinden mit.`)) return; await api.deleteStandingOrder(o.id); loadOrders(); loadCharges(); toast("Gelöscht."); };
   const paid = async (c: StandingCharge) => { await api.markChargePaid(c.id); loadCharges(); };
   const unpaid = async (c: StandingCharge) => { await api.markChargeOpen(c.id); loadCharges(); };
+  const remind = async (c: StandingCharge) => {
+    if (!confirm(`Zahlungserinnerung für „${c.title}" an ${c.client_name} senden?`)) return;
+    try { const r = await api.remindCharge(c.id); toast(`Erinnerung an ${r.to} gesendet.`); loadCharges(); }
+    catch (err) { toast((err as Error).message, "err"); }
+  };
   const toggleShowPaid = async () => { const v = !showPaid; setShowPaid(v); loadCharges(v); };
 
   const clientOpts = useMemo(() => [...clients].sort((a, b) => a.name.localeCompare(b.name)), [clients]);
@@ -65,10 +70,15 @@ export default function StandingPage() {
                     <td className="muted">{periodLabel(c.period)}</td>
                     <td>{fmt(c.due_date)} {c.overdue && <span className="status-badge st-pausiert" style={{ marginLeft: 4 }}>überfällig</span>}</td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>{money(c.amount, c.currency)}</td>
-                    <td style={{ textAlign: "right" }}>
-                      {c.status === "open"
-                        ? <button className="btn btn-primary btn-sm" onClick={() => paid(c)}>bezahlt</button>
-                        : <button className="btn btn-ghost btn-sm" onClick={() => unpaid(c)}>↩ offen</button>}
+                    <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                      {c.status === "open" ? (
+                        <>
+                          <button className="btn btn-ghost btn-sm" onClick={() => remind(c)}
+                            title={c.reminded_at ? `Zuletzt angemahnt: ${fmt(c.reminded_at.slice(0, 10))}` : "Zahlungserinnerung per Mail senden"}
+                            style={{ marginRight: 6 }}>{c.reminded_at ? "erneut mahnen" : "anmahnen"}</button>
+                          <button className="btn btn-primary btn-sm" onClick={() => paid(c)}>bezahlt</button>
+                        </>
+                      ) : <button className="btn btn-ghost btn-sm" onClick={() => unpaid(c)}>↩ offen</button>}
                     </td>
                   </tr>
                 ))}
